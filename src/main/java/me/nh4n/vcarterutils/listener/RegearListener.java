@@ -2,9 +2,7 @@ package me.nh4n.vcarterutils.listener;
 
 import me.nh4n.vcarterutils.VCarterUtils;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -25,6 +23,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -35,27 +34,23 @@ public class RegearListener implements Listener {
 
     private final VCarterUtils plugin;
     private final NamespacedKey regearKey;
+    private final MiniMessage miniMessage;
 
-    // Danh sach toa do cac Shulker Regear duoc dat tren mat dat
+    // Danh sach toa do cac Shulker Regear duoc dat tren san
     private final Set<Location> activeShulkerBlocks = Collections.newSetFromMap(new ConcurrentHashMap<>());
-    // Chặn vòng lặp vô hạn khi plugin chủ động phát lệnh regear
+    // Chặn loop lệnh khi plugin chạy lệnh regear ngầm
     private final Set<UUID> bypassCommandFilter = Collections.newSetFromMap(new ConcurrentHashMap<>());
-
-    // Màu sắc thông báo chuẩn giao diện PvP
-    private static final TextColor PREFIX_COLOR = TextColor.fromHexString("#e64553");
-    private static final TextColor INFO_COLOR   = TextColor.fromHexString("#a6d189");
-    private static final TextColor ACCENT_COLOR = TextColor.fromHexString("#04a5e5");
 
     public RegearListener(VCarterUtils plugin) {
         this.plugin = plugin;
         this.regearKey = new NamespacedKey(plugin, "vcarter_regear_shulker");
+        this.miniMessage = MiniMessage.miniMessage();
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onRegearCommand(PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
 
-        // Neu lenh do chinh plugin phat ra thi cho phep PerPlayerKit xu ly
         if (bypassCommandFilter.contains(player.getUniqueId())) {
             return;
         }
@@ -63,42 +58,42 @@ public class RegearListener implements Listener {
         String raw = event.getMessage().trim().toLowerCase();
         String cmd = raw.split(" ")[0];
 
-        // Chặn lệnh /regear hoặc /rg từ người chơi
         if (cmd.equals("/regear") || cmd.equals("/rg") ||
             cmd.endsWith(":regear") || cmd.endsWith(":rg")) {
 
             event.setCancelled(true);
 
-            // 1. Kiểm tra người chơi đã có Shulker Regear trong túi đồ chưa
+            // 1. Kiem tra xem nguoi choi da co Shulker Regear trong nguoi chua
             if (hasRegearShulker(player)) {
-                player.sendMessage(Component.text()
-                        .append(Component.text("[VCarter] ", PREFIX_COLOR, TextDecoration.BOLD))
-                        .append(Component.text("Bạn đã có sẵn Shulker Regear trong kho đồ!", NamedTextColor.RED))
-                        .build());
+                String msgRaw = plugin.getConfig().getString(
+                        "regear.messages.already-have-shulker",
+                        "<glyph:warning_blue> <#f38ba8>You already have a <#89dceb>Regear Shulker<#f38ba8> in your inventory!"
+                );
+                player.sendMessage(format(player, msgRaw));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                 return;
             }
 
-            // 2. Kiểm tra kho đồ có bị đầy không
+            // 2. Kiem tra kho do co bi day khong
             if (player.getInventory().firstEmpty() == -1) {
-                player.sendMessage(Component.text()
-                        .append(Component.text("[VCarter] ", PREFIX_COLOR, TextDecoration.BOLD))
-                        .append(Component.text("Kho đồ đã đầy! Hãy dọn trống ít nhất 1 ô để nhận Shulker Regear.", NamedTextColor.RED))
-                        .build());
+                String msgRaw = plugin.getConfig().getString(
+                        "regear.messages.inventory-full",
+                        "<glyph:warning_blue> <#f38ba8>Your inventory is full! <#a6adc8>Please free up at least 1 slot to receive the <#89dceb>Regear Shulker<#a6adc8>."
+                );
+                player.sendMessage(format(player, msgRaw));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                 return;
             }
 
-            // 3. Trao Shulker Regear và gửi thông báo
+            // 3. Trao vat pham Shulker Regear va gui thong bao
             player.getInventory().addItem(createRegearShulkerItem());
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.2f);
 
-            player.sendMessage(Component.text()
-                    .append(Component.text("[VCarter] ", PREFIX_COLOR, TextDecoration.BOLD))
-                    .append(Component.text("Đã nhận ", INFO_COLOR))
-                    .append(Component.text("Shulker Regear", ACCENT_COLOR, TextDecoration.BOLD))
-                    .append(Component.text("! Đặt xuống đất và Chuột Phải để nạp lại đồ.", INFO_COLOR))
-                    .build());
+            String msgRaw = plugin.getConfig().getString(
+                    "regear.messages.received-shulker",
+                    "<glyph:warning_blue> <#a6e3a1>Received <#89dceb><b>Shulker Regear</b><#a6e3a1>! Place it down and <#f9e2af><b>Right-Click</b><#a6e3a1> to restock."
+            );
+            player.sendMessage(format(player, msgRaw));
         }
     }
 
@@ -112,14 +107,12 @@ public class RegearListener implements Listener {
         Block block = event.getBlockPlaced();
         Location loc = block.getLocation();
 
-        // Ghi nhận khối Shulker này là Regear Box
         activeShulkerBlocks.add(loc);
         block.setMetadata("VCarter_Regear_Block", new FixedMetadataValue(plugin, true));
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        // Chỉ bắt hành động Chuột Phải vào khối Block
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
@@ -134,18 +127,18 @@ public class RegearListener implements Listener {
             return;
         }
 
-        // 1. Chặn mở giao diện rương hoàn toàn
+        // 1. Chặn mở giao diện Shulker
         event.setCancelled(true);
 
         Player player = event.getPlayer();
 
-        // 2. Dọn sạch khối Shulker trên sàn đấu ngay lập tức
+        // 2. Dọn sạch khối Shulker trên mặt đất
         activeShulkerBlocks.remove(loc);
         block.removeMetadata("VCarter_Regear_Block", plugin);
         block.setType(Material.AIR);
         loc.getWorld().playSound(loc, Sound.BLOCK_SHULKER_BOX_CLOSE, 1.0f, 1.2f);
 
-        // 3. Kích hoạt tính năng Regear từ PerPlayerKit ở chế độ Command Mode
+        // 3. Thực thi lệnh Regear ngầm qua PerPlayerKit
         executePerPlayerKitRegear(player);
     }
 
@@ -158,19 +151,15 @@ public class RegearListener implements Listener {
             activeShulkerBlocks.remove(loc);
             block.removeMetadata("VCarter_Regear_Block", plugin);
 
-            // Tránh rớt Shulker thường, hoàn trả lại đúng Shulker Regear có gắn thẻ PDC
+            // Hoàn trả đúng vật phẩm Shulker Regear có gắn thẻ PDC
             event.setDropItems(false);
             loc.getWorld().dropItemNaturally(loc, createRegearShulkerItem());
         }
     }
 
-    /**
-     * Bắn lệnh regear ngầm sang PerPlayerKit mà không bị bộ lọc command chặn lại
-     */
     private void executePerPlayerKitRegear(Player player) {
         bypassCommandFilter.add(player.getUniqueId());
         try {
-            // PerPlayerKit đang ở command mode sẽ tự nạp đầy kho đồ theo kit
             boolean success = player.performCommand("perplayerkit:regear");
             if (!success) {
                 player.performCommand("regear");
@@ -180,9 +169,6 @@ public class RegearListener implements Listener {
         }
     }
 
-    /**
-     * Kiểm tra người chơi có đang giữ Shulker Regear hay không
-     */
     private boolean hasRegearShulker(Player player) {
         for (ItemStack item : player.getInventory().getContents()) {
             if (isRegearItem(item)) {
@@ -192,9 +178,6 @@ public class RegearListener implements Listener {
         return false;
     }
 
-    /**
-     * Nhận diện Shulker Regear thông qua PersistentDataContainer
-     */
     private boolean isRegearItem(ItemStack item) {
         if (item == null || item.getType() == Material.AIR || !item.hasItemMeta()) {
             return false;
@@ -203,29 +186,47 @@ public class RegearListener implements Listener {
         return meta.getPersistentDataContainer().has(regearKey, PersistentDataType.BYTE);
     }
 
-    /**
-     * Khởi tạo vật phẩm Shulker Regear chuẩn NBT/PDC
-     */
     private ItemStack createRegearShulkerItem() {
         ItemStack item = new ItemStack(Material.CYAN_SHULKER_BOX, 1);
         ItemMeta meta = item.getItemMeta();
 
         if (meta != null) {
-            meta.displayName(Component.text("Shulker Regear", ACCENT_COLOR, TextDecoration.BOLD));
+            String nameRaw = plugin.getConfig().getString(
+                    "regear.item.name",
+                    "<#89dceb><b><!italic>Shulker Regear</b>"
+            );
+            meta.displayName(miniMessage.deserialize(nameRaw));
 
-            meta.lore(List.of(
-                    Component.text("Đặt xuống đất và ", NamedTextColor.GRAY)
-                            .append(Component.text("Chuột Phải", NamedTextColor.YELLOW, TextDecoration.BOLD))
-                            .append(Component.text(" để nạp lại đồ.", NamedTextColor.GRAY)),
-                    Component.text("Tự động biến mất sau khi kích hoạt.", NamedTextColor.DARK_GRAY)
-            ));
+            List<String> loreRaw = plugin.getConfig().getStringList("regear.item.lore");
+            if (loreRaw.isEmpty()) {
+                loreRaw = List.of(
+                        "<#a6adc8><!italic>Place on the ground and <#f9e2af><b>Right-Click</b><#a6adc8> to restock.",
+                        "<#6c7086><!italic>Automatically disappears after use."
+                );
+            }
 
-            // Đóng dấu định danh để chống làm giả hoặc nhận nhầm Shulker thường
+            List<Component> loreComponents = new ArrayList<>();
+            for (String line : loreRaw) {
+                loreComponents.add(miniMessage.deserialize(line));
+            }
+            meta.lore(loreComponents);
+
+            // Gắn thẻ PDC để nhận diện chính xác
             meta.getPersistentDataContainer().set(regearKey, PersistentDataType.BYTE, (byte) 1);
             item.setItemMeta(meta);
         }
 
         return item;
+    }
+
+    private Component format(Player player, String text) {
+        if (text == null || text.isEmpty()) {
+            return Component.empty();
+        }
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            text = me.clip.placeholderapi.PlaceholderAPI.setPlaceholders(player, text);
+        }
+        return miniMessage.deserialize(text);
     }
 
     public void clearAll() {

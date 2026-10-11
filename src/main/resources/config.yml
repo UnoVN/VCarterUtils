@@ -1,0 +1,15 @@
+# ==============================================================
+#                 VCarterUtils Configuration
+#       Catppuccin Pastel Palette & Glyph Integration
+# ==============================================================
+
+regear:
+  item:
+    name: "<#89dceb><b><!italic>Shulker Regear</b>"
+    lore:
+      - "<#a6adc8><!italic>Place on the ground and <#f9e2af><b>Right-Click</b><#a6adc8> to restock."
+      - "<#6c7086><!italic>Automatically disappears after use."
+  messages:
+    already-have-shulker: "<glyph:warning_blue> <#f38ba8>You already have a <#89dceb>Regear Shulker<#f38ba8> in your inventory!"
+    inventory-full: "<glyph:warning_blue> <#f38ba8>Your inventory is full! <#a6adc8>Please free up at least 1 slot to receive the <#89dceb>Regear Shulker<#a6adc8>."
+    received-shulker: "<glyph:warning_blue> <#a6e3a1>Received <#89dceb><b>Shulker Regear</b><#a6e3a1>! Place it down and <#f9e2af><b>Right-Click</b><#a6e3a1> to restock."

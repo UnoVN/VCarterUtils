@@ -30,7 +30,6 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
     private final VCarterUtils plugin;
     private final MiniMessage miniMessage;
 
-    // Bang mau Catppuccin Pastel
     private static final TextColor COLOR_SKY      = TextColor.fromHexString("#89dceb");
     private static final TextColor COLOR_GREEN    = TextColor.fromHexString("#a6e3a1");
     private static final TextColor COLOR_RED      = TextColor.fromHexString("#f38ba8");
@@ -42,9 +41,6 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
         this.miniMessage = MiniMessage.miniMessage();
     }
 
-    /**
-     * Bắt trực tiếp lệnh /sc tại EventPriority.LOWEST để chống bị plugin khác (như StaffChat) chiếm dụng
-     */
     @EventHandler(priority = EventPriority.LOWEST)
     public void onCommandPreprocess(PlayerCommandPreprocessEvent event) {
         String msg = event.getMessage().trim();
@@ -78,7 +74,23 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
         String sub = args[0].toLowerCase();
         ScoreManager manager = plugin.getScoreManager();
 
-        // 1. Lenh Admin Reset All: /score resetall
+        // 1. Lenh Reload Config: /score reload
+        if (sub.equals("reload")) {
+            if (!sender.hasPermission("vcarterutils.admin")) {
+                sendMessage(sender, getPrefix().append(Component.text("You do not have permission to execute this command.", COLOR_RED)));
+                return;
+            }
+
+            plugin.reloadPluginConfig();
+            String successMsg = plugin.getConfig().getString(
+                    "admin.messages.reload-success",
+                    "<glyph:warning_blue> <#a6e3a1>VCarterUtils configuration and regear whitelist reloaded successfully!"
+            );
+            sender.sendMessage(miniMessage.deserialize(successMsg));
+            return;
+        }
+
+        // 2. Lenh Admin Reset All: /score resetall
         if (sub.equals("resetall") || sub.equals("clearall")) {
             if (!sender.hasPermission("vcarterutils.admin")) {
                 sendMessage(sender, getPrefix().append(Component.text("You do not have permission to execute this command.", COLOR_RED)));
@@ -96,7 +108,7 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
             return;
         }
 
-        // 2. Lenh gui yeu cau reset: /score reset <player>
+        // 3. Lenh gui yeu cau reset: /score reset <player>
         if (sub.equals("reset")) {
             if (args.length < 2) {
                 sendUsage(player);
@@ -120,19 +132,17 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
             long timeout = plugin.getConfig().getLong("score.request-timeout-seconds", 60L);
             manager.createRequest(player.getUniqueId(), target.getUniqueId(), timeout);
 
-            // Thong bao cho nguoi gui
             sendMessage(player, getPrefix()
                     .append(Component.text("Sent a 1v1 score reset request to ", COLOR_GREEN))
                     .append(Component.text(target.getName(), COLOR_SKY, TextDecoration.BOLD))
                     .append(Component.text(". Waiting for approval...", COLOR_GREEN)));
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.2f);
 
-            // TAO TIN NHAN KEM 2 NUT BAM TUONG TAC CHO DOI THU
             sendInteractiveRequestMessage(target, player);
             return;
         }
 
-        // 3. Lenh chap nhan yeu cau: /score accept <player>
+        // 4. Lenh chap nhan yeu cau: /score accept <player>
         if (sub.equals("accept")) {
             if (args.length < 2) {
                 sendUsage(player);
@@ -166,7 +176,7 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
             return;
         }
 
-        // 4. Lenh tu choi yeu cau: /score decline <player>
+        // 5. Lenh tu choi yeu cau: /score decline <player>
         if (sub.equals("decline") || sub.equals("deny")) {
             if (args.length < 2) {
                 sendUsage(player);
@@ -194,9 +204,6 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
         sendUsage(sender);
     }
 
-    /**
-     * Tao tin nhan chat voi nut [ACCEPT] va [DECLINE] tuong tac truc tiep
-     */
     private void sendInteractiveRequestMessage(Player target, Player sender) {
         Component acceptButton = Component.text("[ACCEPT]", COLOR_GREEN, TextDecoration.BOLD)
                 .clickEvent(ClickEvent.runCommand("/score accept " + sender.getName()))
@@ -258,6 +265,7 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
             List<String> subs = new ArrayList<>(List.of("reset", "accept", "decline"));
             if (sender.hasPermission("vcarterutils.admin")) {
                 subs.add("resetall");
+                subs.add("reload");
             }
             for (String sub : subs) {
                 if (sub.startsWith(input)) {

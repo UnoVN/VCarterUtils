@@ -16,6 +16,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -24,11 +25,7 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class RegearListener implements Listener {
 
@@ -36,23 +33,24 @@ public class RegearListener implements Listener {
     private final NamespacedKey regearKey;
     private final MiniMessage miniMessage;
 
-    // Chặn vòng lặp vô hạn khi plugin gọi lệnh regear ngầm
-    private final Set<UUID> bypassCommandFilter = Collections.newSetFromMap(new ConcurrentHashMap<>());
-
     public RegearListener(VCarterUtils plugin) {
         this.plugin = plugin;
         this.regearKey = new NamespacedKey(plugin, "vcarter_regear_shulker");
         this.miniMessage = MiniMessage.miniMessage();
     }
 
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPlayerDamage(EntityDamageEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            plugin.getRegearManager().recordDamage(player.getUniqueId());
+        }
+    }
+
+    /**
+     * Chặn tuyệt đối /regear và /rg không cho PerPlayerKit can thiệp
+     */
     @EventHandler(priority = EventPriority.LOWEST)
     public void onRegearCommand(PlayerCommandPreprocessEvent event) {
-        Player player = event.getPlayer();
-
-        if (bypassCommandFilter.contains(player.getUniqueId())) {
-            return;
-        }
-
         String raw = event.getMessage().trim().toLowerCase();
         String cmd = raw.split(" ")[0];
 
@@ -60,41 +58,29 @@ public class RegearListener implements Listener {
             cmd.endsWith(":regear") || cmd.endsWith(":rg")) {
 
             event.setCancelled(true);
+            Player player = event.getPlayer();
 
-            // 1. Kiểm tra nếu người chơi đã có Shulker Regear trong người
             if (hasRegearShulker(player)) {
-                String msgRaw = plugin.getConfig().getString(
-                        "regear.messages.already-have-shulker",
-                        "<glyph:warning_blue> <#f38ba8>You already have a <#89dceb>Regear Shulker<#f38ba8> in your inventory!"
-                );
-                player.sendMessage(format(player, msgRaw));
+                sendMsg(player, "regear.messages.already-have-shulker");
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                 return;
             }
 
-            // 2. Kiểm tra kho đồ bị đầy
             if (player.getInventory().firstEmpty() == -1) {
-                String msgRaw = plugin.getConfig().getString(
-                        "regear.messages.inventory-full",
-                        "<glyph:warning_blue> <#f38ba8>Your inventory is full! <#a6adc8>Please free up at least 1 slot to receive the <#89dceb>Regear Shulker<#a6adc8>."
-                );
-                player.sendMessage(format(player, msgRaw));
+                sendMsg(player, "regear.messages.inventory-full");
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                 return;
             }
 
-            // 3. Trao Shulker Regear và thông báo
             player.getInventory().addItem(createRegearShulkerItem());
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.2f);
-
-            String msgRaw = plugin.getConfig().getString(
-                    "regear.messages.received-shulker",
-                    "<glyph:warning_blue> <#a6e3a1>Received <#89dceb><b>Shulker Regear</b><#a6e3a1>! Place it on the ground to restock."
-            );
-            player.sendMessage(format(player, msgRaw));
+            sendMsg(player, "regear.messages.received-shulker");
         }
     }
 
+    /**
+     * Đặt Shulker Box: Tự động xóa khối và chạy Regear độc lập của VCarterUtils
+     */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
         ItemStack item = event.getItemInHand();
@@ -106,11 +92,8 @@ public class RegearListener implements Listener {
         Block block = event.getBlockPlaced();
         Location loc = block.getLocation();
 
-        // Đánh dấu khối Shulker để chặn mở GUI nếu có click trùng lặp
         block.setMetadata("VCarter_Regear_Block", new FixedMetadataValue(plugin, true));
 
-        // Tự động dọn block và kích hoạt Regear ở tick kế tiếp:
-        // Đảm bảo Minecraft hoàn tất việc tiêu thụ item trên tay trước khi nạp đồ mới
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (block.hasMetadata("VCarter_Regear_Block") || block.getType().name().endsWith("SHULKER_BOX")) {
                 block.removeMetadata("VCarter_Regear_Block", plugin);
@@ -119,7 +102,11 @@ public class RegearListener implements Listener {
             }
 
             if (player.isOnline()) {
-                executePerPlayerKitRegear(player);
+                // Thuc thi truc tiep logic regear cua VCarterUtils, khong qua PPK
+                boolean success = plugin.getRegearManager().performRegear(player);
+                if (!success) {
+                    player.getInventory().addItem(createRegearShulkerItem());
+                }
             }
         });
     }
@@ -129,7 +116,6 @@ public class RegearListener implements Listener {
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
             Block block = event.getClickedBlock();
             if (block != null && block.hasMetadata("VCarter_Regear_Block")) {
-                // Chặn hoàn toàn việc mở GUI Shulker
                 event.setCancelled(true);
             }
         }
@@ -141,18 +127,6 @@ public class RegearListener implements Listener {
         if (block.hasMetadata("VCarter_Regear_Block")) {
             event.setDropItems(false);
             block.removeMetadata("VCarter_Regear_Block", plugin);
-        }
-    }
-
-    private void executePerPlayerKitRegear(Player player) {
-        bypassCommandFilter.add(player.getUniqueId());
-        try {
-            boolean success = player.performCommand("perplayerkit:regear");
-            if (!success) {
-                player.performCommand("regear");
-            }
-        } finally {
-            bypassCommandFilter.remove(player.getUniqueId());
         }
     }
 
@@ -205,17 +179,10 @@ public class RegearListener implements Listener {
         return item;
     }
 
-    private Component format(Player player, String text) {
-        if (text == null || text.isEmpty()) {
-            return Component.empty();
+    private void sendMsg(Player player, String configPath) {
+        String raw = plugin.getConfig().getString(configPath);
+        if (raw != null && !raw.isEmpty()) {
+            player.sendMessage(miniMessage.deserialize(raw));
         }
-        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-            text = me.clip.placeholderapi.PlaceholderAPI.setPlaceholders(player, text);
-        }
-        return miniMessage.deserialize(text);
-    }
-
-    public void clearAll() {
-        bypassCommandFilter.clear();
     }
 }

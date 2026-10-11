@@ -14,27 +14,26 @@ public final class VCarterUtils extends JavaPlugin {
     private static VCarterUtils instance;
     private ScoreManager scoreManager;
     private KillDeathListener killDeathListener;
+    private AutoPotListener autoPotListener;
     private RegearListener regearListener;
 
     @Override
     public void onEnable() {
         instance = this;
 
-        // Tao file config.yml mac dinh neu chua ton tai
         saveDefaultConfig();
 
         this.scoreManager = new ScoreManager();
         this.killDeathListener = new KillDeathListener(this);
+        this.autoPotListener = new AutoPotListener(this);
         this.regearListener = new RegearListener(this);
 
         PluginManager pluginManager = Bukkit.getPluginManager();
 
-        // Dang ky cac Listeners
         pluginManager.registerEvents(killDeathListener, this);
-        pluginManager.registerEvents(new AutoPotListener(this), this);
+        pluginManager.registerEvents(autoPotListener, this);
         pluginManager.registerEvents(regearListener, this);
 
-        // Ket noi PlaceholderAPI
         if (pluginManager.getPlugin("PlaceholderAPI") != null) {
             new VCarterExpansion(this).register();
             getLogger().info("Successfully hooked into PlaceholderAPI!");
@@ -47,6 +46,9 @@ public final class VCarterUtils extends JavaPlugin {
     public void onDisable() {
         if (killDeathListener != null) {
             killDeathListener.cancelAllTasks();
+        }
+        if (autoPotListener != null) {
+            autoPotListener.clearAll();
         }
         if (regearListener != null) {
             regearListener.clearAll();

@@ -5,6 +5,7 @@ import me.nh4n.vcarterutils.hook.VCarterExpansion;
 import me.nh4n.vcarterutils.listener.AutoPotListener;
 import me.nh4n.vcarterutils.listener.KillDeathListener;
 import me.nh4n.vcarterutils.listener.RegearListener;
+import me.nh4n.vcarterutils.manager.RegearManager;
 import me.nh4n.vcarterutils.manager.ScoreManager;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
@@ -17,6 +18,7 @@ public final class VCarterUtils extends JavaPlugin {
 
     private static VCarterUtils instance;
     private ScoreManager scoreManager;
+    private RegearManager regearManager;
     private KillDeathListener killDeathListener;
     private AutoPotListener autoPotListener;
     private RegearListener regearListener;
@@ -27,12 +29,12 @@ public final class VCarterUtils extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Tu dong dong bo tat ca cac key moi tu jar vao config.yml tren host ma khong lam mat config cu
         saveDefaultConfig();
         getConfig().options().copyDefaults(true);
         saveConfig();
 
         this.scoreManager = new ScoreManager();
+        this.regearManager = new RegearManager(this);
         this.killDeathListener = new KillDeathListener(this);
         this.autoPotListener = new AutoPotListener(this);
         this.regearListener = new RegearListener(this);
@@ -40,13 +42,11 @@ public final class VCarterUtils extends JavaPlugin {
 
         PluginManager pluginManager = Bukkit.getPluginManager();
 
-        // Dang ky Listeners
         pluginManager.registerEvents(killDeathListener, this);
         pluginManager.registerEvents(autoPotListener, this);
         pluginManager.registerEvents(regearListener, this);
-        pluginManager.registerEvents(scoreCommand, this); // Bat lenh /sc qua event de tranh xung dot
+        pluginManager.registerEvents(scoreCommand, this);
 
-        // Dang ky Lenh Bukkit
         PluginCommand cmd = getCommand("score");
         if (cmd != null) {
             cmd.setExecutor(scoreCommand);
@@ -93,8 +93,8 @@ public final class VCarterUtils extends JavaPlugin {
         if (autoPotListener != null) {
             autoPotListener.clearAll();
         }
-        if (regearListener != null) {
-            regearListener.clearAll();
+        if (regearManager != null) {
+            regearManager.clearAll();
         }
         if (scoreManager != null) {
             scoreManager.clearAll();
@@ -108,5 +108,9 @@ public final class VCarterUtils extends JavaPlugin {
 
     public ScoreManager getScoreManager() {
         return scoreManager;
+    }
+
+    public RegearManager getRegearManager() {
+        return regearManager;
     }
 }

@@ -1,6 +1,9 @@
 package me.nh4n.vcarterutils.listener;
 
 import me.nh4n.vcarterutils.VCarterUtils;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -8,6 +11,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
@@ -22,10 +26,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AutoPotListener implements Listener {
 
     private final VCarterUtils plugin;
-    // Quan ly task scanner dang chay de tranh spam khi player go nhieu lenh lien tiep
     private final Map<UUID, BukkitTask> activeScanners = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> lastRekitAnnounceTimes = new ConcurrentHashMap<>();
 
-    // Cac lenh quan ly kit KHONG PHAI la lenh load kit
     private static final Set<String> NON_LOAD_SUBCOMMANDS = Set.of(
             "room", "editor", "create", "delete", "edit", "swap", "share", "copy", "inspect", "autosetup"
     );
@@ -37,27 +40,28 @@ public class AutoPotListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onCommand(PlayerCommandPreprocessEvent event) {
         String msg = event.getMessage().trim();
-        // Chi kich hoat khi player thuc su chay lenh load kit
         if (isKitLoadCommand(msg)) {
-            schedulePotionScanner(event.getPlayer());
+            Player player = event.getPlayer();
+            scheduleKitProcess(player);
         }
     }
 
-    /**
-     * Kiem tra chinh xac xem lenh go co phai la lenh load kit hay khong:
-     * - /k1 .. /k99, /kit1 .. /kit99
-     * - /k <slot|name>, /kit <slot|name>, /k load <slot>
-     * - /pk <name>, /publickit <name>
-     * - /rekit
-     * - Khong bat lenh chi go /kit hoac /k (chi mo menu)
-     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onRespawn(PlayerRespawnEvent event) {
+        Player player = event.getPlayer();
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline()) {
+                scheduleKitProcess(player);
+            }
+        }, 10L);
+    }
+
     private boolean isKitLoadCommand(String message) {
         if (!message.startsWith("/")) {
             return false;
         }
 
         String raw = message.substring(1).trim().toLowerCase();
-        // Loai bo namespace neu co (vi du: /perplayerkit:k1 -> k1)
         if (raw.contains(":")) {
             raw = raw.substring(raw.indexOf(':') + 1);
         }
@@ -69,42 +73,28 @@ public class AutoPotListener implements Listener {
 
         String cmd = parts[0];
 
-        // 1. /k1..k99 hoac /kit1..kit99 (Lenh load kit chinh cua PerPlayerKit)
-        if (cmd.matches("^k\\d+$") || cmd.matches("^kit\\d+$")) {
+        if (cmd.matches("^k\\d+$") || cmd.matches("^kit\\d+$") ||
+            cmd.equals("pk") || cmd.equals("publickit") || cmd.equals("rekit")) {
             return true;
         }
 
-        // 2. /pk <name> hoac /publickit <name> (Lenh load public kit)
-        if (cmd.equals("pk") || cmd.equals("publickit")) {
-            return true;
-        }
-
-        // 3. /rekit
-        if (cmd.equals("rekit")) {
-            return true;
-        }
-
-        // 4. /k <arg> hoac /kit <arg> co tham so (vi du: /k 1, /kit 1, /k load 1, /kit pvp)
         if ((cmd.equals("k") || cmd.equals("kit")) && parts.length > 1) {
-            String sub = parts[1];
-            return !NON_LOAD_SUBCOMMANDS.contains(sub);
+            return !NON_LOAD_SUBCOMMANDS.contains(parts[1]);
         }
 
         return false;
     }
 
-    /**
-     * Quet kho do sau 4 tick (0.2s) de doi PerPlayerKit nap xong do vao tui,
-     * neu chua kip nạp se thu lai toi da 5 lan (moi 4 tick mot lan).
-     */
-    private void schedulePotionScanner(Player player) {
+    private void scheduleKitProcess(Player player) {
         UUID uuid = player.getUniqueId();
 
-        // Huy task cu neu co lenh moi den lien tiep
         BukkitTask oldTask = activeScanners.remove(uuid);
         if (oldTask != null) {
             oldTask.cancel();
         }
+
+        // Phat broadcast rekit announcement
+        broadcastRekit(player);
 
         BukkitTask task = new BukkitRunnable() {
             int runs = 0;
@@ -113,6 +103,7 @@ public class AutoPotListener implements Listener {
             public void run() {
                 if (!player.isOnline() || runs >= 5) {
                     activeScanners.remove(uuid);
+                    plugin.getRegearManager().saveKitSnapshot(player);
                     cancel();
                     return;
                 }
@@ -120,7 +111,8 @@ public class AutoPotListener implements Listener {
                 boolean applied = applyPotionsFromInventory(player);
                 if (applied) {
                     activeScanners.remove(uuid);
-                    cancel(); // Da nạp va apply thanh cong -> huy task ngay
+                    plugin.getRegearManager().saveKitSnapshot(player);
+                    cancel();
                     return;
                 }
 
@@ -129,6 +121,36 @@ public class AutoPotListener implements Listener {
         }.runTaskTimer(plugin, 4L, 4L);
 
         activeScanners.put(uuid, task);
+    }
+
+    /**
+     * Gui thong bao rekit theo Catppuccin palette & glyph
+     */
+    private void broadcastRekit(Player player) {
+        if (!plugin.getConfig().getBoolean("kit.announcement.enabled", true)) {
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        Long lastAnnounce = lastRekitAnnounceTimes.get(player.getUniqueId());
+        // Chon loc gian cach 2.5s tranh spam khi nguoi choi spam lenh
+        if (lastAnnounce != null && (now - lastAnnounce < 2500L)) {
+            return;
+        }
+        lastRekitAnnounceTimes.put(player.getUniqueId(), now);
+
+        String rawMsg = plugin.getConfig().getString(
+                "kit.announcement.message",
+                "<glyph:warning_blue> <#89dceb><b>%player%</b> <#a6adc8>rekited"
+        );
+
+        Component comp = MiniMessage.miniMessage().deserialize(rawMsg.replace("%player%", player.getName()));
+
+        if (plugin.getConfig().getBoolean("kit.announcement.broadcast", true)) {
+            Bukkit.broadcast(comp);
+        } else {
+            player.sendMessage(comp);
+        }
     }
 
     private boolean applyPotionsFromInventory(Player player) {
@@ -143,23 +165,18 @@ public class AutoPotListener implements Listener {
             Material type = item.getType();
             if (type == Material.POTION || type == Material.SPLASH_POTION || type == Material.LINGERING_POTION) {
                 if (item.getItemMeta() instanceof PotionMeta meta) {
-
-                    // 1. Lay custom effects tu kit
                     if (meta.hasCustomEffects()) {
                         for (PotionEffect effect : meta.getCustomEffects()) {
                             mergeEffect(effectsToApply, effect);
                         }
                     }
 
-                    // 2. Lay base effects (Speed, Strength, Fire Resistance...)
                     PotionType baseType = meta.getBasePotionType();
                     if (baseType != null) {
                         for (PotionEffect effect : baseType.getPotionEffects()) {
                             mergeEffect(effectsToApply, effect);
                         }
                     }
-
-                    // KHONG XOA LO THUOC: Giu nguyen toan bo lo thuoc trong kho do
                 }
             }
         }
@@ -168,13 +185,11 @@ public class AutoPotListener implements Listener {
             return false;
         }
 
-        // Apply tat ca hieu ung vao nguoi choi (da loc bo trung lap va loc hieu ung gay hai)
         for (PotionEffect effect : effectsToApply.values()) {
             player.removePotionEffect(effect.getType());
             player.addPotionEffect(effect);
         }
 
-        // Phat am thanh 1 lan duy nhat khi nạp kit thanh cong
         player.playSound(player.getLocation(), Sound.ENTITY_SPLASH_POTION_BREAK, 1.0f, 1.2f);
         return true;
     }
@@ -188,7 +203,6 @@ public class AutoPotListener implements Listener {
         if (existing == null) {
             map.put(effect.getType(), effect);
         } else {
-            // Uu tien cap do cao hon hoac thoi gian lau hon
             if (effect.getAmplifier() > existing.getAmplifier() ||
                (effect.getAmplifier() == existing.getAmplifier() && effect.getDuration() > existing.getDuration())) {
                 map.put(effect.getType(), effect);
@@ -215,5 +229,6 @@ public class AutoPotListener implements Listener {
             task.cancel();
         }
         activeScanners.clear();
+        lastRekitAnnounceTimes.clear();
     }
 }

@@ -12,19 +12,21 @@ public final class VCarterUtils extends JavaPlugin {
 
     private static VCarterUtils instance;
     private ScoreManager scoreManager;
+    private KillDeathListener killDeathListener;
 
     @Override
     public void onEnable() {
         instance = this;
         this.scoreManager = new ScoreManager();
+        this.killDeathListener = new KillDeathListener(this);
 
         PluginManager pluginManager = Bukkit.getPluginManager();
 
         // Dang ky Listeners
-        pluginManager.registerEvents(new KillDeathListener(this), this);
+        pluginManager.registerEvents(killDeathListener, this);
         pluginManager.registerEvents(new AutoPotListener(this), this);
 
-        // Dang ky PlaceholderAPI neu plugin dang hoat dong
+        // Dang ky PlaceholderAPI
         if (pluginManager.getPlugin("PlaceholderAPI") != null) {
             new VCarterExpansion(this).register();
             getLogger().info("Da ket noi thanh cong voi PlaceholderAPI!");
@@ -35,6 +37,9 @@ public final class VCarterUtils extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (killDeathListener != null) {
+            killDeathListener.cancelAllTasks();
+        }
         if (scoreManager != null) {
             scoreManager.clearAll();
         }

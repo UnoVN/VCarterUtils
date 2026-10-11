@@ -1,5 +1,6 @@
 package me.nh4n.vcarterutils;
 
+import me.nh4n.vcarterutils.command.MainCommand;
 import me.nh4n.vcarterutils.command.ScoreCommand;
 import me.nh4n.vcarterutils.hook.VCarterExpansion;
 import me.nh4n.vcarterutils.listener.AutoPotListener;
@@ -23,6 +24,7 @@ public final class VCarterUtils extends JavaPlugin {
     private AutoPotListener autoPotListener;
     private RegearListener regearListener;
     private ScoreCommand scoreCommand;
+    private MainCommand mainCommand;
     private BukkitTask autoResetTask;
 
     @Override
@@ -39,6 +41,7 @@ public final class VCarterUtils extends JavaPlugin {
         this.autoPotListener = new AutoPotListener(this);
         this.regearListener = new RegearListener(this);
         this.scoreCommand = new ScoreCommand(this);
+        this.mainCommand = new MainCommand(this);
 
         PluginManager pluginManager = Bukkit.getPluginManager();
 
@@ -47,10 +50,18 @@ public final class VCarterUtils extends JavaPlugin {
         pluginManager.registerEvents(regearListener, this);
         pluginManager.registerEvents(scoreCommand, this);
 
-        PluginCommand cmd = getCommand("score");
-        if (cmd != null) {
-            cmd.setExecutor(scoreCommand);
-            cmd.setTabCompleter(scoreCommand);
+        // Dang ky Lenh /score
+        PluginCommand scoreCmd = getCommand("score");
+        if (scoreCmd != null) {
+            scoreCmd.setExecutor(scoreCommand);
+            scoreCmd.setTabCompleter(scoreCommand);
+        }
+
+        // Dang ky Lenh /vcarterutils (/vcu, /vcarter)
+        PluginCommand vcuCmd = getCommand("vcarterutils");
+        if (vcuCmd != null) {
+            vcuCmd.setExecutor(mainCommand);
+            vcuCmd.setTabCompleter(mainCommand);
         }
 
         setupAutoResetTask();
@@ -63,7 +74,24 @@ public final class VCarterUtils extends JavaPlugin {
         getLogger().info("VCarterUtils v1.0.0 has been successfully enabled.");
     }
 
+    /**
+     * Tai lai toan bo cau hinh va regear whitelist trong thoi gian thuc
+     */
+    public void reloadPluginConfig() {
+        reloadConfig();
+        if (regearManager != null) {
+            regearManager.reload();
+        }
+        setupAutoResetTask();
+        getLogger().info("VCarterUtils configuration and regear whitelist reloaded.");
+    }
+
     private void setupAutoResetTask() {
+        if (autoResetTask != null) {
+            autoResetTask.cancel();
+            autoResetTask = null;
+        }
+
         if (!getConfig().getBoolean("score.auto-reset.enabled", true)) {
             return;
         }

@@ -31,4 +31,3 @@ jobs:
           name: VCarterUtils-jar
           path: target/VCarterUtils-*.jar
           retention-days: 7
-          

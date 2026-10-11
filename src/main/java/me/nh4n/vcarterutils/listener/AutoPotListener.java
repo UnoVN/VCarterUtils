@@ -11,78 +11,75 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 public class AutoPotListener implements Listener {
 
     private final VCarterUtils plugin;
-    // Luu thoi gian goi kit gan nhat de chong spam va ho tro bat su kien GUI
-    private final Map<UUID, Long> lastKitClaimTimes = new ConcurrentHashMap<>();
+
+    // Regex bat tron moi lenh load kit cua PerPlayerKit: /k1../k99, /kit1../kit99, /kit, /k, /publickit, /pk, /rekit, /rg, /regear
+    private static final Pattern KIT_COMMAND_PATTERN = Pattern.compile(
+            "^/(?:[a-zA-Z0-9_]+:)?(?:k|kit|pk|publickit|rekit|regear|rg)(?:\\d+)?(?:\\s+.*)?$",
+            Pattern.CASE_INSENSITIVE
+    );
 
     public AutoPotListener(VCarterUtils plugin) {
         this.plugin = plugin;
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST) // Khong dung ignoreCancelled de luon bat duoc lenh
-    public void onKitCommand(PlayerCommandPreprocessEvent event) {
-        String raw = event.getMessage().trim().toLowerCase();
-        String cmd = raw.split(" ")[0];
-
-        // Ho tro moi bien the: /kit, /k, /rekit, /ppk, /perplayerkit
-        if (cmd.equals("/kit") || cmd.equals("/k") || cmd.equals("/rekit") ||
-            cmd.equals("/ppk") || cmd.endsWith(":kit") || cmd.endsWith(":k")) {
-            
-            Player player = event.getPlayer();
-            lastKitClaimTimes.put(player.getUniqueId(), System.currentTimeMillis());
-            schedulePotionScanner(player);
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onCommand(PlayerCommandPreprocessEvent event) {
+        String msg = event.getMessage().trim();
+        if (KIT_COMMAND_PATTERN.matcher(msg).matches()) {
+            schedulePotionScanner(event.getPlayer());
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    // Bat ca khi su kien bi PerPlayerKit cancel de chong trom icon GUI
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) {
-            return;
-        }
-
-        // Kiem tra neu nguoi choi vua go lenh kit trong vong 10 giay ma click vao menu GUI
-        Long lastCmd = lastKitClaimTimes.get(player.getUniqueId());
-        if (lastCmd != null && System.currentTimeMillis() - lastCmd < 10000L) {
-            schedulePotionScanner(player);
+        if (event.getWhoClicked() instanceof Player player) {
+            // Khi player click trong bat ky GUI nao (menu /kit, /k)
+            if (event.getView().getTopInventory().getSize() > 0) {
+                schedulePotionScanner(player);
+            }
         }
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (!(event.getPlayer() instanceof Player player)) {
-            return;
-        }
-
-        Long lastCmd = lastKitClaimTimes.get(player.getUniqueId());
-        if (lastCmd != null && System.currentTimeMillis() - lastCmd < 10000L) {
+        if (event.getPlayer() instanceof Player player) {
             schedulePotionScanner(player);
         }
     }
 
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerRespawn(PlayerRespawnEvent event) {
+        // Ho tro che do Rekit-on-respawn cua PerPlayerKit
+        schedulePotionScanner(event.getPlayer());
+    }
+
     /**
-     * Quet kho do theo chu ky 2 tick, 5 tick, 10 tick, 20 tick 
-     * de dam bao bat duoc pot ngay khi PerPlayerKit hoan tat nap item.
+     * Quet kho do theo chu ky tre (5, 10, 15, 20, 25 ticks) de dam bao 
+     * PerPlayerKit da nap item va da chay xong kits.load.clear-effects.
      */
     private void schedulePotionScanner(Player player) {
         new BukkitRunnable() {
-            int attempts = 0;
+            int runs = 0;
 
             @Override
             public void run() {
-                if (!player.isOnline() || attempts >= 4) {
+                if (!player.isOnline() || runs >= 5) {
                     cancel();
                     return;
                 }
@@ -93,9 +90,9 @@ public class AutoPotListener implements Listener {
                     return;
                 }
 
-                attempts++;
+                runs++;
             }
-        }.runTaskTimer(plugin, 2L, 5L);
+        }.runTaskTimer(plugin, 5L, 5L);
     }
 
     private boolean applyPotionsFromInventory(Player player) {
@@ -110,29 +107,32 @@ public class AutoPotListener implements Listener {
             Material type = item.getType();
             if (type == Material.POTION || type == Material.SPLASH_POTION || type == Material.LINGERING_POTION) {
                 if (item.getItemMeta() instanceof PotionMeta meta) {
+                    List<PotionEffect> effectsToApply = new ArrayList<>();
 
-                    // 1. Ap dung Custom Effects
+                    // 1. Thu thap custom effects neu kit co cau hinh dac biet
                     if (meta.hasCustomEffects()) {
-                        for (PotionEffect effect : meta.getCustomEffects()) {
-                            // Xoa effect cu truoc khi add de tranh bi Bukkit tu choi ghi de
-                            player.removePotionEffect(effect.getType());
-                            player.addPotionEffect(effect);
-                            hasAppliedAny = true;
-                        }
+                        effectsToApply.addAll(meta.getCustomEffects());
                     }
 
-                    // 2. Ap dung Base Potion Effects (Speed, Strength, Fire Resistance...)
+                    // 2. Thu thap effects tu Base Potion Type goc (Speed, Strength, Fire Resistance...)
                     PotionType baseType = meta.getBasePotionType();
                     if (baseType != null) {
-                        List<PotionEffect> baseEffects = baseType.getPotionEffects();
-                        for (PotionEffect effect : baseEffects) {
-                            player.removePotionEffect(effect.getType());
-                            player.addPotionEffect(effect);
-                            hasAppliedAny = true;
-                        }
+                        effectsToApply.addAll(baseType.getPotionEffects());
                     }
 
-                    // KHONG XOA POTION: Giu nguyen toan bo binh thuoc trong inventory
+                    // 3. Loc bo cac hieu ung gay hai (tranh bi dinh Poison, Damage khi kit co pot nem combat)
+                    for (PotionEffect effect : effectsToApply) {
+                        if (isHarmful(effect.getType())) {
+                            continue;
+                        }
+
+                        // Xoa hieu ung cu de dam bao Paper ap dung / lam moi duration
+                        player.removePotionEffect(effect.getType());
+                        player.addPotionEffect(effect);
+                        hasAppliedAny = true;
+                    }
+
+                    // GIU NGUYEN LO THUOC TRONG INVENTORY: Khong xoa hay set null
                 }
             }
         }
@@ -142,5 +142,18 @@ public class AutoPotListener implements Listener {
         }
 
         return hasAppliedAny;
+    }
+
+    private boolean isHarmful(PotionEffectType type) {
+        return type == PotionEffectType.INSTANT_DAMAGE ||
+               type == PotionEffectType.POISON ||
+               type == PotionEffectType.SLOWNESS ||
+               type == PotionEffectType.WEAKNESS ||
+               type == PotionEffectType.WITHER ||
+               type == PotionEffectType.BLINDNESS ||
+               type == PotionEffectType.DARKNESS ||
+               type == PotionEffectType.NAUSEA ||
+               type == PotionEffectType.MINING_FATIGUE ||
+               type == PotionEffectType.HUNGER;
     }
 }

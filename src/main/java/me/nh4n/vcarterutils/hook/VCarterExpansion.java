@@ -44,7 +44,13 @@ public class VCarterExpansion extends PlaceholderExpansion {
         // Format placeholder: %vcarterutils_score_<ten_doi_thu>%
         if (params.startsWith("score_")) {
             String opponentName = params.substring(6);
-            Player opponent = Bukkit.getPlayerExact(opponentName);
+            Player opponent = null;
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                if (p.getName().equalsIgnoreCase(opponentName)) {
+                    opponent = p;
+                    break;
+                }
+            }
             if (opponent == null) {
                 return "0";
             }

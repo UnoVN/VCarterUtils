@@ -110,7 +110,11 @@ public class RegearManager {
 
                 // Neu o trong, bi chen boi rac/vat pham khac, hoac thieu so luong -> De truc tiep
                 if (currentItem == null || currentItem.getType() != originalItem.getType() || currentItem.getAmount() < originalItem.getAmount()) {
-                    inv.setItem(slot, originalItem.clone());
+                    if (slot == 40) {
+                        inv.setItemInOffHand(originalItem.clone());
+                    } else {
+                        inv.setItem(slot, originalItem.clone());
+                    }
                 }
             }
         }
@@ -124,9 +128,6 @@ public class RegearManager {
         return true;
     }
 
-    /**
-     * Parse danh sach Whitelist kem ho tro Smart Matching (Planks, Rails, Logs, Firework, Web)
-     */
     private Set<Material> getWhitelistedMaterials() {
         List<String> list = plugin.getConfig().getStringList("regear.whitelist");
         Set<Material> set = EnumSet.noneOf(Material.class);
@@ -140,7 +141,6 @@ public class RegearManager {
                 set.add(mat);
             }
 
-            // Nhan dien danh muc linh hoat
             if (clean.equals("FIREWORK") || clean.equals("FIREWORKS")) {
                 set.add(Material.FIREWORK_ROCKET);
             } else if (clean.equals("WEB")) {
@@ -180,4 +180,4 @@ public class RegearManager {
         lastDamageTimes.clear();
         lastRegearTimes.clear();
     }
-                                }
+}

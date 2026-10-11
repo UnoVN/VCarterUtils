@@ -13,3 +13,22 @@ regear:
     already-have-shulker: "<glyph:warning_blue> <#f38ba8>You already have a <#89dceb>Regear Shulker<#f38ba8> in your inventory!"
     inventory-full: "<glyph:warning_blue> <#f38ba8>Your inventory is full! <#a6adc8>Please free up at least 1 slot to receive the <#89dceb>Regear Shulker<#a6adc8>."
     received-shulker: "<glyph:warning_blue> <#a6e3a1>Received <#89dceb><b>Shulker Regear</b><#a6e3a1>! Place it on the ground to restock."
+
+score:
+  auto-reset:
+    enabled: true
+    interval-minutes: 60
+    broadcast: true
+  request-timeout-seconds: 60
+  messages:
+    no-permission: "<glyph:warning_blue> <#f38ba8>You do not have permission to execute this command."
+    player-not-found: "<glyph:warning_blue> <#f38ba8>Player <#89dceb>%target%<#f38ba8> is not online."
+    cannot-target-self: "<glyph:warning_blue> <#f38ba8>You cannot send a reset request to yourself."
+    request-sent: "<glyph:warning_blue> <#a6e3a1>Sent a 1v1 score reset request to <#89dceb>%target%<#a6e3a1>. Waiting for approval..."
+    request-received: "<glyph:warning_blue> <#89dceb>%sender% <#a6adc8>has requested to reset your 1v1 score! <click:run_command:'/score accept %sender%'><hover:show_text:'<#a6e3a1>Click to accept'><#a6e3a1><b>[ACCEPT]</b></hover></click> <click:run_command:'/score decline %sender%'><hover:show_text:'<#f38ba8>Click to decline'><#f38ba8><b>[DECLINE]</b></hover></click>"
+    no-pending-request: "<glyph:warning_blue> <#f38ba8>You have no pending reset request from <#89dceb>%sender%<#f38ba8>."
+    request-declined: "<glyph:warning_blue> <#f38ba8>Reset request with <#89dceb>%player%<#f38ba8> was declined."
+    score-reset-success: "<glyph:warning_blue> <#a6e3a1>1v1 score between <#89dceb>%player1% <#a6e3a1>and <#89dceb>%player2% <#a6e3a1>has been reset!"
+    global-reset-admin: "<glyph:warning_blue> <#a6e3a1>All 1v1 scores have been globally reset by an administrator."
+    global-reset-auto: "<glyph:warning_blue> <#a6e3a1>All 1v1 scores have been automatically reset (Hourly Schedule)."
+    usage: "<glyph:warning_blue> <#a6adc8>Usage: <#89dceb>/score reset <player> <#6c7086>| <#89dceb>/score accept <player> <#6c7086>| <#89dceb>/score resetall"

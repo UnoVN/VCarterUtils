@@ -3,8 +3,7 @@ version: '1.0.0'
 main: me.nh4n.vcarterutils.VCarterUtils
 api-version: '1.21'
 author: Nh4n
-description: Plugin tinh diem 1v1 action bar va autopot giu nguyen lo thuoc khi nhan kit.
+description: Plugin tinh diem 1v1 action bar 15s va autopot PerPlayerKit giu nguyen lo thuoc.
 softdepend:
   - PlaceholderAPI
   - PerPlayerKit
-  

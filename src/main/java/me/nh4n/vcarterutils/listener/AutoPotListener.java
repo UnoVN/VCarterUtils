@@ -93,7 +93,6 @@ public class AutoPotListener implements Listener {
             oldTask.cancel();
         }
 
-        // Phat broadcast rekit announcement
         broadcastRekit(player);
 
         BukkitTask task = new BukkitRunnable() {
@@ -123,9 +122,6 @@ public class AutoPotListener implements Listener {
         activeScanners.put(uuid, task);
     }
 
-    /**
-     * Gui thong bao rekit theo Catppuccin palette & glyph
-     */
     private void broadcastRekit(Player player) {
         if (!plugin.getConfig().getBoolean("kit.announcement.enabled", true)) {
             return;
@@ -133,7 +129,6 @@ public class AutoPotListener implements Listener {
 
         long now = System.currentTimeMillis();
         Long lastAnnounce = lastRekitAnnounceTimes.get(player.getUniqueId());
-        // Chon loc gian cach 2.5s tranh spam khi nguoi choi spam lenh
         if (lastAnnounce != null && (now - lastAnnounce < 2500L)) {
             return;
         }

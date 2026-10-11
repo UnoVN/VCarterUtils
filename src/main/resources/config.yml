@@ -3,20 +3,22 @@
 #       Catppuccin Pastel Palette & Glyph Integration
 # ==============================================================
 
-kit:
-  announcement:
-    enabled: true
-    broadcast: true # Gui thong bao den toan bo server khi co nguoi rekit
-    message: "<glyph:warning_blue> <#89dceb><b>%player%</b> <#a6adc8>rekited"
-
 regear:
   # Thoi gian (giay) sau khi nhan sat thuong moi duoc phep regear (0 de tat)
   damage-cooldown-seconds: 5
   # Thoi gian gian cach giua 2 lan regear (giay)
   cooldown-seconds: 3
 
-  # Danh sach cac vat pham duoc phep regear va de dung vi tri ban dau
-  # Cac vat pham ngoai danh sach nay (Kiem, Giap, Cup...) se duoc giu nguyen ven
+  # Tu dong don sach rac o cac o von di trong trong kit ban dau
+  clear-junk-in-empty-slots: true
+
+  # Thong bao tren chat khi co nguoi Regear (khong thong bao luc rekit)
+  announcement:
+    enabled: true
+    broadcast: true
+    message: "<glyph:warning_blue> <#89dceb><b>%player%</b> <#a6adc8>regeared"
+
+  # Danh sach whitelist cac item duoc phep refill va de dung vi tri
   whitelist:
     - FIREWORK_ROCKET
     - FIREWORK
@@ -116,3 +118,4 @@ score:
     global-reset-admin: "<glyph:warning_blue> <#a6e3a1>All 1v1 scores have been globally reset by an administrator."
     global-reset-auto: "<glyph:warning_blue> <#a6e3a1>All 1v1 scores have been automatically reset (Hourly Schedule)."
     usage: "<glyph:warning_blue> <#a6adc8>Usage: <#89dceb>/score reset <player> <#6c7086>| <#89dceb>/score accept <player> <#6c7086>| <#89dceb>/score resetall"
+    

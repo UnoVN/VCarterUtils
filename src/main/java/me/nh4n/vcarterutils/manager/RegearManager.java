@@ -9,6 +9,7 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.CrossbowMeta;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,7 +22,7 @@ public class RegearManager {
     // Cache danh sach whitelist de toi uu hieu nang
     private final Set<Material> cachedWhitelist = EnumSet.noneOf(Material.class);
 
-    // Snapshot layout kit goc cua tung nguoi choi
+    // Snapshot layout kit goc cua tung nguoi choi (luu ca item, slot, va dan da nap trong no)
     private final Map<UUID, ItemStack[]> savedKitSnapshots = new ConcurrentHashMap<>();
     // Combat Tag (thoi diem nhan sat thuong gan nhat)
     private final Map<UUID, Long> lastDamageTimes = new ConcurrentHashMap<>();
@@ -35,7 +36,7 @@ public class RegearManager {
     }
 
     /**
-     * Load va parse toan bo danh sach whitelist tu config
+     * Load va parse toan bo danh sach whitelist tu config (ho tro tu khoa nhom)
      */
     public void reload() {
         cachedWhitelist.clear();
@@ -45,7 +46,7 @@ public class RegearManager {
             String clean = entry.trim().toUpperCase();
             if (clean.isEmpty()) continue;
 
-            // 1. Kiem tra cac tu khoa nhom (Fast Groups)
+            // 1. Nhom vu khi va dung cu
             if (clean.equals("AXES") || clean.equals("AXE")) {
                 for (Material m : Material.values()) {
                     if (m.name().endsWith("_AXE")) cachedWhitelist.add(m);
@@ -58,7 +59,9 @@ public class RegearManager {
                 cachedWhitelist.add(Material.ARROW);
                 cachedWhitelist.add(Material.SPECTRAL_ARROW);
                 cachedWhitelist.add(Material.TIPPED_ARROW);
-            } else if (clean.equals("PLANKS") || clean.contains("PLANK")) {
+            } 
+            // 2. Nhom khoi xay dung va duong ray
+            else if (clean.equals("PLANKS") || clean.contains("PLANK")) {
                 for (Material m : Material.values()) {
                     if (m.name().endsWith("_PLANKS")) cachedWhitelist.add(m);
                 }
@@ -74,7 +77,9 @@ public class RegearManager {
                         cachedWhitelist.add(m);
                     }
                 }
-            } else if (clean.equals("POTIONS") || clean.equals("SPLASH_POTIONS")) {
+            } 
+            // 3. Nhom thuoc va vat pham dac thu
+            else if (clean.equals("POTIONS") || clean.equals("SPLASH_POTIONS") || clean.equals("SPLASH_POTION")) {
                 cachedWhitelist.add(Material.SPLASH_POTION);
                 cachedWhitelist.add(Material.POTION);
                 cachedWhitelist.add(Material.LINGERING_POTION);
@@ -83,7 +88,7 @@ public class RegearManager {
             } else if (clean.equals("FIREWORK") || clean.equals("FIREWORKS")) {
                 cachedWhitelist.add(Material.FIREWORK_ROCKET);
             } else {
-                // 2. Parse Material don le
+                // Parse truc tiep ten Material
                 Material mat = Material.matchMaterial(clean);
                 if (mat != null) {
                     cachedWhitelist.add(mat);
@@ -92,6 +97,9 @@ public class RegearManager {
         }
     }
 
+    /**
+     * Deep-clone toan bo 41 slot (bao gom ca dan mui ten da nap trong no, enchantments, NBT)
+     */
     public void saveKitSnapshot(Player player) {
         PlayerInventory inv = player.getInventory();
         ItemStack[] currentContents = inv.getContents();
@@ -112,6 +120,9 @@ public class RegearManager {
         lastDamageTimes.put(playerId, System.currentTimeMillis());
     }
 
+    /**
+     * Thuc hien Regear: Ghi de thang len rac/item la va refill y chang vat pham ban dau
+     */
     public boolean performRegear(Player player) {
         UUID uuid = player.getUniqueId();
         long now = System.currentTimeMillis();
@@ -161,43 +172,56 @@ public class RegearManager {
         for (int slot = 0; slot < snapshot.length; slot++) {
             ItemStack originalItem = snapshot[slot];
 
-            // Chi bo qua giap (36-39) neu vat pham do KHONG thuoc whitelist (vi du: giu do ben giap Netherite, nhung van cho phep Elytra regear)
+            // Chi bo qua giap (36-39) neu vat pham do KHONG thuoc whitelist (vi du: giu do ben giap, nhung van cho phep Elytra regear)
             if (slot >= 36 && slot <= 39) {
                 if (originalItem == null || !isWhitelisted(originalItem.getType())) {
                     continue;
                 }
             }
 
-            // TH1: Slot goc trong kit la vat pham thuoc Whitelist -> Ghi de va phuc hoi
+            // TH1: Slot goc trong kit la vat pham thuoc Whitelist -> Ghi de va phuc hoi y chang
             if (originalItem != null && isWhitelisted(originalItem.getType())) {
                 ItemStack currentItem = inv.getItem(slot);
-
                 boolean needRestore = false;
 
-                // Neu o dang trong, hoac bi rac/block la chen vao
+                // Neu slot dang trong, hoac bi rac / block la chen vao
                 if (currentItem == null || currentItem.getType() != originalItem.getType()) {
                     needRestore = true;
                 }
-                // Neu stack vat pham bi thieu so luong
+                // Neu stack vat pham bi thieu so luong (Ender Pearl, Pot, Blocks, v.v.)
                 else if (currentItem.getAmount() < originalItem.getAmount()) {
                     needRestore = true;
                 }
-                // Doi voi Crossbow trong Cart PvP: luon hoi lai no co san ten/phao hoa tu kit goc
+                // Xu ly rieng cho NO (CROSSBOW): Kiem tra tinh trang dan mui ten da nap
                 else if (originalItem.getType() == Material.CROSSBOW) {
+                    if (originalItem.getItemMeta() instanceof CrossbowMeta origMeta &&
+                        currentItem.getItemMeta() instanceof CrossbowMeta curMeta) {
+                        // Neu so luong hoac loai dan mui ten da nap khong giong voi kit ban dau -> can nap lai
+                        if (!origMeta.getChargedProjectiles().equals(curMeta.getChargedProjectiles())) {
+                            needRestore = true;
+                        }
+                    } else if (!currentItem.isSimilar(originalItem)) {
+                        needRestore = true;
+                    }
+                }
+                // Cac vu khi, dung cu, vat pham khac neu co thay doi do ben / NBT
+                else if (!currentItem.isSimilar(originalItem)) {
                     needRestore = true;
                 }
 
                 if (needRestore) {
+                    // Clone nguyen ban item goc (giu nguyen 100% loai mui ten, do ben, enchant)
+                    ItemStack restored = originalItem.clone();
                     if (slot == 40) {
-                        inv.setItemInOffHand(originalItem.clone());
+                        inv.setItemInOffHand(restored);
                     } else if (slot == 38) {
-                        inv.setChestplate(originalItem.clone());
+                        inv.setChestplate(restored);
                     } else {
-                        inv.setItem(slot, originalItem.clone());
+                        inv.setItem(slot, restored);
                     }
                 }
             }
-            // TH2: Slot goc trong kit von di la O TRONG -> Xoa rac chen vao
+            // TH2: Slot goc trong kit von di la O TRONG -> Xoa sach rac nhat ngoai san
             else if (originalItem == null && clearJunkInEmpty) {
                 ItemStack currentItem = inv.getItem(slot);
                 if (currentItem != null && !isItemInOriginalKit(currentItem.getType(), snapshot)) {

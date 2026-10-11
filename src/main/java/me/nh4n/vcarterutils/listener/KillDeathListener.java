@@ -3,6 +3,7 @@ package me.nh4n.vcarterutils.listener;
 import me.nh4n.vcarterutils.VCarterUtils;
 import me.nh4n.vcarterutils.manager.ScoreManager;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -26,9 +27,9 @@ public class KillDeathListener implements Listener {
     private final Map<UUID, BukkitTask> activeActionBarTasks = new ConcurrentHashMap<>();
     private final Map<UUID, Component> pendingRespawnMessages = new ConcurrentHashMap<>();
 
-    // Bang mau Hex: Killer (#e64553), Ti so (#a6d189), Victim (#04a5e5)
+    // Bang mau: Killer (#e64553), Ti so (Trang #ffffff), Victim (#04a5e5)
     private static final TextColor COLOR_KILLER = TextColor.fromHexString("#e64553");
-    private static final TextColor COLOR_SCORE  = TextColor.fromHexString("#a6d189");
+    private static final TextColor COLOR_SCORE  = NamedTextColor.WHITE;
     private static final TextColor COLOR_VICTIM = TextColor.fromHexString("#04a5e5");
 
     public KillDeathListener(VCarterUtils plugin) {
@@ -50,7 +51,7 @@ public class KillDeathListener implements Listener {
         int killerScore = manager.getKillsAgainst(killer.getUniqueId(), victim.getUniqueId());
         int victimScore = manager.getKillsAgainst(victim.getUniqueId(), killer.getUniqueId());
 
-        // Format khong con bold: &#e64553<Killer> &#a6d189<Score> - <Score> &#04a5e5<Victim>
+        // Format: &#e64553<Killer> &f<Score> - <Score> &#04a5e5<Victim> (khong bold)
         Component actionBarComponent = Component.text()
                 .append(Component.text(killer.getName(), COLOR_KILLER))
                 .append(Component.text(" "))
@@ -62,7 +63,7 @@ public class KillDeathListener implements Listener {
         // Nguoi ha guc: Hien thi 15 giay
         startPersistentActionBar(killer, actionBarComponent, 15);
 
-        // Nguoi bi ha guc: Luu lai de hien thi 15 giay sau khi Respawn
+        // Nguoi bi ha guc: Luu lai cho den khi bam Respawn
         pendingRespawnMessages.put(victim.getUniqueId(), actionBarComponent);
     }
 

@@ -7,3 +7,11 @@ description: Plugin tinh diem 1v1 action bar 15s va autopot PerPlayerKit giu ngu
 softdepend:
   - PlaceholderAPI
   - PerPlayerKit
+commands:
+  score:
+    description: Manage 1v1 scores and reset requests
+    aliases: [vscore, sc]
+permissions:
+  vcarterutils.admin:
+    description: Allows administrative score reset commands
+    default: op

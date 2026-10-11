@@ -26,13 +26,13 @@ public final class VCarterUtils extends JavaPlugin {
         pluginManager.registerEvents(killDeathListener, this);
         pluginManager.registerEvents(new AutoPotListener(this), this);
 
-        // Dang ky PlaceholderAPI
+        // Dang ky PlaceholderAPI neu co tren server
         if (pluginManager.getPlugin("PlaceholderAPI") != null) {
             new VCarterExpansion(this).register();
             getLogger().info("Da ket noi thanh cong voi PlaceholderAPI!");
         }
 
-        getLogger().info("VCarterUtils v1.0.0 da duoc kich hoat san sang.");
+        getLogger().info("VCarterUtils v1.0.0 da duoc kich hoat thanh cong!");
     }
 
     @Override

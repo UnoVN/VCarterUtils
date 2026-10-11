@@ -18,6 +18,9 @@ public class RegearManager {
     private final VCarterUtils plugin;
     private final MiniMessage miniMessage;
 
+    // Cache danh sach whitelist de toi uu hieu nang
+    private final Set<Material> cachedWhitelist = EnumSet.noneOf(Material.class);
+
     // Snapshot layout kit goc cua tung nguoi choi
     private final Map<UUID, ItemStack[]> savedKitSnapshots = new ConcurrentHashMap<>();
     // Combat Tag (thoi diem nhan sat thuong gan nhat)
@@ -28,11 +31,67 @@ public class RegearManager {
     public RegearManager(VCarterUtils plugin) {
         this.plugin = plugin;
         this.miniMessage = MiniMessage.miniMessage();
+        reload();
     }
 
     /**
-     * Luu ban snapshot day du 41 slot ngay khi player load kit
+     * Load va parse toan bo danh sach whitelist tu config
      */
+    public void reload() {
+        cachedWhitelist.clear();
+        List<String> list = plugin.getConfig().getStringList("regear.whitelist");
+
+        for (String entry : list) {
+            String clean = entry.trim().toUpperCase();
+            if (clean.isEmpty()) continue;
+
+            // 1. Kiem tra cac tu khoa nhom (Fast Groups)
+            if (clean.equals("AXES") || clean.equals("AXE")) {
+                for (Material m : Material.values()) {
+                    if (m.name().endsWith("_AXE")) cachedWhitelist.add(m);
+                }
+            } else if (clean.equals("PICKAXES") || clean.equals("PICKAXE")) {
+                for (Material m : Material.values()) {
+                    if (m.name().endsWith("_PICKAXE")) cachedWhitelist.add(m);
+                }
+            } else if (clean.equals("ARROWS") || clean.equals("ARROW")) {
+                cachedWhitelist.add(Material.ARROW);
+                cachedWhitelist.add(Material.SPECTRAL_ARROW);
+                cachedWhitelist.add(Material.TIPPED_ARROW);
+            } else if (clean.equals("PLANKS") || clean.contains("PLANK")) {
+                for (Material m : Material.values()) {
+                    if (m.name().endsWith("_PLANKS")) cachedWhitelist.add(m);
+                }
+            } else if (clean.equals("RAILS") || clean.equals("RAIL")) {
+                for (Material m : Material.values()) {
+                    if (m.name().endsWith("_RAIL") || m == Material.RAIL) cachedWhitelist.add(m);
+                }
+            } else if (clean.equals("WOOD") || clean.equals("LOGS") || clean.equals("LOG") || clean.equals("WOODS")) {
+                for (Material m : Material.values()) {
+                    if (m.name().endsWith("_LOG") || m.name().endsWith("_WOOD") ||
+                        m.name().endsWith("_STEM") || m.name().startsWith("STRIPPED_") ||
+                        m == Material.BAMBOO_BLOCK) {
+                        cachedWhitelist.add(m);
+                    }
+                }
+            } else if (clean.equals("POTIONS") || clean.equals("SPLASH_POTIONS")) {
+                cachedWhitelist.add(Material.SPLASH_POTION);
+                cachedWhitelist.add(Material.POTION);
+                cachedWhitelist.add(Material.LINGERING_POTION);
+            } else if (clean.equals("WEB")) {
+                cachedWhitelist.add(Material.COBWEB);
+            } else if (clean.equals("FIREWORK") || clean.equals("FIREWORKS")) {
+                cachedWhitelist.add(Material.FIREWORK_ROCKET);
+            } else {
+                // 2. Parse Material don le
+                Material mat = Material.matchMaterial(clean);
+                if (mat != null) {
+                    cachedWhitelist.add(mat);
+                }
+            }
+        }
+    }
+
     public void saveKitSnapshot(Player player) {
         PlayerInventory inv = player.getInventory();
         ItemStack[] currentContents = inv.getContents();
@@ -53,9 +112,6 @@ public class RegearManager {
         lastDamageTimes.put(playerId, System.currentTimeMillis());
     }
 
-    /**
-     * Thuc thi Regear tu than 100%: De thang len rac/item la va refill dung slot whitelist
-     */
     public boolean performRegear(Player player) {
         UUID uuid = player.getUniqueId();
         long now = System.currentTimeMillis();
@@ -101,32 +157,49 @@ public class RegearManager {
         PlayerInventory inv = player.getInventory();
         boolean clearJunkInEmpty = plugin.getConfig().getBoolean("regear.clear-junk-in-empty-slots", true);
 
-        // 4. DUYET TUNG SLOT VA GHI DE DUNG VI TRI (0-35: Storage/Hotbar, 40: Offhand)
+        // 4. DUYET TUNG SLOT VA GHI DE DUNG VI TRI
         for (int slot = 0; slot < snapshot.length; slot++) {
-            // Bo qua cac slot giap (36, 37, 38, 39) de giu nguyen do ben thuc chien
-            if (slot >= 36 && slot <= 39) {
-                continue;
-            }
-
             ItemStack originalItem = snapshot[slot];
 
-            // TH1: Slot goc trong kit la item thuoc Whitelist -> BAT BUOC GHI DE VA PHUC HOI
+            // Chi bo qua giap (36-39) neu vat pham do KHONG thuoc whitelist (vi du: giu do ben giap Netherite, nhung van cho phep Elytra regear)
+            if (slot >= 36 && slot <= 39) {
+                if (originalItem == null || !isWhitelisted(originalItem.getType())) {
+                    continue;
+                }
+            }
+
+            // TH1: Slot goc trong kit la vat pham thuoc Whitelist -> Ghi de va phuc hoi
             if (originalItem != null && isWhitelisted(originalItem.getType())) {
                 ItemStack currentItem = inv.getItem(slot);
 
-                // Bat ke o do dang trong, dang bi rac/block la chiem, hay bi hao hut so luong -> DE THANG
-                if (currentItem == null || currentItem.getType() != originalItem.getType() || currentItem.getAmount() < originalItem.getAmount()) {
+                boolean needRestore = false;
+
+                // Neu o dang trong, hoac bi rac/block la chen vao
+                if (currentItem == null || currentItem.getType() != originalItem.getType()) {
+                    needRestore = true;
+                }
+                // Neu stack vat pham bi thieu so luong
+                else if (currentItem.getAmount() < originalItem.getAmount()) {
+                    needRestore = true;
+                }
+                // Doi voi Crossbow trong Cart PvP: luon hoi lai no co san ten/phao hoa tu kit goc
+                else if (originalItem.getType() == Material.CROSSBOW) {
+                    needRestore = true;
+                }
+
+                if (needRestore) {
                     if (slot == 40) {
                         inv.setItemInOffHand(originalItem.clone());
+                    } else if (slot == 38) {
+                        inv.setChestplate(originalItem.clone());
                     } else {
                         inv.setItem(slot, originalItem.clone());
                     }
                 }
             }
-            // TH2: Slot goc trong kit von di la O TRONG (null)
+            // TH2: Slot goc trong kit von di la O TRONG -> Xoa rac chen vao
             else if (originalItem == null && clearJunkInEmpty) {
                 ItemStack currentItem = inv.getItem(slot);
-                // Neu player nhat phai rac/block linh tinh khong co trong kit goc -> XOA SACH
                 if (currentItem != null && !isItemInOriginalKit(currentItem.getType(), snapshot)) {
                     if (slot == 40) {
                         inv.setItemInOffHand(null);
@@ -139,12 +212,11 @@ public class RegearManager {
 
         lastRegearTimes.put(uuid, now);
 
-        // Hieu ung am thanh
         player.playSound(player.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1.0f, 1.2f);
         player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.5f);
         sendConfigMessage(player, "regear.messages.success", "%seconds%", "0");
 
-        // 5. BROADCAST ANNOUNCEMENT LEN CHAT CHO REGEAR (Catppuccin Palette)
+        // Broadcast thong bao regear
         broadcastRegear(player);
 
         return true;
@@ -168,42 +240,8 @@ public class RegearManager {
         }
     }
 
-    /**
-     * Kiem tra Whitelist ho tro Smart Category Matcher
-     */
     public boolean isWhitelisted(Material mat) {
-        if (mat == null) return false;
-        String name = mat.name();
-
-        // Danh muc dac thu
-        if (name.equals("FIREWORK_ROCKET") || name.equals("ENDER_PEARL") ||
-            name.equals("TNT_MINECART") || name.equals("SPLASH_POTION") ||
-            name.equals("CROSSBOW") || name.equals("COBWEB")) {
-            return true;
-        }
-
-        // Tat ca cac loai Rail
-        if (name.endsWith("_RAIL") || name.equals("RAIL")) {
-            return true;
-        }
-
-        // Tat ca cac loai Planks, Logs, Wood, Stems
-        if (name.endsWith("_PLANKS") || name.endsWith("_LOG") ||
-            name.endsWith("_WOOD") || name.endsWith("_STEM") ||
-            name.startsWith("STRIPPED_") || name.equals("BAMBOO_BLOCK")) {
-            return true;
-        }
-
-        // Kiem tra them trong config list neu co bo sung them
-        List<String> list = plugin.getConfig().getStringList("regear.whitelist");
-        for (String entry : list) {
-            Material m = Material.matchMaterial(entry.trim().toUpperCase());
-            if (m != null && m == mat) {
-                return true;
-            }
-        }
-
-        return false;
+        return mat != null && cachedWhitelist.contains(mat);
     }
 
     private boolean isItemInOriginalKit(Material mat, ItemStack[] snapshot) {
@@ -226,5 +264,6 @@ public class RegearManager {
         savedKitSnapshots.clear();
         lastDamageTimes.clear();
         lastRegearTimes.clear();
+        cachedWhitelist.clear();
     }
 }

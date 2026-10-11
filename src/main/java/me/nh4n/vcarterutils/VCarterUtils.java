@@ -20,18 +20,23 @@ public final class VCarterUtils extends JavaPlugin {
     private KillDeathListener killDeathListener;
     private AutoPotListener autoPotListener;
     private RegearListener regearListener;
+    private ScoreCommand scoreCommand;
     private BukkitTask autoResetTask;
 
     @Override
     public void onEnable() {
         instance = this;
 
+        // Tu dong dong bo tat ca cac key moi tu jar vao config.yml tren host ma khong lam mat config cu
         saveDefaultConfig();
+        getConfig().options().copyDefaults(true);
+        saveConfig();
 
         this.scoreManager = new ScoreManager();
         this.killDeathListener = new KillDeathListener(this);
         this.autoPotListener = new AutoPotListener(this);
         this.regearListener = new RegearListener(this);
+        this.scoreCommand = new ScoreCommand(this);
 
         PluginManager pluginManager = Bukkit.getPluginManager();
 
@@ -39,19 +44,17 @@ public final class VCarterUtils extends JavaPlugin {
         pluginManager.registerEvents(killDeathListener, this);
         pluginManager.registerEvents(autoPotListener, this);
         pluginManager.registerEvents(regearListener, this);
+        pluginManager.registerEvents(scoreCommand, this); // Bat lenh /sc qua event de tranh xung dot
 
-        // Dang ky Lenh /score
-        ScoreCommand scoreCommand = new ScoreCommand(this);
+        // Dang ky Lenh Bukkit
         PluginCommand cmd = getCommand("score");
         if (cmd != null) {
             cmd.setExecutor(scoreCommand);
             cmd.setTabCompleter(scoreCommand);
         }
 
-        // Dang ky Task tu dong Reset Score theo chu ky (Mac dinh 60 phut = 1 tieng)
         setupAutoResetTask();
 
-        // Ket noi PlaceholderAPI
         if (pluginManager.getPlugin("PlaceholderAPI") != null) {
             new VCarterExpansion(this).register();
             getLogger().info("Successfully hooked into PlaceholderAPI!");
@@ -72,10 +75,9 @@ public final class VCarterUtils extends JavaPlugin {
             scoreManager.clearAll();
 
             if (getConfig().getBoolean("score.auto-reset.broadcast", true)) {
-                String msg = getConfig().getString("score.messages.global-reset-auto");
-                if (msg != null && !msg.isEmpty()) {
-                    Bukkit.broadcast(MiniMessage.miniMessage().deserialize(msg));
-                }
+                String msg = getConfig().getString("score.messages.global-reset-auto",
+                        "<glyph:warning_blue> <#a6e3a1>All 1v1 scores have been automatically reset (Hourly Schedule).");
+                Bukkit.broadcast(MiniMessage.miniMessage().deserialize(msg));
             }
         }, ticks, ticks);
     }

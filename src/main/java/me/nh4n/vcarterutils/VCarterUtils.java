@@ -19,24 +19,28 @@ public final class VCarterUtils extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+
+        // Tao file config.yml mac dinh neu chua ton tai
+        saveDefaultConfig();
+
         this.scoreManager = new ScoreManager();
         this.killDeathListener = new KillDeathListener(this);
         this.regearListener = new RegearListener(this);
 
         PluginManager pluginManager = Bukkit.getPluginManager();
 
-        // Dang ky Listeners
+        // Dang ky cac Listeners
         pluginManager.registerEvents(killDeathListener, this);
         pluginManager.registerEvents(new AutoPotListener(this), this);
         pluginManager.registerEvents(regearListener, this);
 
-        // Dang ky PlaceholderAPI neu co
+        // Ket noi PlaceholderAPI
         if (pluginManager.getPlugin("PlaceholderAPI") != null) {
             new VCarterExpansion(this).register();
-            getLogger().info("Da ket noi thanh cong voi PlaceholderAPI!");
+            getLogger().info("Successfully hooked into PlaceholderAPI!");
         }
 
-        getLogger().info("VCarterUtils v1.0.0 da duoc kich hoat thanh cong!");
+        getLogger().info("VCarterUtils v1.0.0 has been successfully enabled.");
     }
 
     @Override
@@ -50,7 +54,7 @@ public final class VCarterUtils extends JavaPlugin {
         if (scoreManager != null) {
             scoreManager.clearAll();
         }
-        getLogger().info("VCarterUtils da dung hoat dong.");
+        getLogger().info("VCarterUtils has been disabled.");
     }
 
     public static VCarterUtils getInstance() {

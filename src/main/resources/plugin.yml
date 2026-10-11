@@ -3,7 +3,7 @@ version: '1.0.0'
 main: me.nh4n.vcarterutils.VCarterUtils
 api-version: '1.21'
 author: Nh4n
-description: Plugin tinh diem 1v1 action bar 15s va autopot PerPlayerKit giu nguyen lo thuoc.
+description: Plugin tinh diem 1v1 action bar 15s va he thong Regear tuy bien cho Cart PvP.
 softdepend:
   - PlaceholderAPI
   - PerPlayerKit
@@ -11,7 +11,11 @@ commands:
   score:
     description: Manage 1v1 scores and reset requests
     aliases: [vscore, sc]
+  vcarterutils:
+    description: Main plugin command
+    aliases: [vcu, vcarter]
 permissions:
   vcarterutils.admin:
-    description: Allows administrative score reset commands
+    description: Allows administrative score reset and config reload commands
     default: op
+    

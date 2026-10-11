@@ -1,8 +1,6 @@
 package me.nh4n.vcarterutils.listener;
 
 import me.nh4n.vcarterutils.VCarterUtils;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -27,7 +25,6 @@ public class AutoPotListener implements Listener {
 
     private final VCarterUtils plugin;
     private final Map<UUID, BukkitTask> activeScanners = new ConcurrentHashMap<>();
-    private final Map<UUID, Long> lastRekitAnnounceTimes = new ConcurrentHashMap<>();
 
     private static final Set<String> NON_LOAD_SUBCOMMANDS = Set.of(
             "room", "editor", "create", "delete", "edit", "swap", "share", "copy", "inspect", "autosetup"
@@ -93,8 +90,6 @@ public class AutoPotListener implements Listener {
             oldTask.cancel();
         }
 
-        broadcastRekit(player);
-
         BukkitTask task = new BukkitRunnable() {
             int runs = 0;
 
@@ -102,6 +97,7 @@ public class AutoPotListener implements Listener {
             public void run() {
                 if (!player.isOnline() || runs >= 5) {
                     activeScanners.remove(uuid);
+                    // Luu snapshot layout kit ban dau cho Regear
                     plugin.getRegearManager().saveKitSnapshot(player);
                     cancel();
                     return;
@@ -110,6 +106,7 @@ public class AutoPotListener implements Listener {
                 boolean applied = applyPotionsFromInventory(player);
                 if (applied) {
                     activeScanners.remove(uuid);
+                    // Kit da duoc nap day du -> luu snapshot
                     plugin.getRegearManager().saveKitSnapshot(player);
                     cancel();
                     return;
@@ -120,32 +117,6 @@ public class AutoPotListener implements Listener {
         }.runTaskTimer(plugin, 4L, 4L);
 
         activeScanners.put(uuid, task);
-    }
-
-    private void broadcastRekit(Player player) {
-        if (!plugin.getConfig().getBoolean("kit.announcement.enabled", true)) {
-            return;
-        }
-
-        long now = System.currentTimeMillis();
-        Long lastAnnounce = lastRekitAnnounceTimes.get(player.getUniqueId());
-        if (lastAnnounce != null && (now - lastAnnounce < 2500L)) {
-            return;
-        }
-        lastRekitAnnounceTimes.put(player.getUniqueId(), now);
-
-        String rawMsg = plugin.getConfig().getString(
-                "kit.announcement.message",
-                "<glyph:warning_blue> <#89dceb><b>%player%</b> <#a6adc8>rekited"
-        );
-
-        Component comp = MiniMessage.miniMessage().deserialize(rawMsg.replace("%player%", player.getName()));
-
-        if (plugin.getConfig().getBoolean("kit.announcement.broadcast", true)) {
-            Bukkit.broadcast(comp);
-        } else {
-            player.sendMessage(comp);
-        }
     }
 
     private boolean applyPotionsFromInventory(Player player) {
@@ -224,6 +195,5 @@ public class AutoPotListener implements Listener {
             task.cancel();
         }
         activeScanners.clear();
-        lastRekitAnnounceTimes.clear();
     }
 }

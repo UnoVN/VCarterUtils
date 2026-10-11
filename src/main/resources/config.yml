@@ -3,16 +3,100 @@
 #       Catppuccin Pastel Palette & Glyph Integration
 # ==============================================================
 
+kit:
+  announcement:
+    enabled: true
+    broadcast: true # Gui thong bao den toan bo server khi co nguoi rekit
+    message: "<glyph:warning_blue> <#89dceb><b>%player%</b> <#a6adc8>rekited"
+
 regear:
+  # Thoi gian (giay) sau khi nhan sat thuong moi duoc phep regear (0 de tat)
+  damage-cooldown-seconds: 5
+  # Thoi gian gian cach giua 2 lan regear (giay)
+  cooldown-seconds: 3
+
+  # Danh sach cac vat pham duoc phep regear va de dung vi tri ban dau
+  # Cac vat pham ngoai danh sach nay (Kiem, Giap, Cup...) se duoc giu nguyen ven
+  whitelist:
+    - FIREWORK_ROCKET
+    - FIREWORK
+    - ENDER_PEARL
+    - TNT_MINECART
+    - SPLASH_POTION
+    - CROSSBOW
+    - COBWEB
+    - WEB
+    # Tat ca cac loai Rail
+    - RAIL
+    - POWERED_RAIL
+    - DETECTOR_RAIL
+    - ACTIVATOR_RAIL
+    # Tat ca cac loai Planks
+    - OAK_PLANKS
+    - SPRUCE_PLANKS
+    - BIRCH_PLANKS
+    - JUNGLE_PLANKS
+    - ACACIA_PLANKS
+    - DARK_OAK_PLANKS
+    - MANGROVE_PLANKS
+    - CHERRY_PLANKS
+    - BAMBOO_PLANKS
+    - CRIMSON_PLANKS
+    - WARPED_PLANKS
+    # Tat ca cac loai Block go (Logs, Wood, Stem)
+    - OAK_LOG
+    - SPRUCE_LOG
+    - BIRCH_LOG
+    - JUNGLE_LOG
+    - ACACIA_LOG
+    - DARK_OAK_LOG
+    - MANGROVE_LOG
+    - CHERRY_LOG
+    - BAMBOO_BLOCK
+    - CRIMSON_STEM
+    - WARPED_STEM
+    - OAK_WOOD
+    - SPRUCE_WOOD
+    - BIRCH_WOOD
+    - JUNGLE_WOOD
+    - ACACIA_WOOD
+    - DARK_OAK_WOOD
+    - MANGROVE_WOOD
+    - CHERRY_WOOD
+    - STRIPPED_OAK_LOG
+    - STRIPPED_SPRUCE_LOG
+    - STRIPPED_BIRCH_LOG
+    - STRIPPED_JUNGLE_LOG
+    - STRIPPED_ACACIA_LOG
+    - STRIPPED_DARK_OAK_LOG
+    - STRIPPED_MANGROVE_LOG
+    - STRIPPED_CHERRY_LOG
+    - STRIPPED_BAMBOO_BLOCK
+    - STRIPPED_CRIMSON_STEM
+    - STRIPPED_WARPED_STEM
+    - STRIPPED_OAK_WOOD
+    - STRIPPED_SPRUCE_WOOD
+    - STRIPPED_BIRCH_WOOD
+    - STRIPPED_JUNGLE_WOOD
+    - STRIPPED_ACACIA_WOOD
+    - STRIPPED_DARK_OAK_WOOD
+    - STRIPPED_MANGROVE_WOOD
+    - STRIPPED_CHERRY_WOOD
+
   item:
     name: "<#89dceb><b><!italic>Shulker Regear</b>"
     lore:
       - "<#a6adc8><!italic>Place on the ground to restock."
       - "<#6c7086><!italic>Automatically disappears after use."
+
   messages:
     already-have-shulker: "<glyph:warning_blue> <#f38ba8>You already have a <#89dceb>Regear Shulker<#f38ba8> in your inventory!"
     inventory-full: "<glyph:warning_blue> <#f38ba8>Your inventory is full! <#a6adc8>Please free up at least 1 slot to receive the <#89dceb>Regear Shulker<#a6adc8>."
     received-shulker: "<glyph:warning_blue> <#a6e3a1>Received <#89dceb><b>Shulker Regear</b><#a6e3a1>! Place it on the ground to restock."
+    combat-tagged: "<glyph:warning_blue> <#f38ba8>Cannot regear while in combat! <#a6adc8>Wait <#f9e2af><b>%seconds%s</b> <#a6adc8>after taking damage."
+    on-cooldown: "<glyph:warning_blue> <#f38ba8>Regear is on cooldown! <#a6adc8>Please wait <#f9e2af><b>%seconds%s</b>."
+    no-kit-loaded: "<glyph:warning_blue> <#f38ba8>No previous kit snapshot found! <#a6adc8>Please load a kit first (/k1)."
+    success: "<glyph:warning_blue> <#a6e3a1>Successfully regeared and restored inventory slots!"
 
 score:
   auto-reset:

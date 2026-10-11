@@ -4,7 +4,6 @@ import me.nh4n.vcarterutils.VCarterUtils;
 import me.nh4n.vcarterutils.manager.ScoreManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -27,7 +26,7 @@ public class KillDeathListener implements Listener {
     private final Map<UUID, BukkitTask> activeActionBarTasks = new ConcurrentHashMap<>();
     private final Map<UUID, Component> pendingRespawnMessages = new ConcurrentHashMap<>();
 
-    // Bang mau Hex theo yeu cau: &#e64553, &#a6d189, &#04a5e5
+    // Bang mau Hex: Killer (#e64553), Ti so (#a6d189), Victim (#04a5e5)
     private static final TextColor COLOR_KILLER = TextColor.fromHexString("#e64553");
     private static final TextColor COLOR_SCORE  = TextColor.fromHexString("#a6d189");
     private static final TextColor COLOR_VICTIM = TextColor.fromHexString("#04a5e5");
@@ -51,19 +50,19 @@ public class KillDeathListener implements Listener {
         int killerScore = manager.getKillsAgainst(killer.getUniqueId(), victim.getUniqueId());
         int victimScore = manager.getKillsAgainst(victim.getUniqueId(), killer.getUniqueId());
 
-        // Dinh dang Action Bar: &#e64553<Killer> &l&#a6d189 <Score> - <Score> &r&#04a5e5<Victim>
+        // Format khong con bold: &#e64553<Killer> &#a6d189<Score> - <Score> &#04a5e5<Victim>
         Component actionBarComponent = Component.text()
                 .append(Component.text(killer.getName(), COLOR_KILLER))
                 .append(Component.text(" "))
-                .append(Component.text(killerScore + " - " + victimScore, COLOR_SCORE, TextDecoration.BOLD))
+                .append(Component.text(killerScore + " - " + victimScore, COLOR_SCORE))
                 .append(Component.text(" "))
                 .append(Component.text(victim.getName(), COLOR_VICTIM))
                 .build();
 
-        // Nguoi ha guc con song: Gui lien tuc trong 15 giay (15s)
+        // Nguoi ha guc: Hien thi 15 giay
         startPersistentActionBar(killer, actionBarComponent, 15);
 
-        // Nguoi bi ha guc dang o man hinh chet: Luu lai de hien thi 15s sau khi Respawn
+        // Nguoi bi ha guc: Luu lai de hien thi 15 giay sau khi Respawn
         pendingRespawnMessages.put(victim.getUniqueId(), actionBarComponent);
     }
 
@@ -73,7 +72,6 @@ public class KillDeathListener implements Listener {
         Component msg = pendingRespawnMessages.remove(player.getUniqueId());
 
         if (msg != null) {
-            // Cho 7 tick sau khi hoi sinh de client render xong the gioi
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (player.isOnline()) {
                     startPersistentActionBar(player, msg, 15);
@@ -89,9 +87,6 @@ public class KillDeathListener implements Listener {
         pendingRespawnMessages.remove(uuid);
     }
 
-    /**
-     * Gui lai Action Bar moi 20 tick (1 giay) de giu tren man hinh dung 15 giay
-     */
     private void startPersistentActionBar(Player player, Component component, int durationSeconds) {
         UUID uuid = player.getUniqueId();
         stopActionBarTask(uuid);

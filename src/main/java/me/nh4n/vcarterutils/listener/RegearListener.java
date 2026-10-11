@@ -36,9 +36,7 @@ public class RegearListener implements Listener {
     private final NamespacedKey regearKey;
     private final MiniMessage miniMessage;
 
-    // Danh sach toa do cac Shulker Regear duoc dat tren san
-    private final Set<Location> activeShulkerBlocks = Collections.newSetFromMap(new ConcurrentHashMap<>());
-    // Chặn loop lệnh khi plugin chạy lệnh regear ngầm
+    // Chặn vòng lặp vô hạn khi plugin gọi lệnh regear ngầm
     private final Set<UUID> bypassCommandFilter = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     public RegearListener(VCarterUtils plugin) {
@@ -63,7 +61,7 @@ public class RegearListener implements Listener {
 
             event.setCancelled(true);
 
-            // 1. Kiem tra xem nguoi choi da co Shulker Regear trong nguoi chua
+            // 1. Kiểm tra nếu người chơi đã có Shulker Regear trong người
             if (hasRegearShulker(player)) {
                 String msgRaw = plugin.getConfig().getString(
                         "regear.messages.already-have-shulker",
@@ -74,7 +72,7 @@ public class RegearListener implements Listener {
                 return;
             }
 
-            // 2. Kiem tra kho do co bi day khong
+            // 2. Kiểm tra kho đồ bị đầy
             if (player.getInventory().firstEmpty() == -1) {
                 String msgRaw = plugin.getConfig().getString(
                         "regear.messages.inventory-full",
@@ -85,13 +83,13 @@ public class RegearListener implements Listener {
                 return;
             }
 
-            // 3. Trao vat pham Shulker Regear va gui thong bao
+            // 3. Trao Shulker Regear và thông báo
             player.getInventory().addItem(createRegearShulkerItem());
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.2f);
 
             String msgRaw = plugin.getConfig().getString(
                     "regear.messages.received-shulker",
-                    "<glyph:warning_blue> <#a6e3a1>Received <#89dceb><b>Shulker Regear</b><#a6e3a1>! Place it down and <#f9e2af><b>Right-Click</b><#a6e3a1> to restock."
+                    "<glyph:warning_blue> <#a6e3a1>Received <#89dceb><b>Shulker Regear</b><#a6e3a1>! Place it on the ground to restock."
             );
             player.sendMessage(format(player, msgRaw));
         }
@@ -104,56 +102,45 @@ public class RegearListener implements Listener {
             return;
         }
 
+        Player player = event.getPlayer();
         Block block = event.getBlockPlaced();
         Location loc = block.getLocation();
 
-        activeShulkerBlocks.add(loc);
+        // Đánh dấu khối Shulker để chặn mở GUI nếu có click trùng lặp
         block.setMetadata("VCarter_Regear_Block", new FixedMetadataValue(plugin, true));
+
+        // Tự động dọn block và kích hoạt Regear ở tick kế tiếp:
+        // Đảm bảo Minecraft hoàn tất việc tiêu thụ item trên tay trước khi nạp đồ mới
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (block.hasMetadata("VCarter_Regear_Block") || block.getType().name().endsWith("SHULKER_BOX")) {
+                block.removeMetadata("VCarter_Regear_Block", plugin);
+                block.setType(Material.AIR);
+                loc.getWorld().playSound(loc, Sound.BLOCK_SHULKER_BOX_CLOSE, 1.0f, 1.2f);
+            }
+
+            if (player.isOnline()) {
+                executePerPlayerKitRegear(player);
+            }
+        });
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
-            return;
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            Block block = event.getClickedBlock();
+            if (block != null && block.hasMetadata("VCarter_Regear_Block")) {
+                // Chặn hoàn toàn việc mở GUI Shulker
+                event.setCancelled(true);
+            }
         }
-
-        Block block = event.getClickedBlock();
-        if (block == null || !block.getType().name().endsWith("SHULKER_BOX")) {
-            return;
-        }
-
-        Location loc = block.getLocation();
-        if (!activeShulkerBlocks.contains(loc) && !block.hasMetadata("VCarter_Regear_Block")) {
-            return;
-        }
-
-        // 1. Chặn mở giao diện Shulker
-        event.setCancelled(true);
-
-        Player player = event.getPlayer();
-
-        // 2. Dọn sạch khối Shulker trên mặt đất
-        activeShulkerBlocks.remove(loc);
-        block.removeMetadata("VCarter_Regear_Block", plugin);
-        block.setType(Material.AIR);
-        loc.getWorld().playSound(loc, Sound.BLOCK_SHULKER_BOX_CLOSE, 1.0f, 1.2f);
-
-        // 3. Thực thi lệnh Regear ngầm qua PerPlayerKit
-        executePerPlayerKitRegear(player);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
-        Location loc = block.getLocation();
-
-        if (activeShulkerBlocks.contains(loc) || block.hasMetadata("VCarter_Regear_Block")) {
-            activeShulkerBlocks.remove(loc);
-            block.removeMetadata("VCarter_Regear_Block", plugin);
-
-            // Hoàn trả đúng vật phẩm Shulker Regear có gắn thẻ PDC
+        if (block.hasMetadata("VCarter_Regear_Block")) {
             event.setDropItems(false);
-            loc.getWorld().dropItemNaturally(loc, createRegearShulkerItem());
+            block.removeMetadata("VCarter_Regear_Block", plugin);
         }
     }
 
@@ -200,7 +187,7 @@ public class RegearListener implements Listener {
             List<String> loreRaw = plugin.getConfig().getStringList("regear.item.lore");
             if (loreRaw.isEmpty()) {
                 loreRaw = List.of(
-                        "<#a6adc8><!italic>Place on the ground and <#f9e2af><b>Right-Click</b><#a6adc8> to restock.",
+                        "<#a6adc8><!italic>Place on the ground to restock.",
                         "<#6c7086><!italic>Automatically disappears after use."
                 );
             }
@@ -211,7 +198,6 @@ public class RegearListener implements Listener {
             }
             meta.lore(loreComponents);
 
-            // Gắn thẻ PDC để nhận diện chính xác
             meta.getPersistentDataContainer().set(regearKey, PersistentDataType.BYTE, (byte) 1);
             item.setItemMeta(meta);
         }
@@ -230,7 +216,6 @@ public class RegearListener implements Listener {
     }
 
     public void clearAll() {
-        activeShulkerBlocks.clear();
         bypassCommandFilter.clear();
     }
 }

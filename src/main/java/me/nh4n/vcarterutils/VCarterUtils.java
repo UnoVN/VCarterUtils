@@ -6,8 +6,10 @@ import me.nh4n.vcarterutils.hook.VCarterExpansion;
 import me.nh4n.vcarterutils.listener.AutoPotListener;
 import me.nh4n.vcarterutils.listener.KillDeathListener;
 import me.nh4n.vcarterutils.listener.RegearListener;
+import me.nh4n.vcarterutils.listener.TotemListener;
 import me.nh4n.vcarterutils.manager.RegearManager;
 import me.nh4n.vcarterutils.manager.ScoreManager;
+import me.nh4n.vcarterutils.manager.TotemManager;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
@@ -20,9 +22,11 @@ public final class VCarterUtils extends JavaPlugin {
     private static VCarterUtils instance;
     private ScoreManager scoreManager;
     private RegearManager regearManager;
+    private TotemManager totemManager;
     private KillDeathListener killDeathListener;
     private AutoPotListener autoPotListener;
     private RegearListener regearListener;
+    private TotemListener totemListener;
     private ScoreCommand scoreCommand;
     private MainCommand mainCommand;
     private BukkitTask autoResetTask;
@@ -37,9 +41,13 @@ public final class VCarterUtils extends JavaPlugin {
 
         this.scoreManager = new ScoreManager();
         this.regearManager = new RegearManager(this);
+        this.totemManager = new TotemManager(this);
+
         this.killDeathListener = new KillDeathListener(this);
         this.autoPotListener = new AutoPotListener(this);
         this.regearListener = new RegearListener(this);
+        this.totemListener = new TotemListener(this);
+
         this.scoreCommand = new ScoreCommand(this);
         this.mainCommand = new MainCommand(this);
 
@@ -48,16 +56,15 @@ public final class VCarterUtils extends JavaPlugin {
         pluginManager.registerEvents(killDeathListener, this);
         pluginManager.registerEvents(autoPotListener, this);
         pluginManager.registerEvents(regearListener, this);
+        pluginManager.registerEvents(totemListener, this);
         pluginManager.registerEvents(scoreCommand, this);
 
-        // Dang ky Lenh /score
         PluginCommand scoreCmd = getCommand("score");
         if (scoreCmd != null) {
             scoreCmd.setExecutor(scoreCommand);
             scoreCmd.setTabCompleter(scoreCommand);
         }
 
-        // Dang ky Lenh /vcarterutils (/vcu, /vcarter)
         PluginCommand vcuCmd = getCommand("vcarterutils");
         if (vcuCmd != null) {
             vcuCmd.setExecutor(mainCommand);
@@ -74,16 +81,16 @@ public final class VCarterUtils extends JavaPlugin {
         getLogger().info("VCarterUtils v1.0.0 has been successfully enabled.");
     }
 
-    /**
-     * Tai lai toan bo cau hinh va regear whitelist trong thoi gian thuc
-     */
     public void reloadPluginConfig() {
         reloadConfig();
         if (regearManager != null) {
             regearManager.reload();
         }
+        if (totemManager != null) {
+            totemManager.reload();
+        }
         setupAutoResetTask();
-        getLogger().info("VCarterUtils configuration and regear whitelist reloaded.");
+        getLogger().info("VCarterUtils configuration reloaded.");
     }
 
     private void setupAutoResetTask() {
@@ -121,6 +128,9 @@ public final class VCarterUtils extends JavaPlugin {
         if (autoPotListener != null) {
             autoPotListener.clearAll();
         }
+        if (totemManager != null) {
+            totemManager.clearAll();
+        }
         if (regearManager != null) {
             regearManager.clearAll();
         }
@@ -140,5 +150,9 @@ public final class VCarterUtils extends JavaPlugin {
 
     public RegearManager getRegearManager() {
         return regearManager;
+    }
+
+    public TotemManager getTotemManager() {
+        return totemManager;
     }
 }

@@ -20,6 +20,7 @@ regear:
 
   # ==============================================================
   #               REGEAR WHITELIST CONFIGURATION
+  # Luu y: FIREWORK, BOW, SWORDS, EXP BOTTLE bi cam tuyet doi khoi Regear!
   # Meo: Ban co the su dung cac tu khoa nhom de bat nhanh:
   #  - AXES        : Tat ca cac loai riu (Wood -> Netherite)
   #  - PICKAXES    : Tat ca cac loai cup (Wood -> Netherite)
@@ -27,10 +28,9 @@ regear:
   #  - PLANKS      : Tat ca cac loai van go
   #  - WOOD / LOGS : Tat ca cac loai than go, stems, go khoi
   #  - RAILS       : Tat ca cac loai duong ray
-  # Hoac nhap chinh xac ten vat pham Bukkit Material bat ky.
+  #  - POTIONS     : Tat ca cac loai thuoc nem / lingering
   # ==============================================================
   whitelist:
-    - FIREWORK_ROCKET
     - ENDER_PEARL
     - TNT_MINECART
     - SPLASH_POTION

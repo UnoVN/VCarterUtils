@@ -69,7 +69,7 @@ public class AutoPotListener implements Listener {
         Player player = event.getPlayer();
         clearInfiniteEffects(player);
 
-        // Chay them 1 tick de dam bao Paper da dong bo trang thai chuyen world hoan tat
+        // Delay 1 tick de dam bao Paper dong bo trang thai chuyen world hoan tat
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (player.isOnline()) {
                 clearInfiniteEffects(player);
@@ -88,6 +88,27 @@ public class AutoPotListener implements Listener {
     }
 
     /**
+     * Kiem tra xem AutoPot co duoc phep hoat dong cho nguoi choi o world hien tai hay khong
+     */
+    private boolean isAutoPotEnabledFor(Player player) {
+        if (!plugin.getConfig().getBoolean("autopot.enabled", true)) {
+            return false;
+        }
+        if (player == null || player.getWorld() == null) {
+            return false;
+        }
+
+        String currentWorld = player.getWorld().getName();
+        List<String> blacklistedWorlds = plugin.getConfig().getStringList("autopot.blacklisted-worlds");
+        for (String blacklisted : blacklistedWorlds) {
+            if (blacklisted != null && blacklisted.trim().equalsIgnoreCase(currentWorld.trim())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Xoa toan bo cac hieu ung khong co thoi gian dem nguoc (vo han)
      */
     private void clearInfiniteEffects(Player player) {
@@ -99,10 +120,7 @@ public class AutoPotListener implements Listener {
     }
 
     /**
-     * Nhan dien hieu ung vo han:
-     * - Paper 1.21 API: effect.isInfinite()
-     * - PotionEffect.INFINITE_DURATION (-1)
-     * - Thoi gian qua dai do cac plugin spawn/lobby cap (> 1,000,000 tick ~ 14 gio tro len)
+     * Nhan dien hieu ung vo han (isInfinite, -1, hoac > 1,000,000 tick)
      */
     private boolean isInfiniteEffect(PotionEffect effect) {
         if (effect == null) return false;
@@ -111,7 +129,7 @@ public class AutoPotListener implements Listener {
                 return true;
             }
         } catch (NoSuchMethodError ignored) {
-            // Tuong thich nguoc neu core Paper chua cap nhat build moi
+            // Tuong thich neu Paper build chua cap nhat ham isInfinite()
         }
         return effect.getDuration() == PotionEffect.INFINITE_DURATION
             || effect.getDuration() == -1
@@ -148,7 +166,9 @@ public class AutoPotListener implements Listener {
     }
 
     /**
-     * Cho PerPlayerKit nap xong kho do (sau 5 tick), sau do dong bo hoa va so sanh cac hieu ung
+     * Cho PerPlayerKit nap xong kho do (sau 5 tick):
+     * 1. Neu world KHONG nam trong blacklist -> chay AutoPot.
+     * 2. Luon luon chup Snapshot kit de tinh nang Regear hoat dong binh thuong o moi world.
      */
     private void scheduleKitProcess(Player player) {
         UUID uuid = player.getUniqueId();
@@ -166,8 +186,10 @@ public class AutoPotListener implements Listener {
                     return;
                 }
 
-                // 1. Dong bo hieu ung theo kit moi (giu nguyen cai trung, xoa cai khong co)
-                syncKitEffects(player);
+                // 1. Kiem tra blacklist world: chi apply AutoPot neu world duoc phep
+                if (isAutoPotEnabledFor(player)) {
+                    syncKitEffects(player);
+                }
 
                 // 2. Chup snapshot layout kit ban dau phuc vu Regear
                 plugin.getRegearManager().saveKitSnapshot(player);
@@ -180,16 +202,12 @@ public class AutoPotListener implements Listener {
     }
 
     /**
-     * Logic xu ly AutoPot:
-     * - Quet cac lo thuoc trong kit moi.
-     * - Neu kit moi KHONG co hieu ung ma nguoi choi dang co / kit cu da apply -> Xoa rieng hieu ung do.
-     * - Neu kit moi CO hieu ung do -> Giu nguyen khong xoa.
+     * Dong bo hieu ung AutoPot (xoa rieng hieu ung khong co trong kit moi, giu nguyen hieu ung trung)
      */
     private void syncKitEffects(Player player) {
         UUID uuid = player.getUniqueId();
         Map<PotionEffectType, PotionEffect> newKitEffects = extractPotionsFromInventory(player);
 
-        // Tap hop tat ca cac hieu ung can xem xet: gom hieu ung kit cu + hieu ung huu han dang co trong nguoi
         Set<PotionEffectType> currentOrPreviousTypes = new HashSet<>();
         Set<PotionEffectType> prev = lastAutoPotEffectTypes.get(uuid);
         if (prev != null) {
@@ -197,13 +215,12 @@ public class AutoPotListener implements Listener {
         }
 
         for (PotionEffect active : player.getActivePotionEffects()) {
-            // Bo qua hieu ung vo han de tranh xoa nham buff he thong
             if (!isInfiniteEffect(active)) {
                 currentOrPreviousTypes.add(active.getType());
             }
         }
 
-        // BƯỚC 1: XOA RIENG cac effect KHONG ton tai trong kit moi
+        // Xoa rieng cac effect khong ton tai trong kit moi
         for (PotionEffectType type : currentOrPreviousTypes) {
             if (!newKitEffects.containsKey(type)) {
                 player.removePotionEffect(type);
@@ -212,17 +229,14 @@ public class AutoPotListener implements Listener {
 
         boolean hasAppliedNewEffect = false;
 
-        // BƯỚC 2: GIU NGUYEN hoac REFRESH cac effect CO trong kit moi
+        // Giu nguyen hoac lam moi cac effect co trong kit moi
         for (PotionEffect newEffect : newKitEffects.values()) {
             PotionEffect current = player.getPotionEffect(newEffect.getType());
 
             if (current == null) {
-                // Chua co -> Apply moi vao nguoi
                 player.addPotionEffect(newEffect);
                 hasAppliedNewEffect = true;
             } else {
-                // Da co san trong nguoi -> GIU NGUYEN!
-                // Chi lam moi neu thoi gian con lai cua effect sap het hoac effect moi manh hon
                 if (newEffect.getAmplifier() > current.getAmplifier() ||
                    (newEffect.getAmplifier() == current.getAmplifier() && newEffect.getDuration() > current.getDuration())) {
                     player.removePotionEffect(newEffect.getType());
@@ -232,7 +246,6 @@ public class AutoPotListener implements Listener {
             }
         }
 
-        // Cap nhat bo nho luu cac effect cua kit vua load
         lastAutoPotEffectTypes.put(uuid, new HashSet<>(newKitEffects.keySet()));
 
         if (hasAppliedNewEffect) {
@@ -240,9 +253,6 @@ public class AutoPotListener implements Listener {
         }
     }
 
-    /**
-     * Trich xuat toan bo cac hieu ung co loi tu cac lo thuoc trong kho do
-     */
     private Map<PotionEffectType, PotionEffect> extractPotionsFromInventory(Player player) {
         ItemStack[] contents = player.getInventory().getContents();
         Map<PotionEffectType, PotionEffect> map = new HashMap<>();

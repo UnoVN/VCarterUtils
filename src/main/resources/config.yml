@@ -5,38 +5,33 @@
 
 autopot:
   enabled: true
-  # Danh sach cac world ma AutoPot se KHONG hoat dong
-  # Khi o cac world nay, lenh /k1../k99 se khong tu dong apply effect potion
   blacklisted-worlds:
     - "ffa_diamond"
 
+totem:
+  enabled: true
+  # So luong Totem toi da co the mang trong kho do (bao gom ca hotbar va offhand)
+  max-in-inventory: 1
+  # So lan kich hoat (pop) Totem toi da trong 1 lan nhan kit (1 mang song)
+  max-activations-per-kit: 1
+  # Hanh dong khi phat hien vuot qua so Totem cho phep: REMOVE (xoa bo) hoac DROP (roi xuong dat)
+  excess-action: "REMOVE"
+  # Danh sach world ma tinh nang Totem Limiter se bi vo hieu hoa
+  blacklisted-worlds:
+    - "ffa_diamond"
+  messages:
+    inventory-limit-reached: "<glyph:warning_blue> <#f38ba8>You can only carry <#89dceb>%max%<#f38ba8> Totem of Undying in your inventory!"
+    activation-limit-reached: "<glyph:warning_blue> <#f38ba8>You have already used your Totem for this kit! Totem activation denied."
+
 regear:
-  # Thoi gian (giay) sau khi nhan sat thuong moi duoc phep regear (0 de tat)
   damage-cooldown-seconds: 5
-  # Thoi gian gian cach giua 2 lan regear (giay)
   cooldown-seconds: 3
-
-  # Tu dong don sach rac o cac o von di trong trong kit ban dau
   clear-junk-in-empty-slots: true
-
-  # Thong bao tren chat khi co nguoi Regear (khong thong bao luc rekit)
   announcement:
     enabled: true
     broadcast: true
     message: "<glyph:warning_blue> <#89dceb><b>%player%</b> <#a6adc8>regeared"
 
-  # ==============================================================
-  #               REGEAR WHITELIST CONFIGURATION
-  # Luu y: FIREWORK, BOW, SWORDS, EXP BOTTLE bi cam tuyet doi khoi Regear!
-  # Meo: Ban co the su dung cac tu khoa nhom de bat nhanh:
-  #  - AXES        : Tat ca cac loai riu (Wood -> Netherite)
-  #  - PICKAXES    : Tat ca cac loai cup (Wood -> Netherite)
-  #  - ARROWS      : Mui ten thuong, spectral, tipped arrow
-  #  - PLANKS      : Tat ca cac loai van go
-  #  - WOOD / LOGS : Tat ca cac loai than go, stems, go khoi
-  #  - RAILS       : Tat ca cac loai duong ray
-  #  - POTIONS     : Tat ca cac loai thuoc nem / lingering
-  # ==============================================================
   whitelist:
     - ENDER_PEARL
     - TNT_MINECART

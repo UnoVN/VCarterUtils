@@ -19,12 +19,12 @@ public class RegearManager {
     private final VCarterUtils plugin;
     private final MiniMessage miniMessage;
 
-    // Cache danh sach whitelist de toi uu hieu nang
+    // Cache danh sach whitelist da duoc loc bo hoan toan cac item bi cam
     private final Set<Material> cachedWhitelist = EnumSet.noneOf(Material.class);
 
-    // Snapshot layout kit goc cua tung nguoi choi (luu ca item, slot, va dan da nap trong no)
+    // Snapshot layout kit goc cua tung nguoi choi
     private final Map<UUID, ItemStack[]> savedKitSnapshots = new ConcurrentHashMap<>();
-    // Combat Tag (thoi diem nhan sat thuong gan nhat)
+    // Combat Tag
     private final Map<UUID, Long> lastDamageTimes = new ConcurrentHashMap<>();
     // Regear Cooldown
     private final Map<UUID, Long> lastRegearTimes = new ConcurrentHashMap<>();
@@ -36,7 +36,42 @@ public class RegearManager {
     }
 
     /**
-     * Load va parse toan bo danh sach whitelist tu config (ho tro tu khoa nhom)
+     * Kiem tra vat pham bi CAM HOAN TOAN khoi tinh nang Regear:
+     * - Firework (phao hoa)
+     * - Bow (cung)
+     * - Swords (tat ca cac loai kiem)
+     * - Experience Bottle (chai exp)
+     */
+    public boolean isForbidden(Material mat) {
+        if (mat == null) {
+            return true;
+        }
+
+        // Cam tat ca cac loai Kiem
+        if (mat.name().endsWith("_SWORD")) {
+            return true;
+        }
+
+        // Cam Phao hoa
+        if (mat == Material.FIREWORK_ROCKET || mat == Material.FIREWORK_STAR) {
+            return true;
+        }
+
+        // Cam Cung
+        if (mat == Material.BOW) {
+            return true;
+        }
+
+        // Cam Chai EXP
+        if (mat == Material.EXPERIENCE_BOTTLE) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Load va parse danh sach whitelist tu config
      */
     public void reload() {
         cachedWhitelist.clear();
@@ -46,14 +81,18 @@ public class RegearManager {
             String clean = entry.trim().toUpperCase();
             if (clean.isEmpty()) continue;
 
-            // 1. Nhom vu khi va dung cu
+            // 1. Nhom vu khi va dung cu (DA LOAI BO SWORDS VA BOWS)
             if (clean.equals("AXES") || clean.equals("AXE")) {
                 for (Material m : Material.values()) {
-                    if (m.name().endsWith("_AXE")) cachedWhitelist.add(m);
+                    if (m.name().endsWith("_AXE") && !isForbidden(m)) {
+                        cachedWhitelist.add(m);
+                    }
                 }
             } else if (clean.equals("PICKAXES") || clean.equals("PICKAXE")) {
                 for (Material m : Material.values()) {
-                    if (m.name().endsWith("_PICKAXE")) cachedWhitelist.add(m);
+                    if (m.name().endsWith("_PICKAXE") && !isForbidden(m)) {
+                        cachedWhitelist.add(m);
+                    }
                 }
             } else if (clean.equals("ARROWS") || clean.equals("ARROW")) {
                 cachedWhitelist.add(Material.ARROW);
@@ -63,17 +102,21 @@ public class RegearManager {
             // 2. Nhom khoi xay dung va duong ray
             else if (clean.equals("PLANKS") || clean.contains("PLANK")) {
                 for (Material m : Material.values()) {
-                    if (m.name().endsWith("_PLANKS")) cachedWhitelist.add(m);
+                    if (m.name().endsWith("_PLANKS") && !isForbidden(m)) {
+                        cachedWhitelist.add(m);
+                    }
                 }
             } else if (clean.equals("RAILS") || clean.equals("RAIL")) {
                 for (Material m : Material.values()) {
-                    if (m.name().endsWith("_RAIL") || m == Material.RAIL) cachedWhitelist.add(m);
+                    if ((m.name().endsWith("_RAIL") || m == Material.RAIL) && !isForbidden(m)) {
+                        cachedWhitelist.add(m);
+                    }
                 }
             } else if (clean.equals("WOOD") || clean.equals("LOGS") || clean.equals("LOG") || clean.equals("WOODS")) {
                 for (Material m : Material.values()) {
-                    if (m.name().endsWith("_LOG") || m.name().endsWith("_WOOD") ||
-                        m.name().endsWith("_STEM") || m.name().startsWith("STRIPPED_") ||
-                        m == Material.BAMBOO_BLOCK) {
+                    if ((m.name().endsWith("_LOG") || m.name().endsWith("_WOOD") ||
+                         m.name().endsWith("_STEM") || m.name().startsWith("STRIPPED_") ||
+                         m == Material.BAMBOO_BLOCK) && !isForbidden(m)) {
                         cachedWhitelist.add(m);
                     }
                 }
@@ -85,21 +128,19 @@ public class RegearManager {
                 cachedWhitelist.add(Material.LINGERING_POTION);
             } else if (clean.equals("WEB")) {
                 cachedWhitelist.add(Material.COBWEB);
-            } else if (clean.equals("FIREWORK") || clean.equals("FIREWORKS")) {
-                cachedWhitelist.add(Material.FIREWORK_ROCKET);
             } else {
-                // Parse truc tiep ten Material
+                // Parse truc tiep ten Material va chan neu thuoc danh sach cam
                 Material mat = Material.matchMaterial(clean);
-                if (mat != null) {
+                if (mat != null && !isForbidden(mat)) {
                     cachedWhitelist.add(mat);
                 }
             }
         }
+
+        // Dam bao loai bo 100% cac vat pham bi cam khoi cache
+        cachedWhitelist.removeIf(this::isForbidden);
     }
 
-    /**
-     * Deep-clone toan bo 41 slot (bao gom ca dan mui ten da nap trong no, enchantments, NBT)
-     */
     public void saveKitSnapshot(Player player) {
         PlayerInventory inv = player.getInventory();
         ItemStack[] currentContents = inv.getContents();
@@ -120,9 +161,6 @@ public class RegearManager {
         lastDamageTimes.put(playerId, System.currentTimeMillis());
     }
 
-    /**
-     * Thuc hien Regear: Ghi de thang len rac/item la va refill y chang vat pham ban dau
-     */
     public boolean performRegear(Player player) {
         UUID uuid = player.getUniqueId();
         long now = System.currentTimeMillis();
@@ -172,14 +210,14 @@ public class RegearManager {
         for (int slot = 0; slot < snapshot.length; slot++) {
             ItemStack originalItem = snapshot[slot];
 
-            // Chi bo qua giap (36-39) neu vat pham do KHONG thuoc whitelist (vi du: giu do ben giap, nhung van cho phep Elytra regear)
+            // Chi bo qua giap (36-39) neu vat pham khong phai Elytra / khong nam trong whitelist
             if (slot >= 36 && slot <= 39) {
                 if (originalItem == null || !isWhitelisted(originalItem.getType())) {
                     continue;
                 }
             }
 
-            // TH1: Slot goc trong kit la vat pham thuoc Whitelist -> Ghi de va phuc hoi y chang
+            // TH1: Slot goc trong kit la vat pham thuoc Whitelist va KHONG BI CAM
             if (originalItem != null && isWhitelisted(originalItem.getType())) {
                 ItemStack currentItem = inv.getItem(slot);
                 boolean needRestore = false;
@@ -192,11 +230,10 @@ public class RegearManager {
                 else if (currentItem.getAmount() < originalItem.getAmount()) {
                     needRestore = true;
                 }
-                // Xu ly rieng cho NO (CROSSBOW): Kiem tra tinh trang dan mui ten da nap
+                // Xu ly rieng cho NO (CROSSBOW): Kiem tra tinh trang dan da nap
                 else if (originalItem.getType() == Material.CROSSBOW) {
                     if (originalItem.getItemMeta() instanceof CrossbowMeta origMeta &&
                         currentItem.getItemMeta() instanceof CrossbowMeta curMeta) {
-                        // Neu so luong hoac loai dan mui ten da nap khong giong voi kit ban dau -> can nap lai
                         if (!origMeta.getChargedProjectiles().equals(curMeta.getChargedProjectiles())) {
                             needRestore = true;
                         }
@@ -204,13 +241,12 @@ public class RegearManager {
                         needRestore = true;
                     }
                 }
-                // Cac vu khi, dung cu, vat pham khac neu co thay doi do ben / NBT
+                // Cac vat pham khac neu khong con nguyen ban
                 else if (!currentItem.isSimilar(originalItem)) {
                     needRestore = true;
                 }
 
                 if (needRestore) {
-                    // Clone nguyen ban item goc (giu nguyen 100% loai mui ten, do ben, enchant)
                     ItemStack restored = originalItem.clone();
                     if (slot == 40) {
                         inv.setItemInOffHand(restored);
@@ -265,7 +301,7 @@ public class RegearManager {
     }
 
     public boolean isWhitelisted(Material mat) {
-        return mat != null && cachedWhitelist.contains(mat);
+        return mat != null && !isForbidden(mat) && cachedWhitelist.contains(mat);
     }
 
     private boolean isItemInOriginalKit(Material mat, ItemStack[] snapshot) {

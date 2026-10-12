@@ -39,9 +39,6 @@ public class AutoPotListener implements Listener {
         this.plugin = plugin;
     }
 
-    /**
-     * Bat cac lenh load kit cua PerPlayerKit: /k1..k99, /kit1..kit99, /pk, /publickit, /rekit
-     */
     @EventHandler(priority = EventPriority.LOWEST)
     public void onCommand(PlayerCommandPreprocessEvent event) {
         String msg = event.getMessage().trim();
@@ -54,6 +51,9 @@ public class AutoPotListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
+        // Reset luot kich hoat totem khi chet va hoi sinh
+        plugin.getTotemManager().resetActivations(player.getUniqueId());
+
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (player.isOnline()) {
                 scheduleKitProcess(player);
@@ -61,18 +61,15 @@ public class AutoPotListener implements Listener {
         }, 10L);
     }
 
-    /**
-     * Tinh nang: Khi sang world khac, neu trong nguoi co hieu ung vo han thi xoa ngay
-     */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onWorldChange(PlayerChangedWorldEvent event) {
         Player player = event.getPlayer();
         clearInfiniteEffects(player);
 
-        // Delay 1 tick de dam bao Paper dong bo trang thai chuyen world hoan tat
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (player.isOnline()) {
                 clearInfiniteEffects(player);
+                plugin.getTotemManager().enforceInventoryLimit(player);
             }
         }, 1L);
     }
@@ -87,9 +84,6 @@ public class AutoPotListener implements Listener {
         lastAutoPotEffectTypes.remove(uuid);
     }
 
-    /**
-     * Kiem tra xem AutoPot co duoc phep hoat dong cho nguoi choi o world hien tai hay khong
-     */
     private boolean isAutoPotEnabledFor(Player player) {
         if (!plugin.getConfig().getBoolean("autopot.enabled", true)) {
             return false;
@@ -108,9 +102,6 @@ public class AutoPotListener implements Listener {
         return true;
     }
 
-    /**
-     * Xoa toan bo cac hieu ung khong co thoi gian dem nguoc (vo han)
-     */
     private void clearInfiniteEffects(Player player) {
         for (PotionEffect effect : player.getActivePotionEffects()) {
             if (isInfiniteEffect(effect)) {
@@ -119,9 +110,6 @@ public class AutoPotListener implements Listener {
         }
     }
 
-    /**
-     * Nhan dien hieu ung vo han (isInfinite, -1, hoac > 1,000,000 tick)
-     */
     private boolean isInfiniteEffect(PotionEffect effect) {
         if (effect == null) return false;
         try {
@@ -129,7 +117,6 @@ public class AutoPotListener implements Listener {
                 return true;
             }
         } catch (NoSuchMethodError ignored) {
-            // Tuong thich neu Paper build chua cap nhat ham isInfinite()
         }
         return effect.getDuration() == PotionEffect.INFINITE_DURATION
             || effect.getDuration() == -1
@@ -167,8 +154,9 @@ public class AutoPotListener implements Listener {
 
     /**
      * Cho PerPlayerKit nap xong kho do (sau 5 tick):
-     * 1. Neu world KHONG nam trong blacklist -> chay AutoPot.
-     * 2. Luon luon chup Snapshot kit de tinh nang Regear hoat dong binh thuong o moi world.
+     * 1. Reset luot dung Totem va kiem tra gioi han Totem trong tui.
+     * 2. Kiem tra blacklist world cua AutoPot va apply effect.
+     * 3. Chup snapshot layout kit ban dau cho he thong Regear.
      */
     private void scheduleKitProcess(Player player) {
         UUID uuid = player.getUniqueId();
@@ -178,6 +166,9 @@ public class AutoPotListener implements Listener {
             oldTask.cancel();
         }
 
+        // RESET LUOT DUNG TOTEM KHI LOAD/REKIT
+        plugin.getTotemManager().resetActivations(uuid);
+
         BukkitTask task = new BukkitRunnable() {
             @Override
             public void run() {
@@ -186,12 +177,15 @@ public class AutoPotListener implements Listener {
                     return;
                 }
 
-                // 1. Kiem tra blacklist world: chi apply AutoPot neu world duoc phep
+                // Xu ly gioi han Totem trong kho do ngay sau khi kit nap xong
+                plugin.getTotemManager().enforceInventoryLimit(player);
+
+                // Kiem tra blacklist world: chi apply AutoPot neu world duoc phep
                 if (isAutoPotEnabledFor(player)) {
                     syncKitEffects(player);
                 }
 
-                // 2. Chup snapshot layout kit ban dau phuc vu Regear
+                // Chup snapshot layout kit ban dau phuc vu Regear
                 plugin.getRegearManager().saveKitSnapshot(player);
 
                 activeScanners.remove(uuid);
@@ -201,9 +195,6 @@ public class AutoPotListener implements Listener {
         activeScanners.put(uuid, task);
     }
 
-    /**
-     * Dong bo hieu ung AutoPot (xoa rieng hieu ung khong co trong kit moi, giu nguyen hieu ung trung)
-     */
     private void syncKitEffects(Player player) {
         UUID uuid = player.getUniqueId();
         Map<PotionEffectType, PotionEffect> newKitEffects = extractPotionsFromInventory(player);
@@ -220,7 +211,6 @@ public class AutoPotListener implements Listener {
             }
         }
 
-        // Xoa rieng cac effect khong ton tai trong kit moi
         for (PotionEffectType type : currentOrPreviousTypes) {
             if (!newKitEffects.containsKey(type)) {
                 player.removePotionEffect(type);
@@ -229,7 +219,6 @@ public class AutoPotListener implements Listener {
 
         boolean hasAppliedNewEffect = false;
 
-        // Giu nguyen hoac lam moi cac effect co trong kit moi
         for (PotionEffect newEffect : newKitEffects.values()) {
             PotionEffect current = player.getPotionEffect(newEffect.getType());
 

@@ -9,7 +9,6 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.CrossbowMeta;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,7 +21,7 @@ public class RegearManager {
     // Cache danh sach whitelist da duoc loc bo hoan toan cac item bi cam
     private final Set<Material> cachedWhitelist = EnumSet.noneOf(Material.class);
 
-    // Snapshot layout kit goc cua tung nguoi choi
+    // Snapshot layout kit goc cua tung nguoi choi (luu day du 41 slot khi vua load kit)
     private final Map<UUID, ItemStack[]> savedKitSnapshots = new ConcurrentHashMap<>();
     // Combat Tag
     private final Map<UUID, Long> lastDamageTimes = new ConcurrentHashMap<>();
@@ -36,43 +35,21 @@ public class RegearManager {
     }
 
     /**
-     * Kiem tra vat pham bi CAM HOAN TOAN khoi tinh nang Regear:
-     * - Firework (phao hoa)
-     * - Bow (cung)
-     * - Swords (tat ca cac loai kiem)
-     * - Experience Bottle (chai exp)
+     * Danh sach vat pham TUYET DOI KHONG TU DONG CAP MOI / REFILL SO LUONG:
+     * - Tat ca cac loai Kiem (giu nguyen do ben thuc chien)
+     * - Cung (Bow)
+     * - Phao hoa (Firework - giu nguyen so luong con lai, khong hoi them)
+     * - Chai EXP (giu nguyen so chai con lai, khong hoi them)
      */
-    public boolean isForbidden(Material mat) {
-        if (mat == null) {
-            return true;
-        }
-
-        // Cam tat ca cac loai Kiem
-        if (mat.name().endsWith("_SWORD")) {
-            return true;
-        }
-
-        // Cam Phao hoa
-        if (mat == Material.FIREWORK_ROCKET || mat == Material.FIREWORK_STAR) {
-            return true;
-        }
-
-        // Cam Cung
-        if (mat == Material.BOW) {
-            return true;
-        }
-
-        // Cam Chai EXP
-        if (mat == Material.EXPERIENCE_BOTTLE) {
-            return true;
-        }
-
+    public boolean isForbiddenFromRefill(Material mat) {
+        if (mat == null) return true;
+        if (mat.name().endsWith("_SWORD")) return true;
+        if (mat == Material.BOW) return true;
+        if (mat == Material.FIREWORK_ROCKET || mat == Material.FIREWORK_STAR) return true;
+        if (mat == Material.EXPERIENCE_BOTTLE) return true;
         return false;
     }
 
-    /**
-     * Load va parse danh sach whitelist tu config
-     */
     public void reload() {
         cachedWhitelist.clear();
         List<String> list = plugin.getConfig().getStringList("regear.whitelist");
@@ -81,16 +58,15 @@ public class RegearManager {
             String clean = entry.trim().toUpperCase();
             if (clean.isEmpty()) continue;
 
-            // 1. Nhom vu khi va dung cu (DA LOAI BO SWORDS VA BOWS)
             if (clean.equals("AXES") || clean.equals("AXE")) {
                 for (Material m : Material.values()) {
-                    if (m.name().endsWith("_AXE") && !isForbidden(m)) {
+                    if (m.name().endsWith("_AXE") && !isForbiddenFromRefill(m)) {
                         cachedWhitelist.add(m);
                     }
                 }
             } else if (clean.equals("PICKAXES") || clean.equals("PICKAXE")) {
                 for (Material m : Material.values()) {
-                    if (m.name().endsWith("_PICKAXE") && !isForbidden(m)) {
+                    if (m.name().endsWith("_PICKAXE") && !isForbiddenFromRefill(m)) {
                         cachedWhitelist.add(m);
                     }
                 }
@@ -98,17 +74,15 @@ public class RegearManager {
                 cachedWhitelist.add(Material.ARROW);
                 cachedWhitelist.add(Material.SPECTRAL_ARROW);
                 cachedWhitelist.add(Material.TIPPED_ARROW);
-            } 
-            // 2. Nhom khoi xay dung va duong ray
-            else if (clean.equals("PLANKS") || clean.contains("PLANK")) {
+            } else if (clean.equals("PLANKS") || clean.contains("PLANK")) {
                 for (Material m : Material.values()) {
-                    if (m.name().endsWith("_PLANKS") && !isForbidden(m)) {
+                    if (m.name().endsWith("_PLANKS") && !isForbiddenFromRefill(m)) {
                         cachedWhitelist.add(m);
                     }
                 }
             } else if (clean.equals("RAILS") || clean.equals("RAIL")) {
                 for (Material m : Material.values()) {
-                    if ((m.name().endsWith("_RAIL") || m == Material.RAIL) && !isForbidden(m)) {
+                    if ((m.name().endsWith("_RAIL") || m == Material.RAIL) && !isForbiddenFromRefill(m)) {
                         cachedWhitelist.add(m);
                     }
                 }
@@ -116,29 +90,25 @@ public class RegearManager {
                 for (Material m : Material.values()) {
                     if ((m.name().endsWith("_LOG") || m.name().endsWith("_WOOD") ||
                          m.name().endsWith("_STEM") || m.name().startsWith("STRIPPED_") ||
-                         m == Material.BAMBOO_BLOCK) && !isForbidden(m)) {
+                         m == Material.BAMBOO_BLOCK) && !isForbiddenFromRefill(m)) {
                         cachedWhitelist.add(m);
                     }
                 }
-            } 
-            // 3. Nhom thuoc va vat pham dac thu
-            else if (clean.equals("POTIONS") || clean.equals("SPLASH_POTIONS") || clean.equals("SPLASH_POTION")) {
+            } else if (clean.equals("POTIONS") || clean.equals("SPLASH_POTIONS") || clean.equals("SPLASH_POTION")) {
                 cachedWhitelist.add(Material.SPLASH_POTION);
                 cachedWhitelist.add(Material.POTION);
                 cachedWhitelist.add(Material.LINGERING_POTION);
             } else if (clean.equals("WEB")) {
                 cachedWhitelist.add(Material.COBWEB);
             } else {
-                // Parse truc tiep ten Material va chan neu thuoc danh sach cam
                 Material mat = Material.matchMaterial(clean);
-                if (mat != null && !isForbidden(mat)) {
+                if (mat != null && !isForbiddenFromRefill(mat)) {
                     cachedWhitelist.add(mat);
                 }
             }
         }
 
-        // Dam bao loai bo 100% cac vat pham bi cam khoi cache
-        cachedWhitelist.removeIf(this::isForbidden);
+        cachedWhitelist.removeIf(this::isForbiddenFromRefill);
     }
 
     public void saveKitSnapshot(Player player) {
@@ -161,6 +131,12 @@ public class RegearManager {
         lastDamageTimes.put(playerId, System.currentTimeMillis());
     }
 
+    /**
+     * Thuat toan Regear chuyen sau:
+     * 1. Gom toan bo vat pham thuc te dang co (Phao hoa con lai, EXP con lai, Kiem da mon do ben).
+     * 2. Uu tien phuc hoi 100% Hotbar (Slot 0-8) ve y chang vi tri luc vua load kit ban dau.
+     * 3. Refill dung cac item Whitelist ma khong bao gio lam mat Phao hoa, EXP hay vat pham hop le.
+     */
     public boolean performRegear(Player player) {
         UUID uuid = player.getUniqueId();
         long now = System.currentTimeMillis();
@@ -204,70 +180,95 @@ public class RegearManager {
         }
 
         PlayerInventory inv = player.getInventory();
-        boolean clearJunkInEmpty = plugin.getConfig().getBoolean("regear.clear-junk-in-empty-slots", true);
+        ItemStack[] currentContents = inv.getContents();
 
-        // 4. DUYET TUNG SLOT VA GHI DE DUNG VI TRI
-        for (int slot = 0; slot < snapshot.length; slot++) {
-            ItemStack originalItem = snapshot[slot];
+        // Thu thap toan bo vat pham thuc te vao pool de bao toan so luong va do ben
+        List<ItemStack> currentPool = new ArrayList<>();
+        for (ItemStack item : currentContents) {
+            if (item != null && item.getType() != Material.AIR) {
+                currentPool.add(item.clone());
+            }
+        }
 
-            // Chi bo qua giap (36-39) neu vat pham khong phai Elytra / khong nam trong whitelist
-            if (slot >= 36 && slot <= 39) {
-                if (originalItem == null || !isWhitelisted(originalItem.getType())) {
-                    continue;
+        ItemStack[] newContents = new ItemStack[currentContents.length];
+
+        // --- BUOC 1: Xu ly Giap (Slots 36 - 39) ---
+        for (int a = 36; a <= 39; a++) {
+            ItemStack snapArmor = (a < snapshot.length) ? snapshot[a] : null;
+            if (a == 38 && snapArmor != null && isWhitelisted(snapArmor.getType())) {
+                newContents[a] = snapArmor.clone();
+            } else {
+                ItemStack currentArmor = currentContents[a];
+                newContents[a] = (currentArmor != null && currentArmor.getType() != Material.AIR) ? currentArmor.clone() : null;
+            }
+            if (currentContents[a] != null) {
+                removeFirstMatch(currentPool, currentContents[a]);
+            }
+        }
+
+        // --- BUOC 2: Uu tien sap xep Hotbar (0 - 8) va Offhand (40) ve y chang kit ban dau ---
+        int[] priorityOrder = getSlotPriorityOrder(); // 0..8, 40, 9..35
+
+        // Phase 2.1: Phuc hoi cac vat pham khong refill (Phao hoa, EXP con lai, Kiem, Cung) ve dung slot Hotbar
+        for (int slot : priorityOrder) {
+            if (slot >= snapshot.length) continue;
+            ItemStack snapItem = snapshot[slot];
+            if (snapItem == null || snapItem.getType() == Material.AIR) continue;
+
+            if (isForbiddenFromRefill(snapItem.getType()) || !isWhitelisted(snapItem.getType())) {
+                ItemStack matched = extractMatchingAmount(currentPool, snapItem);
+                if (matched != null) {
+                    newContents[slot] = matched; // Tra vat pham thuc te ve dung slot goc!
+                } else {
+                    newContents[slot] = null;
                 }
             }
+        }
 
-            // TH1: Slot goc trong kit la vat pham thuoc Whitelist va KHONG BI CAM
-            if (originalItem != null && isWhitelisted(originalItem.getType())) {
-                ItemStack currentItem = inv.getItem(slot);
-                boolean needRestore = false;
+        // Phase 2.2: Refill cac vat pham thuoc Whitelist ve dung slot Hotbar va Inventory
+        for (int slot : priorityOrder) {
+            if (slot >= snapshot.length) continue;
+            ItemStack snapItem = snapshot[slot];
+            if (snapItem == null || snapItem.getType() == Material.AIR) continue;
 
-                // Neu slot dang trong, hoac bi rac / block la chen vao
-                if (currentItem == null || currentItem.getType() != originalItem.getType()) {
-                    needRestore = true;
-                }
-                // Neu stack vat pham bi thieu so luong (Ender Pearl, Pot, Blocks, v.v.)
-                else if (currentItem.getAmount() < originalItem.getAmount()) {
-                    needRestore = true;
-                }
-                // Xu ly rieng cho NO (CROSSBOW): Kiem tra tinh trang dan da nap
-                else if (originalItem.getType() == Material.CROSSBOW) {
-                    if (originalItem.getItemMeta() instanceof CrossbowMeta origMeta &&
-                        currentItem.getItemMeta() instanceof CrossbowMeta curMeta) {
-                        if (!origMeta.getChargedProjectiles().equals(curMeta.getChargedProjectiles())) {
-                            needRestore = true;
-                        }
-                    } else if (!currentItem.isSimilar(originalItem)) {
-                        needRestore = true;
+            if (isWhitelisted(snapItem.getType()) && !isForbiddenFromRefill(snapItem.getType())) {
+                newContents[slot] = snapItem.clone();
+                // Loai bo item tuong ung khoi currentPool de tranh bi nhan ban
+                removeFirstMatch(currentPool, snapItem);
+            }
+        }
+
+        // --- BUOC 3: Xu ly cac vat pham hop le con sot lai trong Pool (Chong mat Phao hoa & EXP) ---
+        for (ItemStack leftover : currentPool) {
+            if (leftover == null || leftover.getType() == Material.AIR) continue;
+
+            if (isItemInOriginalKit(leftover.getType(), snapshot)) {
+                // Thu gom gop vao cac stack da co trong kho do truoc
+                for (int s = 0; s <= 35; s++) {
+                    ItemStack existing = newContents[s];
+                    if (existing != null && existing.isSimilar(leftover) && existing.getAmount() < existing.getMaxStackSize()) {
+                        int canAdd = existing.getMaxStackSize() - existing.getAmount();
+                        int toAdd = Math.min(canAdd, leftover.getAmount());
+                        existing.setAmount(existing.getAmount() + toAdd);
+                        leftover.setAmount(leftover.getAmount() - toAdd);
+                        if (leftover.getAmount() <= 0) break;
                     }
                 }
-                // Cac vat pham khac neu khong con nguyen ban
-                else if (!currentItem.isSimilar(originalItem)) {
-                    needRestore = true;
-                }
-
-                if (needRestore) {
-                    ItemStack restored = originalItem.clone();
-                    if (slot == 40) {
-                        inv.setItemInOffHand(restored);
-                    } else if (slot == 38) {
-                        inv.setChestplate(restored);
-                    } else {
-                        inv.setItem(slot, restored);
+                // Neu van con du thi dat vao o trong cua inventory (9-35)
+                if (leftover.getAmount() > 0) {
+                    int emptySlot = findFirstEmptyStorageSlot(newContents);
+                    if (emptySlot != -1) {
+                        newContents[emptySlot] = leftover;
                     }
                 }
             }
-            // TH2: Slot goc trong kit von di la O TRONG -> Xoa sach rac nhat ngoai san
-            else if (originalItem == null && clearJunkInEmpty) {
-                ItemStack currentItem = inv.getItem(slot);
-                if (currentItem != null && !isItemInOriginalKit(currentItem.getType(), snapshot)) {
-                    if (slot == 40) {
-                        inv.setItemInOffHand(null);
-                    } else {
-                        inv.setItem(slot, null);
-                    }
-                }
-            }
+            // Cac khoi Dirt, Cobblestone, rac ngoai san khong co trong snapshot -> Tu dong bien mat
+        }
+
+        // Cap nhat toan bo kho do
+        inv.setContents(newContents);
+        if (newContents.length > 40 && newContents[40] != null) {
+            inv.setItemInOffHand(newContents[40]);
         }
 
         lastRegearTimes.put(uuid, now);
@@ -276,10 +277,76 @@ public class RegearManager {
         player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.5f);
         sendConfigMessage(player, "regear.messages.success", "%seconds%", "0");
 
-        // Broadcast thong bao regear
         broadcastRegear(player);
-
         return true;
+    }
+
+    /**
+     * Thu tu uu tien: Hotbar (0-8) xep truoc, sau do den Tay phu (40), roi moi den Rương (9-35)
+     */
+    private int[] getSlotPriorityOrder() {
+        int[] order = new int[37];
+        int idx = 0;
+        for (int i = 0; i <= 8; i++) {
+            order[idx++] = i;
+        }
+        order[idx++] = 40;
+        for (int i = 9; i <= 35; i++) {
+            order[idx++] = i;
+        }
+        return order;
+    }
+
+    /**
+     * Trich xuat va tu dong gop cac coc vat pham (Phao hoa / EXP / Mui ten) bi tach le
+     */
+    private ItemStack extractMatchingAmount(List<ItemStack> pool, ItemStack target) {
+        if (target == null || target.getType() == Material.AIR) return null;
+        ItemStack result = null;
+
+        for (int i = pool.size() - 1; i >= 0; i--) {
+            ItemStack item = pool.get(i);
+            if (item != null && item.getType() == target.getType()) {
+                if (result == null) {
+                    result = pool.remove(i);
+                    if (result.getMaxStackSize() == 1 || result.getAmount() >= target.getAmount()) {
+                        return result;
+                    }
+                } else {
+                    int canAdd = target.getAmount() - result.getAmount();
+                    if (canAdd <= 0) break;
+                    if (item.getAmount() <= canAdd) {
+                        result.setAmount(result.getAmount() + item.getAmount());
+                        pool.remove(i);
+                    } else {
+                        result.setAmount(result.getAmount() + canAdd);
+                        item.setAmount(item.getAmount() - canAdd);
+                        break;
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    private void removeFirstMatch(List<ItemStack> pool, ItemStack target) {
+        if (target == null || target.getType() == Material.AIR) return;
+        for (int i = 0; i < pool.size(); i++) {
+            ItemStack item = pool.get(i);
+            if (item != null && item.getType() == target.getType()) {
+                pool.remove(i);
+                return;
+            }
+        }
+    }
+
+    private int findFirstEmptyStorageSlot(ItemStack[] contents) {
+        for (int i = 9; i <= 35; i++) {
+            if (contents[i] == null || contents[i].getType() == Material.AIR) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private void broadcastRegear(Player player) {
@@ -301,7 +368,7 @@ public class RegearManager {
     }
 
     public boolean isWhitelisted(Material mat) {
-        return mat != null && !isForbidden(mat) && cachedWhitelist.contains(mat);
+        return mat != null && !isForbiddenFromRefill(mat) && cachedWhitelist.contains(mat);
     }
 
     private boolean isItemInOriginalKit(Material mat, ItemStack[] snapshot) {
@@ -326,4 +393,4 @@ public class RegearManager {
         lastRegearTimes.clear();
         cachedWhitelist.clear();
     }
-}
+            }

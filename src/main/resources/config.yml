@@ -3,6 +3,13 @@
 #       Catppuccin Pastel Palette & Glyph Integration
 # ==============================================================
 
+autopot:
+  enabled: true
+  # Danh sach cac world ma AutoPot se KHONG hoat dong
+  # Khi o cac world nay, lenh /k1../k99 se khong tu dong apply effect potion
+  blacklisted-worlds:
+    - "ffa_diamond"
+
 regear:
   # Thoi gian (giay) sau khi nhan sat thuong moi duoc phep regear (0 de tat)
   damage-cooldown-seconds: 5

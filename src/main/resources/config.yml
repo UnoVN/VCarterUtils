@@ -10,18 +10,28 @@ autopot:
 
 totem:
   enabled: true
-  # So luong Totem toi da co the mang trong kho do (bao gom ca hotbar va offhand)
   max-in-inventory: 1
-  # So lan kich hoat (pop) Totem toi da trong 1 lan nhan kit (1 mang song)
   max-activations-per-kit: 1
-  # Hanh dong khi phat hien vuot qua so Totem cho phep: REMOVE (xoa bo) hoac DROP (roi xuong dat)
   excess-action: "REMOVE"
-  # Danh sach world ma tinh nang Totem Limiter se bi vo hieu hoa
   blacklisted-worlds:
     - "ffa_diamond"
   messages:
     inventory-limit-reached: "<glyph:warning_blue> <#f38ba8>You can only carry <#89dceb>%max%<#f38ba8> Totem of Undying in your inventory!"
     activation-limit-reached: "<glyph:warning_blue> <#f38ba8>You have already used your Totem for this kit! Totem activation denied."
+
+# ==============================================================
+#                      BACK ON DEATH FEATURE
+# ==============================================================
+back:
+  enabled: true
+  # Danh sach world KHONG THE su dung /back (khong the back tu world nay hoac back ve world nay)
+  blacklisted-worlds:
+    - "ffa_diamond"
+  messages:
+    death-notify: "<glyph:warning_blue> <#a6adc8>You died! Click <click:run_command:'/back'><hover:show_text:'<#a6e3a1>Click to teleport back'><#89dceb><b>[HERE]</b></hover></click> or type <#89dceb><b>/back</b><#a6adc8> to return."
+    teleported: "<glyph:warning_blue> <#a6e3a1>Successfully teleported back to your previous death location!"
+    no-death-location: "<glyph:warning_blue> <#f38ba8>You do not have a previous death location to return to!"
+    world-blacklisted: "<glyph:warning_blue> <#f38ba8>The /back feature is disabled in or to this world!"
 
 regear:
   damage-cooldown-seconds: 5

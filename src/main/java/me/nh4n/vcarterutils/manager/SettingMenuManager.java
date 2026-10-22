@@ -187,12 +187,12 @@ public class SettingMenuManager {
 
         ItemStack globalPearlItem = createSimpleItem(
                 Material.ENDER_PEARL,
-                "<!italic><white><sprite:items:item/ender_pearl></white> <#89dceb><b>Global Pearl</b>",
+                "<!italic><#89dceb><b>Global Pearl</b>",
                 List.of(
                         "",
                         "<!italic><#a6adc8>Global Force: " + (pearlGlobalOn ? "<#a6e3a1><b>ON</b>" : "<#f38ba8><b>OFF</b>"),
                         "<!italic><#a6adc8>Force Duration: <#f9e2af><b>" + pearlGlobalSec + "s</b>",
-                        "<!italic><#a6adc8>Server Default: <#89dceb><b>" + pearlDefSec + "s</b>",
+                        "<!italic><#a6adc8>Default Minimum: <#89dceb><b>" + pearlDefSec + "s</b>",
                         "",
                         "<!italic><#a6adc8>Presets: " + buildOptionsBar(pearlGlobalSec, pearlManager.getAvailableOptions()),
                         "",
@@ -213,7 +213,7 @@ public class SettingMenuManager {
 
         ItemStack scannerItem = createSimpleItem(
                 Material.RECOVERY_COMPASS,
-                "<!italic><white><sprite:items:item/recovery_compass></white> <#a6e3a1><b>World Scanner</b>",
+                "<!italic><#a6e3a1><b>World Scanner</b>",
                 List.of(
                         "",
                         "<!italic><#a6adc8>Detected: <#89dceb><b>" + allWorlds.size() + " Worlds</b>",
@@ -232,12 +232,12 @@ public class SettingMenuManager {
 
         ItemStack globalMaceItem = createSimpleItem(
                 Material.MACE,
-                "<!italic><white><sprite:items:item/mace></white> <#89dceb><b>Global Mace</b>",
+                "<!italic><#89dceb><b>Global Mace</b>",
                 List.of(
                         "",
                         "<!italic><#a6adc8>Global Force: " + (maceGlobalOn ? "<#a6e3a1><b>ON</b>" : "<#f38ba8><b>OFF</b>"),
                         "<!italic><#a6adc8>Force Duration: <#f9e2af><b>" + maceGlobalSec + "s</b>",
-                        "<!italic><#a6adc8>Server Default: <#89dceb><b>" + maceDefSec + "s</b>",
+                        "<!italic><#a6adc8>Default Minimum: <#89dceb><b>" + maceDefSec + "s</b>",
                         "",
                         "<!italic><#a6adc8>Presets: " + buildOptionsBar(maceGlobalSec, maceManager.getAvailableOptions()),
                         "",
@@ -264,9 +264,6 @@ public class SettingMenuManager {
             boolean hasAnyForce = (forcedPearl >= 0 || forcedMace >= 0);
 
             Material iconMat = getWorldIconMaterial(dw, hasAnyForce);
-            String worldSprite = hasAnyForce
-                    ? "<white><sprite:items:item/emerald></white>"
-                    : "<white><sprite:items:item/ender_eye></white>";
 
             String pearlDisplay = (forcedPearl >= 0)
                     ? "<#a6e3a1><b>" + forcedPearl + "s</b>"
@@ -287,7 +284,7 @@ public class SettingMenuManager {
 
             ItemStack worldItem = createSimpleItem(
                     iconMat,
-                    "<!italic>" + worldSprite + " " + (hasAnyForce ? "<#a6e3a1><b>" : "<#89dceb><b>") + wName + "</b>",
+                    "<!italic>" + (hasAnyForce ? "<#a6e3a1><b>" : "<#89dceb><b>") + wName + "</b>",
                     wLore
             );
 
@@ -300,7 +297,7 @@ public class SettingMenuManager {
         if (currentPage > 0) {
             ItemStack prevBtn = createSimpleItem(
                     Material.ARROW,
-                    "<!italic><white><sprite:items:item/arrow></white> <#89dceb><b>Previous Page</b>",
+                    "<!italic><#89dceb><b>Previous Page</b>",
                     List.of("<!italic><white><glyph:left_click></white> <#a6adc8>Page " + currentPage)
             );
             inv.setItem(45, prevBtn);
@@ -309,7 +306,7 @@ public class SettingMenuManager {
 
         ItemStack playerMenuBtn = createSimpleItem(
                 Material.BOOK,
-                "<!italic><white><sprite:items:item/book></white> <#89dceb><b>Player Settings</b>",
+                "<!italic><#89dceb><b>Player Settings</b>",
                 List.of("<!italic><white><glyph:left_click></white> <#a6adc8>Back to /setting")
         );
         inv.setItem(48, playerMenuBtn);
@@ -317,7 +314,7 @@ public class SettingMenuManager {
 
         ItemStack closeBtn = createSimpleItem(
                 Material.BARRIER,
-                "<!italic><white><sprite:items:item/barrier></white> <#f38ba8><b>Close</b>",
+                "<!italic><#f38ba8><b>Close</b>",
                 List.of("<!italic><white><glyph:left_click></white> <#6c7086>Close menu")
         );
         inv.setItem(49, closeBtn);
@@ -326,7 +323,7 @@ public class SettingMenuManager {
         if (currentPage + 1 < totalPages) {
             ItemStack nextBtn = createSimpleItem(
                     Material.ARROW,
-                    "<!italic><white><sprite:items:item/arrow></white> <#89dceb><b>Next Page</b>",
+                    "<!italic><#89dceb><b>Next Page</b>",
                     List.of("<!italic><white><glyph:left_click></white> <#a6adc8>Page " + (currentPage + 2))
             );
             inv.setItem(53, nextBtn);

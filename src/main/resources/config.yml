@@ -1,6 +1,6 @@
 # ==============================================================
 #                 VCarterUtils Configuration
-#       Catppuccin Pastel Palette & Glyph Integration
+#     Catppuccin Pastel • Glyph • 1.21+ Object Sprite Icons
 # ==============================================================
 
 autopot:
@@ -16,17 +16,15 @@ totem:
   blacklisted-worlds:
     - "ffa_diamond"
   messages:
-    inventory-limit-reached: "<glyph:warning_blue> <#f38ba8>You can only carry <#89dceb>%max%<#f38ba8> Totem of Undying in your inventory!"
-    activation-limit-reached: "<glyph:warning_blue> <#f38ba8>You have already used your Totem for this kit! Totem activation denied."
+    inventory-limit-reached: "<glyph:warning_blue> <white><sprite:items:item/totem_of_undying></white> <#f38ba8>Max <#89dceb><b>%max%</b> <#f38ba8>Totem allowed in inventory!"
+    activation-limit-reached: "<glyph:warning_blue> <white><sprite:items:item/totem_of_undying></white> <#f38ba8>Totem limit reached for this kit!"
 
 # ==============================================================
 #                 ENDER PEARL COOLDOWN SYSTEM
 # ==============================================================
 pearl-cooldown:
   enabled: true
-  # Cooldown mac dinh (giay) khi nguoi choi chua chinh trong /setting (Bat buoc mac dinh: 1s)
   default-seconds: 1
-  # Cac moc giay nguoi choi co the chon trong menu /setting hoac lenh /setting pearl <giay>
   available-options:
     - 0
     - 1
@@ -36,42 +34,32 @@ pearl-cooldown:
     - 8
     - 10
     - 15
-  # Tu dong xoa cooldown pearl khi hoi sinh hoac khi load kit (/k1, /rekit...)
   clear-on-respawn: true
   clear-on-kit-load: true
   send-chat-on-change: true
 
-  # Che do Global Force Cooldown (Chinh truc tiep trong /setting admin):
-  # Neu enabled: true, ep toan bo nguoi choi tren server dung moc seconds nay (tru khi world co force rieng).
   global-force:
     enabled: false
     seconds: 1
 
-  # Che do Force Cooldown theo tung World (Whitelist Force Cooldown - Chinh nhanh trong /setting admin):
-  # Neu enabled: true va nguoi choi dang o trong world co ten duoi day,
-  # he thong se BAT BUOC ap dung so giay cooldown cua world do (bo qua setting ca nhan & global).
   force-worlds:
     enabled: true
     worlds:
       ffa_diamond: 10
-      # cart_arena: 5
-      # duel_world: 3
 
   messages:
-    cooldown-changed: "<glyph:warning_blue> <#a6e3a1>Your personal Ender Pearl cooldown has been set to <#89dceb><b>%seconds%s</b><#a6e3a1>!"
-    invalid-option: "<glyph:warning_blue> <#f38ba8>Invalid cooldown option! Available options: <#89dceb>%options%"
-    world-status-normal: "<#a6e3a1>✔ Active in current world"
-    world-status-forced: "<#f9e2af>⚠ Forced in this world: <#89dceb><b>%forced%s</b>"
-    world-status-global-forced: "<#f9e2af>⚠ Forced globally: <#89dceb><b>%forced%s</b>"
+    cooldown-changed: "<glyph:warning_blue> <white><sprite:items:item/ender_pearl></white> <#a6adc8>Pearl cooldown: <#89dceb><b>%seconds%s</b>"
+    invalid-option: "<glyph:warning_blue> <white><sprite:items:item/ender_pearl></white> <#f38ba8>Invalid option! Available: <#89dceb>%options%"
+    world-status-normal: "<#a6e3a1>● Personal setting active"
+    world-status-forced: "<#f9e2af>● World forced: <#89dceb><b>%forced%s</b>"
+    world-status-global-forced: "<#f9e2af>● Global forced: <#89dceb><b>%forced%s</b>"
 
 # ==============================================================
 #                     MACE COOLDOWN SYSTEM
 # ==============================================================
 mace-cooldown:
   enabled: true
-  # Cooldown mac dinh (giay) khi nguoi choi chua chinh trong /setting
   default-seconds: 5
-  # Cac moc giay nguoi choi co the chon trong menu /setting hoac lenh /setting mace <giay>
   available-options:
     - 0
     - 1
@@ -81,51 +69,41 @@ mace-cooldown:
     - 8
     - 10
     - 15
-  # Neu true: Chi tinh cooldown khi danh trung Nguoi Choi (Player). Neu false: Tinh ca khi danh Mob.
   only-players: false
-  # Neu true: Chi tinh cooldown khi dap Mace tu tren cao xuong (Smash Attack > 1.5 block).
-  # Neu false: Cu danh trung bang Mace la tinh cooldown.
   only-smash-attack: false
-  # Neu true: Chan hoan toan don danh bang Mace khi dang trong thoi gian cooldown.
   cancel-attack-on-cooldown: true
-  # Tu dong xoa cooldown mace khi hoi sinh hoac khi load kit (/k1, /rekit...)
   clear-on-respawn: true
   clear-on-kit-load: true
   send-chat-on-change: true
 
-  # Che do Global Force Cooldown (Chinh truc tiep trong /setting admin):
   global-force:
     enabled: false
     seconds: 5
 
-  # Che do Force Cooldown theo tung World (Whitelist Force Cooldown - Chinh nhanh trong /setting admin):
   force-worlds:
     enabled: true
     worlds:
       ffa_diamond: 10
-      # cart_arena: 5
-      # duel_world: 3
 
   messages:
-    cooldown-changed: "<glyph:warning_blue> <#a6e3a1>Your personal Mace cooldown has been set to <#89dceb><b>%seconds%s</b><#a6e3a1>!"
-    invalid-option: "<glyph:warning_blue> <#f38ba8>Invalid cooldown option! Available options: <#89dceb>%options%"
-    on-cooldown: "<glyph:warning_blue> <#f38ba8>Your <#89dceb>Mace<#f38ba8> is on cooldown! Wait <#f9e2af><b>%seconds%s</b><#f38ba8>."
-    world-status-normal: "<#a6e3a1>✔ Active in current world"
-    world-status-forced: "<#f9e2af>⚠ Forced in this world: <#89dceb><b>%forced%s</b>"
-    world-status-global-forced: "<#f9e2af>⚠ Forced globally: <#89dceb><b>%forced%s</b>"
+    cooldown-changed: "<glyph:warning_blue> <white><sprite:items:item/mace></white> <#a6adc8>Mace cooldown: <#89dceb><b>%seconds%s</b>"
+    invalid-option: "<glyph:warning_blue> <white><sprite:items:item/mace></white> <#f38ba8>Invalid option! Available: <#89dceb>%options%"
+    on-cooldown: "<glyph:warning_blue> <white><sprite:items:item/mace></white> <#f38ba8>Mace cooldown: <#f9e2af><b>%seconds%s</b>"
+    world-status-normal: "<#a6e3a1>● Personal setting active"
+    world-status-forced: "<#f9e2af>● World forced: <#89dceb><b>%forced%s</b>"
+    world-status-global-forced: "<#f9e2af>● Global forced: <#89dceb><b>%forced%s</b>"
 
 # ==============================================================
 #                 CUSTOMIZABLE /SETTING MENU
 # ==============================================================
 setting-menu:
-  title: "<#6c7086>✦ <#89dceb><b>Player Settings</b> <#6c7086>✦"
+  title: "<#6c7086>✦ <#89dceb><b>Settings</b> <#6c7086>✦"
   rows: 3
   filler:
     enabled: true
     material: "GRAY_STAINED_GLASS_PANE"
     name: " "
-  # Ban co the chinh sua hoac them bat ky item nao vao menu nay
-  # Cac loai type ho tro: PEARL_COOLDOWN, MACE_COOLDOWN, ADMIN_MENU, CLOSE, COMMAND, DECORATION
+  # Types: PEARL_COOLDOWN, MACE_COOLDOWN, ADMIN_MENU, CLOSE, COMMAND, DECORATION
   items:
     pearl-cooldown:
       enabled: true
@@ -133,73 +111,71 @@ setting-menu:
       slot: 11
       material: "ENDER_PEARL"
       show-seconds-as-amount: true
-      name: "<#89dceb><b><!italic>Ender Pearl Cooldown</b>"
+      name: "<!italic><white><sprite:items:item/ender_pearl></white> <#89dceb><b>Pearl Cooldown</b>"
       lore:
-        - "<#6c7086><!italic>Customize your personal Ender Pearl"
-        - "<#6c7086><!italic>cooldown duration for duels."
         - ""
-        - "<#a6adc8><!italic>Personal Setting: <#89dceb><b>%current%s</b> <#6c7086>(Default: %default%s)"
-        - "<#a6adc8><!italic>Effective Now: <#f9e2af><b>%effective%s</b>"
+        - "<!italic><#a6adc8>Personal: <#89dceb><b>%current%s</b> <#6c7086>(Default: %default%s)"
+        - "<!italic><#a6adc8>Effective: <#f9e2af><b>%effective%s</b>"
         - "<!italic>%world_status%"
         - ""
-        - "<#a6adc8><!italic>Options: %options_list%"
+        - "<!italic><#a6adc8>Presets: %options_list%"
         - ""
-        - "<#a6e3a1><!italic>▸ Left-Click <#a6adc8>to increase cooldown"
-        - "<#f9e2af><!italic>▸ Right-Click <#a6adc8>to decrease cooldown"
-        - "<#f38ba8><!italic>▸ Shift-Click <#a6adc8>to reset to default"
+        - "<!italic><white><glyph:left_click></white> <#a6e3a1>Increase <#6c7086>| <white><glyph:right_click></white> <#f9e2af>Decrease"
+        - "<!italic><#f38ba8>Shift + <white><glyph:left_click></white> <#a6adc8>Reset default"
     mace-cooldown:
       enabled: true
       type: "MACE_COOLDOWN"
       slot: 15
       material: "MACE"
       show-seconds-as-amount: true
-      name: "<#89dceb><b><!italic>Mace Cooldown</b>"
+      name: "<!italic><white><sprite:items:item/mace></white> <#89dceb><b>Mace Cooldown</b>"
       lore:
-        - "<#6c7086><!italic>Customize your personal Mace"
-        - "<#6c7086><!italic>cooldown duration for duels."
         - ""
-        - "<#a6adc8><!italic>Personal Setting: <#89dceb><b>%current%s</b> <#6c7086>(Default: %default%s)"
-        - "<#a6adc8><!italic>Effective Now: <#f9e2af><b>%effective%s</b>"
+        - "<!italic><#a6adc8>Personal: <#89dceb><b>%current%s</b> <#6c7086>(Default: %default%s)"
+        - "<!italic><#a6adc8>Effective: <#f9e2af><b>%effective%s</b>"
         - "<!italic>%world_status%"
         - ""
-        - "<#a6adc8><!italic>Options: %options_list%"
+        - "<!italic><#a6adc8>Presets: %options_list%"
         - ""
-        - "<#a6e3a1><!italic>▸ Left-Click <#a6adc8>to increase cooldown"
-        - "<#f9e2af><!italic>▸ Right-Click <#a6adc8>to decrease cooldown"
-        - "<#f38ba8><!italic>▸ Shift-Click <#a6adc8>to reset to default"
+        - "<!italic><white><glyph:left_click></white> <#a6e3a1>Increase <#6c7086>| <white><glyph:right_click></white> <#f9e2af>Decrease"
+        - "<!italic><#f38ba8>Shift + <white><glyph:left_click></white> <#a6adc8>Reset default"
     admin-panel:
       enabled: true
       type: "ADMIN_MENU"
       slot: 4
-      material: "COMMAND_BLOCK"
-      name: "<#f38ba8><b><!italic>Admin Cooldown Manager</b>"
+      material: "COMPARATOR"
+      name: "<!italic><white><sprite:items:item/comparator></white> <#f38ba8><b>Admin Manager</b>"
       lore:
-        - "<#6c7086><!italic>Visible only to Administrators."
-        - "<#a6adc8><!italic>Click to configure Global Force &"
-        - "<#a6adc8><!italic>Per-World Cooldowns (/setting admin)."
+        - ""
+        - "<!italic><#a6adc8>Configure Global & Per-World"
+        - "<!italic><#a6adc8>cooldown overrides."
+        - ""
+        - "<!italic><white><glyph:left_click></white> <#89dceb>Open Admin GUI"
     close-button:
       enabled: true
       type: "CLOSE"
       slot: 22
       material: "BARRIER"
-      name: "<#f38ba8><b><!italic>Close Menu</b>"
+      name: "<!italic><white><sprite:items:item/barrier></white> <#f38ba8><b>Close</b>"
       lore:
-        - "<#6c7086><!italic>Click to close the settings menu."
+        - "<!italic><white><glyph:left_click></white> <#6c7086>Close menu"
 
 # ==============================================================
 #                      BACK ON DEATH FEATURE
 # ==============================================================
 back:
   enabled: true
-  # Danh sach world KHONG THE su dung /back (khong the back tu world nay hoac back ve world nay)
   blacklisted-worlds:
     - "ffa_diamond"
   messages:
-    death-notify: "<glyph:warning_blue> <#a6adc8>You died! Click <click:run_command:'/back'><hover:show_text:'<#a6e3a1>Click to teleport back'><#89dceb><b>[HERE]</b></hover></click> or type <#89dceb><b>/back</b><#a6adc8> to return."
-    teleported: "<glyph:warning_blue> <#a6e3a1>Successfully teleported back to your previous death location!"
-    no-death-location: "<glyph:warning_blue> <#f38ba8>You do not have a previous death location to return to!"
-    world-blacklisted: "<glyph:warning_blue> <#f38ba8>The /back feature is disabled in or to this world!"
+    death-notify: "<glyph:warning_blue> <white><sprite:items:item/recovery_compass></white> <#a6adc8>You died! Click <click:run_command:'/back'><hover:show_text:'<#a6e3a1>Click to return'><#89dceb><b>[RETURN]</b></hover></click> <#a6adc8>or <#89dceb>/back"
+    teleported: "<glyph:warning_blue> <white><sprite:items:item/recovery_compass></white> <#a6e3a1>Returned to death location!"
+    no-death-location: "<glyph:warning_blue> <white><sprite:items:item/recovery_compass></white> <#f38ba8>No previous death location!"
+    world-blacklisted: "<glyph:warning_blue> <white><sprite:items:item/recovery_compass></white> <#f38ba8>/back is disabled in this world!"
 
+# ==============================================================
+#                      SHULKER REGEAR SYSTEM
+# ==============================================================
 regear:
   damage-cooldown-seconds: 5
   cooldown-seconds: 3
@@ -207,7 +183,7 @@ regear:
   announcement:
     enabled: true
     broadcast: true
-    message: "<glyph:warning_blue> <#89dceb><b>%player%</b> <#a6adc8>regeared"
+    message: "<glyph:warning_blue> <white><sprite:blocks:block/cyan_shulker_box></white> <#89dceb><b>%player%</b> <#a6adc8>regeared"
 
   whitelist:
     - ENDER_PEARL
@@ -224,20 +200,23 @@ regear:
     - RAILS
 
   item:
-    name: "<#89dceb><b><!italic>Shulker Regear</b>"
+    name: "<!italic><white><sprite:blocks:block/cyan_shulker_box></white> <#89dceb><b>Shulker Regear</b>"
     lore:
-      - "<#a6adc8><!italic>Place on the ground to restock."
-      - "<#6c7086><!italic>Automatically disappears after use."
+      - "<!italic><white><glyph:right_click></white> <#a6adc8>Place to restock inventory"
+      - "<!italic><#6c7086>Auto-removes after placement"
 
   messages:
-    already-have-shulker: "<glyph:warning_blue> <#f38ba8>You already have a <#89dceb>Regear Shulker<#f38ba8> in your inventory!"
-    inventory-full: "<glyph:warning_blue> <#f38ba8>Your inventory is full! <#a6adc8>Please free up at least 1 slot to receive the <#89dceb>Regear Shulker<#a6adc8>."
-    received-shulker: "<glyph:warning_blue> <#a6e3a1>Received <#89dceb><b>Shulker Regear</b><#a6e3a1>! Place it on the ground to restock."
-    combat-tagged: "<glyph:warning_blue> <#f38ba8>Cannot regear while in combat! <#a6adc8>Wait <#f9e2af><b>%seconds%s</b> <#a6adc8>after taking damage."
-    on-cooldown: "<glyph:warning_blue> <#f38ba8>Regear is on cooldown! <#a6adc8>Please wait <#f9e2af><b>%seconds%s</b>."
-    no-kit-loaded: "<glyph:warning_blue> <#f38ba8>No previous kit snapshot found! <#a6adc8>Please load a kit first (/k1)."
-    success: "<glyph:warning_blue> <#a6e3a1>Successfully regeared and restored inventory slots!"
+    already-have-shulker: "<glyph:warning_blue> <white><sprite:blocks:block/cyan_shulker_box></white> <#f38ba8>You already have a <#89dceb>Regear Shulker<#f38ba8>!"
+    inventory-full: "<glyph:warning_blue> <white><sprite:blocks:block/cyan_shulker_box></white> <#f38ba8>Inventory full! <#a6adc8>Free 1 slot first."
+    received-shulker: "<glyph:warning_blue> <white><sprite:blocks:block/cyan_shulker_box></white> <#a6e3a1>Received <#89dceb><b>Shulker Regear</b> <#6c7086>(<white><glyph:right_click></white> Place)"
+    combat-tagged: "<glyph:warning_blue> <white><sprite:blocks:block/cyan_shulker_box></white> <#f38ba8>In combat! Wait <#f9e2af><b>%seconds%s</b>"
+    on-cooldown: "<glyph:warning_blue> <white><sprite:blocks:block/cyan_shulker_box></white> <#f38ba8>Regear cooldown: <#f9e2af><b>%seconds%s</b>"
+    no-kit-loaded: "<glyph:warning_blue> <white><sprite:blocks:block/cyan_shulker_box></white> <#f38ba8>Load a kit first <#89dceb>(/k1)"
+    success: "<glyph:warning_blue> <white><sprite:blocks:block/cyan_shulker_box></white> <#a6e3a1>Inventory restocked!"
 
+# ==============================================================
+#                        1V1 SCORE SYSTEM
+# ==============================================================
 score:
   auto-reset:
     enabled: true
@@ -245,18 +224,18 @@ score:
     broadcast: true
   request-timeout-seconds: 60
   messages:
-    no-permission: "<glyph:warning_blue> <#f38ba8>You do not have permission to execute this command."
-    player-not-found: "<glyph:warning_blue> <#f38ba8>Player <#89dceb>%target%<#f38ba8> is not online."
-    cannot-target-self: "<glyph:warning_blue> <#f38ba8>You cannot send a reset request to yourself."
-    request-sent: "<glyph:warning_blue> <#a6e3a1>Sent a 1v1 score reset request to <#89dceb>%target%<#a6e3a1>. Waiting for approval..."
-    request-received: "<glyph:warning_blue> <#89dceb>%sender% <#a6adc8>has requested to reset your 1v1 score! <click:run_command:'/score accept %sender%'><hover:show_text:'<#a6e3a1>Click to accept'><#a6e3a1><b>[ACCEPT]</b></hover></click> <click:run_command:'/score decline %sender%'><hover:show_text:'<#f38ba8>Click to decline'><#f38ba8><b>[DECLINE]</b></hover></click>"
-    no-pending-request: "<glyph:warning_blue> <#f38ba8>You have no pending reset request from <#89dceb>%sender%<#f38ba8>."
-    request-declined: "<glyph:warning_blue> <#f38ba8>Reset request with <#89dceb>%player%<#f38ba8> was declined."
-    score-reset-success: "<glyph:warning_blue> <#a6e3a1>1v1 score between <#89dceb>%player1% <#a6e3a1>and <#89dceb>%player2% <#a6e3a1>has been reset!"
-    global-reset-admin: "<glyph:warning_blue> <#a6e3a1>All 1v1 scores have been globally reset by an administrator."
-    global-reset-auto: "<glyph:warning_blue> <#a6e3a1>All 1v1 scores have been automatically reset (Hourly Schedule)."
-    usage: "<glyph:warning_blue> <#a6adc8>Usage: <#89dceb>/score reset <player> <#6c7086>| <#89dceb>/score accept <player> <#6c7086>| <#89dceb>/score resetall"
+    no-permission: "<glyph:warning_blue> <#f38ba8>No permission."
+    player-not-found: "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#f38ba8>Player <#89dceb>%target% <#f38ba8>is offline."
+    cannot-target-self: "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#f38ba8>Cannot target yourself."
+    request-sent: "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#a6e3a1>Reset request sent to <#89dceb><b>%target%</b>"
+    request-received: "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#89dceb><b>%sender%</b> <#a6adc8>wants to reset 1v1 score: <click:run_command:'/score accept %sender%'><hover:show_text:'<#a6e3a1>Click to accept'><#a6e3a1><b>[ACCEPT]</b></hover></click> <click:run_command:'/score decline %sender%'><hover:show_text:'<#f38ba8>Click to decline'><#f38ba8><b>[DECLINE]</b></hover></click>"
+    no-pending-request: "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#f38ba8>No pending request from <#89dceb>%sender%"
+    request-declined: "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#f38ba8>Reset request with <#89dceb>%player% <#f38ba8>declined."
+    score-reset-success: "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#a6e3a1>Score reset: <#89dceb><b>%player1%</b> <#6c7086>vs <#89dceb><b>%player2%</b>"
+    global-reset-admin: "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#a6e3a1>All 1v1 scores reset by Admin."
+    global-reset-auto: "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#a6e3a1>All 1v1 scores auto-reset."
+    usage: "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#89dceb>/score reset <player> <#6c7086>| <#89dceb>accept <player> <#6c7086>| <#89dceb>resetall"
 
 admin:
   messages:
-    reload-success: "<glyph:warning_blue> <#a6e3a1>VCarterUtils configuration and regear whitelist reloaded successfully!"
+    reload-success: "<glyph:warning_blue> <white><sprite:items:item/comparator></white> <#a6e3a1>VCarterUtils reloaded!"

@@ -3,10 +3,14 @@ version: '1.0.0'
 main: me.nh4n.vcarterutils.VCarterUtils
 api-version: '1.21'
 author: Nh4n
-description: Plugin tinh diem 1v1 action bar 15s, Regear tuy bien, Pearl Cooldown va tinh nang Back khi tu tran.
+description: Plugin tinh diem 1v1 action bar 15s, Regear tuy bien, Pearl & Mace Cooldown va tinh nang Back khi tu tran.
 softdepend:
   - PlaceholderAPI
   - PerPlayerKit
+  - Multiverse-Core
+  - SlimeWorldManager
+  - AdvancedSlimeWorldManager
+  - SlimeWorldPlugin
 commands:
   score:
     description: Manage 1v1 scores and reset requests
@@ -18,9 +22,9 @@ commands:
     description: Return to your previous death location
     aliases: [deathback, return]
   setting:
-    description: Open personal PvP settings menu
+    description: Open personal PvP settings or Admin Cooldown Manager
     aliases: [settings, options, vsetting]
 permissions:
   vcarterutils.admin:
-    description: Allows administrative score reset and config reload commands
+    description: Allows administrative score reset, config reload and /setting admin GUI
     default: op

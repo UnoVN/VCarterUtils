@@ -61,19 +61,34 @@ public class VCarterExpansion extends PlaceholderExpansion {
             return String.valueOf(kills);
         }
 
-        // %vcarterutils_pearl_cooldown% -> Cooldown thuc te dang ap dung tai world hien tai (giay)
+        // --- ENDER PEARL PLACEHOLDERS ---
         if (params.equalsIgnoreCase("pearl_cooldown")) {
             return String.valueOf(plugin.getPearlManager().getEffectiveCooldownSeconds(player));
         }
 
-        // %vcarterutils_pearl_cooldown_personal% -> Cooldown ca nhan da chon trong /setting (giay)
         if (params.equalsIgnoreCase("pearl_cooldown_personal")) {
             return String.valueOf(plugin.getPearlManager().getPlayerPersonalSeconds(player.getUniqueId()));
         }
 
-        // %vcarterutils_pearl_cooldown_remaining% -> Thoi gian hoi chieu pearl con lai (vd: 2.5)
         if (params.equalsIgnoreCase("pearl_cooldown_remaining")) {
             int ticks = player.getCooldown(Material.ENDER_PEARL);
+            if (ticks <= 0) {
+                return "0";
+            }
+            return String.format(Locale.US, "%.1f", ticks / 20.0);
+        }
+
+        // --- MACE PLACEHOLDERS ---
+        if (params.equalsIgnoreCase("mace_cooldown")) {
+            return String.valueOf(plugin.getMaceManager().getEffectiveCooldownSeconds(player));
+        }
+
+        if (params.equalsIgnoreCase("mace_cooldown_personal")) {
+            return String.valueOf(plugin.getMaceManager().getPlayerPersonalSeconds(player.getUniqueId()));
+        }
+
+        if (params.equalsIgnoreCase("mace_cooldown_remaining")) {
+            int ticks = player.getCooldown(Material.MACE);
             if (ticks <= 0) {
                 return "0";
             }

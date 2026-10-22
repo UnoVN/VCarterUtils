@@ -37,7 +37,7 @@ public class SettingMenuManager {
             if (top.getHolder() instanceof SettingMenuHolder holder) {
                 populateInventory(online, top, holder);
             } else if (top.getHolder() instanceof AdminSettingMenuHolder adminHolder) {
-                populateAdminInventory( top, adminHolder);
+                populateAdminInventory(top, adminHolder);
             }
         }
     }
@@ -52,7 +52,7 @@ public class SettingMenuManager {
 
         String titleRaw = plugin.getConfig().getString(
                 "setting-menu.title",
-                "<#6c7086>✦ <#89dceb><b>Player Settings</b> <#6c7086>✦"
+                "<#6c7086>✦ <#89dceb><b>Settings</b> <#6c7086>✦"
         );
         Component title = miniMessage.deserialize(titleRaw);
 
@@ -154,7 +154,7 @@ public class SettingMenuManager {
     // ==============================================================
 
     public void openAdminSettingMenu(Player admin, int page) {
-        Component title = miniMessage.deserialize("<#6c7086>✦ <#f38ba8><b>Admin Cooldown Manager</b> <#6c7086>✦");
+        Component title = miniMessage.deserialize("<#6c7086>✦ <#f38ba8><b>Admin Cooldowns</b> <#6c7086>✦");
         AdminSettingMenuHolder holder = new AdminSettingMenuHolder(54, title, Math.max(0, page));
         populateAdminInventory(holder.getInventory(), holder);
         admin.openInventory(holder.getInventory());
@@ -173,10 +173,8 @@ public class SettingMenuManager {
         ItemStack borderFiller = createSimpleItem(Material.BLACK_STAINED_GLASS_PANE, " ", List.of());
         ItemStack separatorFiller = createSimpleItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
 
-        // Row 1 (0-8) & Row 6 (45-53): Black glass border
         for (int i = 0; i <= 8; i++) inv.setItem(i, borderFiller);
         for (int i = 45; i <= 53; i++) inv.setItem(i, borderFiller);
-        // Row 2 (9-17): Gray separator
         for (int i = 9; i <= 17; i++) inv.setItem(i, separatorFiller);
 
         PearlManager pearlManager = plugin.getPearlManager();
@@ -189,20 +187,18 @@ public class SettingMenuManager {
 
         ItemStack globalPearlItem = createSimpleItem(
                 Material.ENDER_PEARL,
-                "<#89dceb><b><!italic>Global Ender Pearl Settings</b>",
+                "<!italic><white><sprite:items:item/ender_pearl></white> <#89dceb><b>Global Pearl</b>",
                 List.of(
-                        "<#6c7086><!italic>Manage server-wide Pearl cooldowns.",
                         "",
-                        "<#a6adc8><!italic>Global Force Override: " + (pearlGlobalOn ? "<#a6e3a1><b>ENABLED</b>" : "<#f38ba8><b>DISABLED</b>"),
-                        "<#a6adc8><!italic>Global Force Duration: <#f9e2af><b>" + pearlGlobalSec + "s</b>",
-                        "<#a6adc8><!italic>Default Player Cooldown: <#89dceb><b>" + pearlDefSec + "s</b>",
+                        "<!italic><#a6adc8>Global Force: " + (pearlGlobalOn ? "<#a6e3a1><b>ON</b>" : "<#f38ba8><b>OFF</b>"),
+                        "<!italic><#a6adc8>Force Duration: <#f9e2af><b>" + pearlGlobalSec + "s</b>",
+                        "<!italic><#a6adc8>Server Default: <#89dceb><b>" + pearlDefSec + "s</b>",
                         "",
-                        "<#a6adc8><!italic>Options: " + buildOptionsBar(pearlGlobalSec, pearlManager.getAvailableOptions()),
+                        "<!italic><#a6adc8>Presets: " + buildOptionsBar(pearlGlobalSec, pearlManager.getAvailableOptions()),
                         "",
-                        "<#a6e3a1><!italic>▸ Left-Click <#a6adc8>to increase duration",
-                        "<#f9e2af><!italic>▸ Right-Click <#a6adc8>to decrease duration",
-                        "<#89dceb><!italic>▸ Shift + Left-Click <#a6adc8>to toggle Global Force",
-                        "<#f38ba8><!italic>▸ Shift + Right-Click <#a6adc8>to set as Default (" + pearlGlobalSec + "s)"
+                        "<!italic><white><glyph:left_click></white> <#a6e3a1>Increase <#6c7086>| <white><glyph:right_click></white> <#f9e2af>Decrease",
+                        "<!italic><#89dceb>Shift + <white><glyph:left_click></white> <#a6adc8>Toggle Force",
+                        "<!italic><#f38ba8>Shift + <white><glyph:right_click></white> <#a6adc8>Set Default (" + pearlGlobalSec + "s)"
                 )
         );
         globalPearlItem.setAmount(Math.max(1, Math.min(64, pearlGlobalSec)));
@@ -217,15 +213,13 @@ public class SettingMenuManager {
 
         ItemStack scannerItem = createSimpleItem(
                 Material.RECOVERY_COMPASS,
-                "<#a6e3a1><b><!italic>World Cooldown Scanner</b>",
+                "<!italic><white><sprite:items:item/recovery_compass></white> <#a6e3a1><b>World Scanner</b>",
                 List.of(
-                        "<#6c7086><!italic>Auto-detected from Bukkit, Multiverse",
-                        "<#6c7086><!italic>& AdvancedSlimeWorldManager (ASWM).",
                         "",
-                        "<#a6adc8><!italic>Total Worlds Found: <#89dceb><b>" + allWorlds.size() + "</b>",
-                        "<#a6adc8><!italic>Current Page: <#f9e2af><b>" + (currentPage + 1) + "/" + totalPages + "</b>",
+                        "<!italic><#a6adc8>Detected: <#89dceb><b>" + allWorlds.size() + " Worlds</b>",
+                        "<!italic><#a6adc8>Page: <#f9e2af><b>" + (currentPage + 1) + "/" + totalPages + "</b>",
                         "",
-                        "<#a6e3a1><!italic>▸ Click <#a6adc8>to rescan worlds & refresh"
+                        "<!italic><white><glyph:left_click></white> <#a6e3a1>Rescan worlds"
                 )
         );
         inv.setItem(4, scannerItem);
@@ -238,20 +232,18 @@ public class SettingMenuManager {
 
         ItemStack globalMaceItem = createSimpleItem(
                 Material.MACE,
-                "<#89dceb><b><!italic>Global Mace Settings</b>",
+                "<!italic><white><sprite:items:item/mace></white> <#89dceb><b>Global Mace</b>",
                 List.of(
-                        "<#6c7086><!italic>Manage server-wide Mace cooldowns.",
                         "",
-                        "<#a6adc8><!italic>Global Force Override: " + (maceGlobalOn ? "<#a6e3a1><b>ENABLED</b>" : "<#f38ba8><b>DISABLED</b>"),
-                        "<#a6adc8><!italic>Global Force Duration: <#f9e2af><b>" + maceGlobalSec + "s</b>",
-                        "<#a6adc8><!italic>Default Player Cooldown: <#89dceb><b>" + maceDefSec + "s</b>",
+                        "<!italic><#a6adc8>Global Force: " + (maceGlobalOn ? "<#a6e3a1><b>ON</b>" : "<#f38ba8><b>OFF</b>"),
+                        "<!italic><#a6adc8>Force Duration: <#f9e2af><b>" + maceGlobalSec + "s</b>",
+                        "<!italic><#a6adc8>Server Default: <#89dceb><b>" + maceDefSec + "s</b>",
                         "",
-                        "<#a6adc8><!italic>Options: " + buildOptionsBar(maceGlobalSec, maceManager.getAvailableOptions()),
+                        "<!italic><#a6adc8>Presets: " + buildOptionsBar(maceGlobalSec, maceManager.getAvailableOptions()),
                         "",
-                        "<#a6e3a1><!italic>▸ Left-Click <#a6adc8>to increase duration",
-                        "<#f9e2af><!italic>▸ Right-Click <#a6adc8>to decrease duration",
-                        "<#89dceb><!italic>▸ Shift + Left-Click <#a6adc8>to toggle Global Force",
-                        "<#f38ba8><!italic>▸ Shift + Right-Click <#a6adc8>to set as Default (" + maceGlobalSec + "s)"
+                        "<!italic><white><glyph:left_click></white> <#a6e3a1>Increase <#6c7086>| <white><glyph:right_click></white> <#f9e2af>Decrease",
+                        "<!italic><#89dceb>Shift + <white><glyph:left_click></white> <#a6adc8>Toggle Force",
+                        "<!italic><#f38ba8>Shift + <white><glyph:right_click></white> <#a6adc8>Set Default (" + maceGlobalSec + "s)"
                 )
         );
         globalMaceItem.setAmount(Math.max(1, Math.min(64, maceGlobalSec)));
@@ -272,29 +264,30 @@ public class SettingMenuManager {
             boolean hasAnyForce = (forcedPearl >= 0 || forcedMace >= 0);
 
             Material iconMat = getWorldIconMaterial(dw, hasAnyForce);
+            String worldSprite = hasAnyForce
+                    ? "<white><sprite:items:item/emerald></white>"
+                    : "<white><sprite:items:item/ender_eye></white>";
 
             String pearlDisplay = (forcedPearl >= 0)
-                    ? "<#a6e3a1><b>Forced (" + forcedPearl + "s)</b>"
-                    : "<#6c7086>OFF (Uses Global/Player)";
+                    ? "<#a6e3a1><b>" + forcedPearl + "s</b>"
+                    : "<#6c7086>OFF";
             String maceDisplay = (forcedMace >= 0)
-                    ? "<#a6e3a1><b>Forced (" + forcedMace + "s)</b>"
-                    : "<#6c7086>OFF (Uses Global/Player)";
+                    ? "<#a6e3a1><b>" + forcedMace + "s</b>"
+                    : "<#6c7086>OFF";
 
             List<String> wLore = List.of(
-                    "<#6c7086><!italic>Status: " + (dw.loaded() ? "<#a6e3a1>Loaded" : "<#f9e2af>Unloaded") + " <#6c7086>(" + dw.source() + ")",
+                    "<!italic>" + (dw.loaded() ? "<#a6e3a1>● Loaded" : "<#f9e2af>○ Unloaded") + " <#6c7086>• " + dw.source(),
                     "",
-                    "<#a6adc8><!italic>Pearl Force Cooldown: " + pearlDisplay,
-                    "<#a6adc8><!italic>Mace Force Cooldown: " + maceDisplay,
+                    "<!italic><white><sprite:items:item/ender_pearl></white> <#a6adc8>Pearl: " + pearlDisplay,
+                    "<!italic><white><sprite:items:item/mace></white> <#a6adc8>Mace: " + maceDisplay,
                     "",
-                    "<#89dceb><!italic>▸ Left-Click <#a6adc8>to cycle Pearl Force",
-                    "<#f9e2af><!italic>▸ Right-Click <#a6adc8>to cycle Mace Force",
-                    "<#f38ba8><!italic>▸ Shift + Left-Click <#a6adc8>to turn Pearl Force OFF",
-                    "<#f38ba8><!italic>▸ Shift + Right-Click <#a6adc8>to turn Mace Force OFF"
+                    "<!italic><white><glyph:left_click></white> <#89dceb>Cycle Pearl <#6c7086>| <white><glyph:right_click></white> <#f9e2af>Cycle Mace",
+                    "<!italic><#f38ba8>Shift + <white><glyph:left_click></white> <#6c7086>Pearl OFF <#6c7086>| <white><glyph:right_click></white> <#6c7086>Mace OFF"
             );
 
             ItemStack worldItem = createSimpleItem(
                     iconMat,
-                    (hasAnyForce ? "<#a6e3a1><b><!italic>✦ " : "<#89dceb><b><!italic>● ") + wName + "</b>",
+                    "<!italic>" + worldSprite + " " + (hasAnyForce ? "<#a6e3a1><b>" : "<#89dceb><b>") + wName + "</b>",
                     wLore
             );
 
@@ -307,8 +300,8 @@ public class SettingMenuManager {
         if (currentPage > 0) {
             ItemStack prevBtn = createSimpleItem(
                     Material.ARROW,
-                    "<#89dceb><b><!italic>« Previous Page</b>",
-                    List.of("<#a6adc8><!italic>Go to page " + currentPage)
+                    "<!italic><white><sprite:items:item/arrow></white> <#89dceb><b>Previous Page</b>",
+                    List.of("<!italic><white><glyph:left_click></white> <#a6adc8>Page " + currentPage)
             );
             inv.setItem(45, prevBtn);
             holder.setSlotAction(45, new AdminSlotAction("PREV_PAGE", null));
@@ -316,16 +309,16 @@ public class SettingMenuManager {
 
         ItemStack playerMenuBtn = createSimpleItem(
                 Material.BOOK,
-                "<#89dceb><b><!italic>Open Player Settings</b>",
-                List.of("<#6c7086><!italic>Click to return to your personal /setting menu.")
+                "<!italic><white><sprite:items:item/book></white> <#89dceb><b>Player Settings</b>",
+                List.of("<!italic><white><glyph:left_click></white> <#a6adc8>Back to /setting")
         );
         inv.setItem(48, playerMenuBtn);
         holder.setSlotAction(48, new AdminSlotAction("OPEN_PLAYER_MENU", null));
 
         ItemStack closeBtn = createSimpleItem(
                 Material.BARRIER,
-                "<#f38ba8><b><!italic>Close Menu</b>",
-                List.of("<#6c7086><!italic>Click to close the admin menu.")
+                "<!italic><white><sprite:items:item/barrier></white> <#f38ba8><b>Close</b>",
+                List.of("<!italic><white><glyph:left_click></white> <#6c7086>Close menu")
         );
         inv.setItem(49, closeBtn);
         holder.setSlotAction(49, new AdminSlotAction("CLOSE", null));
@@ -333,8 +326,8 @@ public class SettingMenuManager {
         if (currentPage + 1 < totalPages) {
             ItemStack nextBtn = createSimpleItem(
                     Material.ARROW,
-                    "<#89dceb><b><!italic>Next Page »</b>",
-                    List.of("<#a6adc8><!italic>Go to page " + (currentPage + 2))
+                    "<!italic><white><sprite:items:item/arrow></white> <#89dceb><b>Next Page</b>",
+                    List.of("<!italic><white><glyph:left_click></white> <#a6adc8>Page " + (currentPage + 2))
             );
             inv.setItem(53, nextBtn);
             holder.setSlotAction(53, new AdminSlotAction("NEXT_PAGE", null));
@@ -356,17 +349,9 @@ public class SettingMenuManager {
         return dw.source().contains("Slime") ? Material.SLIME_BALL : Material.ENDER_EYE;
     }
 
-    /**
-     * Quet toan bo World tu:
-     * 1. Bukkit.getWorlds() (dang load)
-     * 2. Multiverse-Core (Reflection + worlds.yml)
-     * 3. AdvancedSlimeWorldManager / SlimeWorldManager / SlimeWorldPlugin (worlds.yml + slime_worlds/*.slime)
-     * 4. Cac world da cau hinh trong config.yml
-     */
     public List<DiscoveredWorld> scanAllWorlds() {
         Map<String, DiscoveredWorld> map = new LinkedHashMap<>();
 
-        // 1. Bukkit loaded worlds
         for (World w : Bukkit.getWorlds()) {
             String name = w.getName();
             map.put(name.toLowerCase(), new DiscoveredWorld(name, true, "Bukkit"));
@@ -374,7 +359,6 @@ public class SettingMenuManager {
 
         File pluginsFolder = plugin.getDataFolder().getParentFile();
 
-        // 2. Multiverse-Core (worlds.yml + API Reflection)
         if (pluginsFolder != null) {
             File mvWorldsFile = new File(pluginsFolder, "Multiverse-Core/worlds.yml");
             if (mvWorldsFile.exists()) {
@@ -389,7 +373,6 @@ public class SettingMenuManager {
         }
         scanMultiverseReflection(map);
 
-        // 3. AdvancedSlimeWorldManager / SlimeWorldManager / SlimeWorldPlugin
         if (pluginsFolder != null) {
             String[] slimeConfigPaths = {
                     "AdvancedSlimeWorldManager/worlds.yml",
@@ -410,7 +393,6 @@ public class SettingMenuManager {
             }
         }
 
-        // Quet thu muc slime_worlds/*.slime o thu muc goc server neu co
         File slimeFolder = new File(Bukkit.getWorldContainer(), "slime_worlds");
         if (slimeFolder.exists() && slimeFolder.isDirectory()) {
             File[] files = slimeFolder.listFiles();
@@ -424,7 +406,6 @@ public class SettingMenuManager {
             }
         }
 
-        // 4. Cac world dang duoc khai bao trong config.yml
         for (String wName : plugin.getPearlManager().getConfiguredForcedWorldNames()) {
             addDiscoveredWorld(map, wName, "Config");
         }
@@ -518,20 +499,20 @@ public class SettingMenuManager {
             if (maceManager.isWorldForced(player.getWorld())) {
                 String forcedFormat = plugin.getConfig().getString(
                         "mace-cooldown.messages.world-status-forced",
-                        "<#f9e2af>⚠ Forced in this world: <#89dceb><b>%forced%s</b>"
+                        "<#f9e2af>● World forced: <#89dceb><b>%forced%s</b>"
                 );
                 worldStatus = forcedFormat.replace("%forced%", String.valueOf(effectiveSec))
                                           .replace("%world%", player.getWorld().getName());
             } else if (maceManager.isGlobalForceEnabled()) {
                 String globalFormat = plugin.getConfig().getString(
                         "mace-cooldown.messages.world-status-global-forced",
-                        "<#f9e2af>⚠ Forced globally: <#89dceb><b>%forced%s</b>"
+                        "<#f9e2af>● Global forced: <#89dceb><b>%forced%s</b>"
                 );
                 worldStatus = globalFormat.replace("%forced%", String.valueOf(effectiveSec));
             } else {
                 worldStatus = plugin.getConfig().getString(
                         "mace-cooldown.messages.world-status-normal",
-                        "<#a6e3a1>✔ Active in current world"
+                        "<#a6e3a1>● Personal setting active"
                 );
             }
             optionsBar = buildOptionsBar(personalSec, maceManager.getAvailableOptions());
@@ -544,20 +525,20 @@ public class SettingMenuManager {
             if (pearlManager.isWorldForced(player.getWorld())) {
                 String forcedFormat = plugin.getConfig().getString(
                         "pearl-cooldown.messages.world-status-forced",
-                        "<#f9e2af>⚠ Forced in this world: <#89dceb><b>%forced%s</b>"
+                        "<#f9e2af>● World forced: <#89dceb><b>%forced%s</b>"
                 );
                 worldStatus = forcedFormat.replace("%forced%", String.valueOf(effectiveSec))
                                           .replace("%world%", player.getWorld().getName());
             } else if (pearlManager.isGlobalForceEnabled()) {
                 String globalFormat = plugin.getConfig().getString(
                         "pearl-cooldown.messages.world-status-global-forced",
-                        "<#f9e2af>⚠ Forced globally: <#89dceb><b>%forced%s</b>"
+                        "<#f9e2af>● Global forced: <#89dceb><b>%forced%s</b>"
                 );
                 worldStatus = globalFormat.replace("%forced%", String.valueOf(effectiveSec));
             } else {
                 worldStatus = plugin.getConfig().getString(
                         "pearl-cooldown.messages.world-status-normal",
-                        "<#a6e3a1>✔ Active in current world"
+                        "<#a6e3a1>● Personal setting active"
                 );
             }
             optionsBar = buildOptionsBar(personalSec, pearlManager.getAvailableOptions());

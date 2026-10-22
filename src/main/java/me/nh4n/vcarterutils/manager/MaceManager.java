@@ -20,20 +20,13 @@ public class MaceManager {
     private final VCarterUtils plugin;
     private final MiniMessage miniMessage;
 
-    // Luu cooldown Mace ca nhan cua nguoi choi (don vi: giay)
     private final Map<UUID, Integer> playerCooldownSettings = new ConcurrentHashMap<>();
-
-    // Luu danh sach cac moc giay cho phep chon
     private final List<Integer> availableOptions = new ArrayList<>();
-
-    // Luu Force Cooldown theo tung world: Map<WorldNameLowerCase, Seconds>
     private final Map<String, Integer> forcedWorldCooldowns = new ConcurrentHashMap<>();
-
-    // Chong spam tin nhan khi nguoi choi click danh lien tuc luc Mace dang cooldown
     private final Map<UUID, Long> lastCooldownWarnTimes = new ConcurrentHashMap<>();
 
     private boolean globalForceEnabled = false;
-    private int globalForceSeconds = 5;
+    private int globalForceSeconds = 1;
 
     private File dataFile;
 
@@ -60,6 +53,7 @@ public class MaceManager {
 
     private void loadPlayerSettings() {
         playerCooldownSettings.clear();
+        int minAllowed = getDefaultSeconds();
         synchronized (VCarterUtils.class) {
             FileConfiguration dataConfig = YamlConfiguration.loadConfiguration(dataFile);
             ConfigurationSection section = dataConfig.getConfigurationSection("mace-cooldown");
@@ -69,8 +63,8 @@ public class MaceManager {
             for (String key : section.getKeys(false)) {
                 try {
                     UUID uuid = UUID.fromString(key);
-                    int seconds = section.getInt(key, getDefaultSeconds());
-                    playerCooldownSettings.put(uuid, Math.max(0, seconds));
+                    int seconds = section.getInt(key, minAllowed);
+                    playerCooldownSettings.put(uuid, Math.max(minAllowed, seconds));
                 } catch (IllegalArgumentException ignored) {
                 }
             }
@@ -113,34 +107,42 @@ public class MaceManager {
     }
 
     public void reload() {
+        int def = getDefaultSeconds();
+
         availableOptions.clear();
         List<Integer> rawOptions = plugin.getConfig().getIntegerList("mace-cooldown.available-options");
         if (rawOptions.isEmpty()) {
-            availableOptions.addAll(List.of(0, 1, 3, 5, 6, 8, 10, 15));
-        } else {
-            for (int val : rawOptions) {
-                if (val >= 0 && !availableOptions.contains(val)) {
-                    availableOptions.add(val);
-                }
-            }
-            Collections.sort(availableOptions);
+            rawOptions = List.of(1, 3, 5, 6, 8, 10, 15);
         }
 
-        int def = getDefaultSeconds();
+        // Chi cho phep cac moc >= default-seconds (khong bao gio cho chinh thap hon mac dinh)
+        for (int val : rawOptions) {
+            if (val >= def && !availableOptions.contains(val)) {
+                availableOptions.add(val);
+            }
+        }
+
         if (!availableOptions.contains(def)) {
             availableOptions.add(def);
-            Collections.sort(availableOptions);
+        }
+        Collections.sort(availableOptions);
+
+        // Dam bao setting da luu cua nguoi choi khong thap hon muc mac dinh moi
+        for (Map.Entry<UUID, Integer> entry : playerCooldownSettings.entrySet()) {
+            if (entry.getValue() < def) {
+                entry.setValue(def);
+            }
         }
 
         this.globalForceEnabled = plugin.getConfig().getBoolean("mace-cooldown.global-force.enabled", false);
-        this.globalForceSeconds = Math.max(0, plugin.getConfig().getInt("mace-cooldown.global-force.seconds", def));
+        this.globalForceSeconds = Math.max(def, plugin.getConfig().getInt("mace-cooldown.global-force.seconds", def));
 
         forcedWorldCooldowns.clear();
         ConfigurationSection worldSection = plugin.getConfig().getConfigurationSection("mace-cooldown.force-worlds.worlds");
         if (worldSection != null) {
             for (String worldName : worldSection.getKeys(false)) {
                 int sec = worldSection.getInt(worldName, -1);
-                if (sec >= 0) {
+                if (sec >= def) {
                     forcedWorldCooldowns.put(worldName.trim().toLowerCase(), sec);
                 }
             }
@@ -170,7 +172,7 @@ public class MaceManager {
     }
 
     public void setGlobalForceSeconds(int seconds) {
-        this.globalForceSeconds = Math.max(0, seconds);
+        this.globalForceSeconds = Math.max(getDefaultSeconds(), seconds);
         plugin.getConfig().set("mace-cooldown.global-force.seconds", this.globalForceSeconds);
         plugin.saveConfig();
     }
@@ -191,9 +193,10 @@ public class MaceManager {
     }
 
     public void setDefaultSeconds(int seconds) {
-        int clean = Math.max(0, seconds);
+        int clean = Math.max(1, seconds);
         plugin.getConfig().set("mace-cooldown.default-seconds", clean);
         plugin.saveConfig();
+        reload();
     }
 
     public boolean isOnlyPlayers() {
@@ -216,8 +219,11 @@ public class MaceManager {
         return plugin.getConfig().getBoolean("mace-cooldown.clear-on-kit-load", true);
     }
 
+    /**
+     * Default cooldown cua Mace luon >= 1s (khong cho phep chinh duoi muc mac dinh)
+     */
     public int getDefaultSeconds() {
-        return Math.max(0, plugin.getConfig().getInt("mace-cooldown.default-seconds", 5));
+        return Math.max(1, plugin.getConfig().getInt("mace-cooldown.default-seconds", 1));
     }
 
     public List<Integer> getAvailableOptions() {
@@ -270,7 +276,7 @@ public class MaceManager {
             }
         }
 
-        if (seconds < 0) {
+        if (seconds < getDefaultSeconds()) {
             forcedWorldCooldowns.remove(lowerKey);
         } else {
             forcedWorldCooldowns.put(lowerKey, seconds);
@@ -306,11 +312,13 @@ public class MaceManager {
     }
 
     public int getPlayerPersonalSeconds(UUID uuid) {
-        return playerCooldownSettings.getOrDefault(uuid, getDefaultSeconds());
+        int def = getDefaultSeconds();
+        int val = playerCooldownSettings.getOrDefault(uuid, def);
+        return Math.max(def, val);
     }
 
     public void setPlayerPersonalSeconds(UUID uuid, int seconds) {
-        int clean = Math.max(0, seconds);
+        int clean = Math.max(getDefaultSeconds(), seconds);
         playerCooldownSettings.put(uuid, clean);
         savePlayerSettingAsync(uuid, clean);
     }
@@ -351,12 +359,12 @@ public class MaceManager {
         }
         if (isWorldForced(player.getWorld())) {
             int forced = getForcedWorldSeconds(player.getWorld());
-            if (forced >= 0) {
+            if (forced >= getDefaultSeconds()) {
                 return forced;
             }
         }
         if (globalForceEnabled) {
-            return globalForceSeconds;
+            return Math.max(getDefaultSeconds(), globalForceSeconds);
         }
         return getPlayerPersonalSeconds(player.getUniqueId());
     }
@@ -371,7 +379,7 @@ public class MaceManager {
 
         String raw = plugin.getConfig().getString(
                 "mace-cooldown.messages.on-cooldown",
-                "<glyph:warning_blue> <#f38ba8>Your <#89dceb>Mace<#f38ba8> is on cooldown! Wait <#f9e2af><b>%seconds%s</b><#f38ba8>."
+                "<glyph:warning_blue> <#f38ba8>Mace is on cooldown for <#f9e2af><b>%seconds%s</b><#f38ba8>."
         );
         if (raw != null && !raw.isEmpty()) {
             String secFormatted = String.format(Locale.US, "%.1f", remainingTicks / 20.0);

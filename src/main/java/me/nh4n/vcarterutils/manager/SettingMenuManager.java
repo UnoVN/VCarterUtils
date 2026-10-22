@@ -137,13 +137,14 @@ public class SettingMenuManager {
                 stack.setItemMeta(meta);
             }
 
+            // Hien thi dung so giay Personal Setting cua nguoi choi tren so luong item
             if (itemSec.getBoolean("show-seconds-as-amount", true)) {
                 if (type.equals("PEARL_COOLDOWN")) {
-                    int currentSec = plugin.getPearlManager().getEffectiveCooldownSeconds(player);
-                    stack.setAmount(Math.max(1, Math.min(64, currentSec)));
+                    int personalSec = plugin.getPearlManager().getPlayerPersonalSeconds(player.getUniqueId());
+                    stack.setAmount(Math.max(1, Math.min(64, personalSec)));
                 } else if (type.equals("MACE_COOLDOWN")) {
-                    int currentSec = plugin.getMaceManager().getEffectiveCooldownSeconds(player);
-                    stack.setAmount(Math.max(1, Math.min(64, currentSec)));
+                    int personalSec = plugin.getMaceManager().getPlayerPersonalSeconds(player.getUniqueId());
+                    stack.setAmount(Math.max(1, Math.min(64, personalSec)));
                 }
             }
 
@@ -157,7 +158,11 @@ public class SettingMenuManager {
     // ==============================================================
 
     public void openAdminSettingMenu(Player admin, int page) {
-        Component title = miniMessage.deserialize("<#6c7086>✦ <#f38ba8><b>Admin Cooldowns</b> <#6c7086>✦");
+        String titleRaw = plugin.getConfig().getString(
+                "admin-menu.title",
+                "<#6c7086>✦ <#f38ba8><b>Admin Cooldowns</b> <#6c7086>✦"
+        );
+        Component title = miniMessage.deserialize(titleRaw);
         AdminSettingMenuHolder holder = new AdminSettingMenuHolder(54, title, Math.max(0, page));
         populateAdminInventory(holder.getInventory(), holder);
         admin.openInventory(holder.getInventory());
@@ -558,16 +563,29 @@ public class SettingMenuManager {
         if (options.isEmpty()) {
             return "<#89dceb><b>" + currentSec + "s</b>";
         }
+        String selectedFormat = plugin.getConfig().getString(
+                "setting-menu.options-format.selected",
+                "<#a6e3a1><b>[%seconds%s]</b>"
+        );
+        String unselectedFormat = plugin.getConfig().getString(
+                "setting-menu.options-format.unselected",
+                "<#6c7086>%seconds%s"
+        );
+        String separator = plugin.getConfig().getString(
+                "setting-menu.options-format.separator",
+                " <#6c7086>• "
+        );
+
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < options.size(); i++) {
             int opt = options.get(i);
             if (i > 0) {
-                sb.append(" <#6c7086>• ");
+                sb.append(separator);
             }
             if (opt == currentSec) {
-                sb.append("<#a6e3a1><b>[").append(opt).append("s]</b>");
+                sb.append(selectedFormat.replace("%seconds%", String.valueOf(opt)));
             } else {
-                sb.append("<#6c7086>").append(opt).append("s");
+                sb.append(unselectedFormat.replace("%seconds%", String.valueOf(opt)));
             }
         }
         return sb.toString();

@@ -3,15 +3,20 @@ package me.nh4n.vcarterutils;
 import me.nh4n.vcarterutils.command.BackCommand;
 import me.nh4n.vcarterutils.command.MainCommand;
 import me.nh4n.vcarterutils.command.ScoreCommand;
+import me.nh4n.vcarterutils.command.SettingCommand;
 import me.nh4n.vcarterutils.hook.VCarterExpansion;
 import me.nh4n.vcarterutils.listener.AutoPotListener;
 import me.nh4n.vcarterutils.listener.BackListener;
 import me.nh4n.vcarterutils.listener.KillDeathListener;
+import me.nh4n.vcarterutils.listener.PearlListener;
 import me.nh4n.vcarterutils.listener.RegearListener;
+import me.nh4n.vcarterutils.listener.SettingMenuListener;
 import me.nh4n.vcarterutils.listener.TotemListener;
 import me.nh4n.vcarterutils.manager.BackManager;
+import me.nh4n.vcarterutils.manager.PearlManager;
 import me.nh4n.vcarterutils.manager.RegearManager;
 import me.nh4n.vcarterutils.manager.ScoreManager;
+import me.nh4n.vcarterutils.manager.SettingMenuManager;
 import me.nh4n.vcarterutils.manager.TotemManager;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
@@ -27,16 +32,21 @@ public final class VCarterUtils extends JavaPlugin {
     private RegearManager regearManager;
     private TotemManager totemManager;
     private BackManager backManager;
+    private PearlManager pearlManager;
+    private SettingMenuManager settingMenuManager;
 
     private KillDeathListener killDeathListener;
     private AutoPotListener autoPotListener;
     private RegearListener regearListener;
     private TotemListener totemListener;
     private BackListener backListener;
+    private PearlListener pearlListener;
+    private SettingMenuListener settingMenuListener;
 
     private ScoreCommand scoreCommand;
     private MainCommand mainCommand;
     private BackCommand backCommand;
+    private SettingCommand settingCommand;
     private BukkitTask autoResetTask;
 
     @Override
@@ -51,16 +61,21 @@ public final class VCarterUtils extends JavaPlugin {
         this.regearManager = new RegearManager(this);
         this.totemManager = new TotemManager(this);
         this.backManager = new BackManager(this);
+        this.pearlManager = new PearlManager(this);
+        this.settingMenuManager = new SettingMenuManager(this);
 
         this.killDeathListener = new KillDeathListener(this);
         this.autoPotListener = new AutoPotListener(this);
         this.regearListener = new RegearListener(this);
         this.totemListener = new TotemListener(this);
         this.backListener = new BackListener(this);
+        this.pearlListener = new PearlListener(this);
+        this.settingMenuListener = new SettingMenuListener(this);
 
         this.scoreCommand = new ScoreCommand(this);
         this.mainCommand = new MainCommand(this);
         this.backCommand = new BackCommand(this);
+        this.settingCommand = new SettingCommand(this);
 
         PluginManager pluginManager = Bukkit.getPluginManager();
 
@@ -69,6 +84,8 @@ public final class VCarterUtils extends JavaPlugin {
         pluginManager.registerEvents(regearListener, this);
         pluginManager.registerEvents(totemListener, this);
         pluginManager.registerEvents(backListener, this);
+        pluginManager.registerEvents(pearlListener, this);
+        pluginManager.registerEvents(settingMenuListener, this);
         pluginManager.registerEvents(scoreCommand, this);
 
         // Dang ky Lenh /score
@@ -92,6 +109,13 @@ public final class VCarterUtils extends JavaPlugin {
             backCmd.setTabCompleter(backCommand);
         }
 
+        // Dang ky Lenh /setting (/settings, /options, /vsetting)
+        PluginCommand settingCmd = getCommand("setting");
+        if (settingCmd != null) {
+            settingCmd.setExecutor(settingCommand);
+            settingCmd.setTabCompleter(settingCommand);
+        }
+
         setupAutoResetTask();
 
         if (pluginManager.getPlugin("PlaceholderAPI") != null) {
@@ -112,6 +136,12 @@ public final class VCarterUtils extends JavaPlugin {
         }
         if (backManager != null) {
             backManager.reload();
+        }
+        if (pearlManager != null) {
+            pearlManager.reload();
+        }
+        if (settingMenuManager != null) {
+            settingMenuManager.reload();
         }
         setupAutoResetTask();
         getLogger().info("VCarterUtils configuration reloaded.");
@@ -161,6 +191,9 @@ public final class VCarterUtils extends JavaPlugin {
         if (regearManager != null) {
             regearManager.clearAll();
         }
+        if (pearlManager != null) {
+            pearlManager.clearAll();
+        }
         if (scoreManager != null) {
             scoreManager.clearAll();
         }
@@ -185,5 +218,13 @@ public final class VCarterUtils extends JavaPlugin {
 
     public BackManager getBackManager() {
         return backManager;
+    }
+
+    public PearlManager getPearlManager() {
+        return pearlManager;
+    }
+
+    public SettingMenuManager getSettingMenuManager() {
+        return settingMenuManager;
     }
 }

@@ -111,6 +111,10 @@ setting-menu:
     enabled: true
     material: "GRAY_STAINED_GLASS_PANE"
     name: " "
+  options-format:
+    selected: "<#a6e3a1><b>[%seconds%s]</b>"
+    unselected: "<#6c7086>%seconds%s"
+    separator: " <#6c7086>• "
   items:
     pearl-cooldown:
       enabled: true
@@ -168,6 +172,17 @@ setting-menu:
         - "<!italic><white><glyph:left_click></white> <#6c7086>Close menu"
 
 # ==============================================================
+#                   ADMIN /SETTING ADMIN MENU
+# ==============================================================
+admin-menu:
+  title: "<#6c7086>✦ <#f38ba8><b>Admin Cooldowns</b> <#6c7086>✦"
+  messages:
+    global-force-toggled: "<glyph:warning_blue> <#a6adc8>Global %type% Force: %status%"
+    default-updated: "<glyph:warning_blue> <#a6e3a1>Default %type% cooldown set to <#89dceb><b>%seconds%s</b><#a6e3a1>."
+    world-force-updated: "<glyph:warning_blue> <#89dceb><b>%world%</b> <#a6adc8>%type% Force: %status%"
+    world-rescanned: "<glyph:warning_blue> <#a6e3a1>World list rescanned."
+
+# ==============================================================
 #                      BACK ON DEATH FEATURE
 # ==============================================================
 back:
@@ -207,6 +222,7 @@ regear:
     - RAILS
 
   item:
+    material: "CYAN_SHULKER_BOX"
     name: "<!italic><#89dceb><b>Shulker Regear</b>"
     lore:
       - "<!italic><white><glyph:right_click></white> <#a6adc8>Place to restock inventory"

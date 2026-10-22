@@ -27,7 +27,7 @@ public class AutoPotListener implements Listener {
 
     private final VCarterUtils plugin;
     private final Map<UUID, BukkitTask> activeScanners = new ConcurrentHashMap<>();
-    
+
     // Ghi nho danh sach loai hieu ung da apply boi AutoPot tu kit truoc cua tung player
     private final Map<UUID, Set<PotionEffectType>> lastAutoPotEffectTypes = new ConcurrentHashMap<>();
 
@@ -154,7 +154,7 @@ public class AutoPotListener implements Listener {
 
     /**
      * Cho PerPlayerKit nap xong kho do (sau 5 tick):
-     * 1. Reset luot dung Totem va kiem tra gioi han Totem trong tui.
+     * 1. Reset luot dung Totem, xoa Pearl Cooldown (neu bat) va kiem tra gioi han Totem trong tui.
      * 2. Kiem tra blacklist world cua AutoPot va apply effect.
      * 3. Chup snapshot layout kit ban dau cho he thong Regear.
      */
@@ -168,6 +168,11 @@ public class AutoPotListener implements Listener {
 
         // RESET LUOT DUNG TOTEM KHI LOAD/REKIT
         plugin.getTotemManager().resetActivations(uuid);
+
+        // XOA COOLDOWN ENDER PEARL KHI LOAD KIT NEU DUOC BAT
+        if (plugin.getPearlManager().isEnabled() && plugin.getPearlManager().isClearOnKitLoad()) {
+            plugin.getPearlManager().clearCooldown(player);
+        }
 
         BukkitTask task = new BukkitRunnable() {
             @Override

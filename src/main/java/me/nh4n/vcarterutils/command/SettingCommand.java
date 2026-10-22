@@ -1,6 +1,7 @@
 package me.nh4n.vcarterutils.command;
 
 import me.nh4n.vcarterutils.VCarterUtils;
+import me.nh4n.vcarterutils.manager.MaceManager;
 import me.nh4n.vcarterutils.manager.PearlManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -33,7 +34,24 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // Ho tro chinh nhanh qua lenh: /setting pearl <seconds>
+        // 1. Mo giao dien Admin: /setting admin
+        if (args.length >= 1 && args[0].equalsIgnoreCase("admin")) {
+            if (!player.hasPermission("vcarterutils.admin")) {
+                String noPerm = plugin.getConfig().getString(
+                        "score.messages.no-permission",
+                        "<glyph:warning_blue> <#f38ba8>You do not have permission to execute this command."
+                );
+                player.sendMessage(miniMessage.deserialize(noPerm));
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                return true;
+            }
+
+            plugin.getSettingMenuManager().openAdminSettingMenu(player, 0);
+            player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.8f, 1.0f);
+            return true;
+        }
+
+        // 2. Ho tro chinh nhanh qua lenh: /setting pearl <seconds>
         if (args.length >= 2 && args[0].equalsIgnoreCase("pearl")) {
             PearlManager pearlManager = plugin.getPearlManager();
             try {
@@ -68,7 +86,42 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // Mo giao dien /setting
+        // 3. Ho tro chinh nhanh qua lenh: /setting mace <seconds>
+        if (args.length >= 2 && args[0].equalsIgnoreCase("mace")) {
+            MaceManager maceManager = plugin.getMaceManager();
+            try {
+                int seconds = Integer.parseInt(args[1]);
+                if (!maceManager.getAvailableOptions().contains(seconds)) {
+                    String invalidMsg = plugin.getConfig().getString(
+                            "mace-cooldown.messages.invalid-option",
+                            "<glyph:warning_blue> <#f38ba8>Invalid cooldown option! Available options: <#89dceb>%options%"
+                    );
+                    String joined = String.join("s, ", maceManager.getAvailableOptions().stream().map(String::valueOf).toList()) + "s";
+                    player.sendMessage(miniMessage.deserialize(invalidMsg.replace("%options%", joined)));
+                    player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                    return true;
+                }
+
+                maceManager.setPlayerPersonalSeconds(player.getUniqueId(), seconds);
+                String raw = plugin.getConfig().getString(
+                        "mace-cooldown.messages.cooldown-changed",
+                        "<glyph:warning_blue> <#a6e3a1>Your personal Mace cooldown has been set to <#89dceb><b>%seconds%s</b><#a6e3a1>!"
+                );
+                player.sendMessage(miniMessage.deserialize(raw.replace("%seconds%", String.valueOf(seconds))));
+                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.2f);
+            } catch (NumberFormatException e) {
+                String invalidMsg = plugin.getConfig().getString(
+                        "mace-cooldown.messages.invalid-option",
+                        "<glyph:warning_blue> <#f38ba8>Invalid cooldown option! Available options: <#89dceb>%options%"
+                );
+                String joined = String.join("s, ", maceManager.getAvailableOptions().stream().map(String::valueOf).toList()) + "s";
+                player.sendMessage(miniMessage.deserialize(invalidMsg.replace("%options%", joined)));
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+            }
+            return true;
+        }
+
+        // 4. Mo giao dien Player /setting mac dinh
         plugin.getSettingMenuManager().openSettingMenu(player);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.7f, 1.2f);
         return true;
@@ -78,15 +131,31 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         List<String> completions = new ArrayList<>();
         if (args.length == 1) {
-            if ("pearl".startsWith(args[0].toLowerCase())) {
+            String input = args[0].toLowerCase();
+            if ("pearl".startsWith(input)) {
                 completions.add("pearl");
             }
-        } else if (args.length == 2 && args[0].equalsIgnoreCase("pearl")) {
+            if ("mace".startsWith(input)) {
+                completions.add("mace");
+            }
+            if (sender.hasPermission("vcarterutils.admin") && "admin".startsWith(input)) {
+                completions.add("admin");
+            }
+        } else if (args.length == 2) {
             String input = args[1].toLowerCase();
-            for (int opt : plugin.getPearlManager().getAvailableOptions()) {
-                String s = String.valueOf(opt);
-                if (s.startsWith(input)) {
-                    completions.add(s);
+            if (args[0].equalsIgnoreCase("pearl")) {
+                for (int opt : plugin.getPearlManager().getAvailableOptions()) {
+                    String s = String.valueOf(opt);
+                    if (s.startsWith(input)) {
+                        completions.add(s);
+                    }
+                }
+            } else if (args[0].equalsIgnoreCase("mace")) {
+                for (int opt : plugin.getMaceManager().getAvailableOptions()) {
+                    String s = String.valueOf(opt);
+                    if (s.startsWith(input)) {
+                        completions.add(s);
+                    }
                 }
             }
         }

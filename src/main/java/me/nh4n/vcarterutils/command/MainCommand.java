@@ -1,8 +1,6 @@
 package me.nh4n.vcarterutils.command;
 
 import me.nh4n.vcarterutils.VCarterUtils;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -19,10 +17,6 @@ public class MainCommand implements CommandExecutor, TabCompleter {
     private final VCarterUtils plugin;
     private final MiniMessage miniMessage;
 
-    private static final TextColor COLOR_SKY     = TextColor.fromHexString("#89dceb");
-    private static final TextColor COLOR_RED     = TextColor.fromHexString("#f38ba8");
-    private static final TextColor COLOR_SUBTEXT = TextColor.fromHexString("#a6adc8");
-
     public MainCommand(VCarterUtils plugin) {
         this.plugin = plugin;
         this.miniMessage = MiniMessage.miniMessage();
@@ -32,7 +26,11 @@ public class MainCommand implements CommandExecutor, TabCompleter {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
             if (!sender.hasPermission("vcarterutils.admin")) {
-                sender.sendMessage(miniMessage.deserialize("<glyph:warning_blue> ").append(Component.text("You do not have permission to execute this command.", COLOR_RED)));
+                String noPerm = plugin.getConfig().getString(
+                        "score.messages.no-permission",
+                        "<glyph:warning_blue> <#f38ba8>No permission."
+                );
+                sender.sendMessage(miniMessage.deserialize(noPerm));
                 return true;
             }
 
@@ -40,17 +38,15 @@ public class MainCommand implements CommandExecutor, TabCompleter {
 
             String successMsg = plugin.getConfig().getString(
                     "admin.messages.reload-success",
-                    "<glyph:warning_blue> <#a6e3a1>VCarterUtils configuration and regear whitelist reloaded successfully!"
+                    "<glyph:warning_blue> <white><sprite:items:item/comparator></white> <#a6e3a1>VCarterUtils reloaded!"
             );
             sender.sendMessage(miniMessage.deserialize(successMsg));
             return true;
         }
 
-        // Hien thi huong dan lenh
-        Component usage = miniMessage.deserialize("<glyph:warning_blue> ")
-                .append(Component.text("VCarterUtils v1.0.0 | Usage: ", COLOR_SUBTEXT))
-                .append(Component.text("/" + label + " reload", COLOR_SKY));
-        sender.sendMessage(usage);
+        sender.sendMessage(miniMessage.deserialize(
+                "<glyph:warning_blue> <white><sprite:items:item/comparator></white> <#a6adc8>VCarterUtils <#6c7086>| <#89dceb>/" + label + " reload"
+        ));
         return true;
     }
 

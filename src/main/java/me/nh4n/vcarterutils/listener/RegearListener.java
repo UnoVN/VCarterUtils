@@ -46,9 +46,6 @@ public class RegearListener implements Listener {
         }
     }
 
-    /**
-     * Chặn tuyệt đối /regear và /rg không cho PerPlayerKit can thiệp
-     */
     @EventHandler(priority = EventPriority.LOWEST)
     public void onRegearCommand(PlayerCommandPreprocessEvent event) {
         String raw = event.getMessage().trim().toLowerCase();
@@ -78,9 +75,6 @@ public class RegearListener implements Listener {
         }
     }
 
-    /**
-     * Đặt Shulker Box: Tự động xóa khối và chạy Regear độc lập của VCarterUtils
-     */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
         ItemStack item = event.getItemInHand();
@@ -102,7 +96,6 @@ public class RegearListener implements Listener {
             }
 
             if (player.isOnline()) {
-                // Thuc thi truc tiep logic regear cua VCarterUtils, khong qua PPK
                 boolean success = plugin.getRegearManager().performRegear(player);
                 if (!success) {
                     player.getInventory().addItem(createRegearShulkerItem());
@@ -148,21 +141,27 @@ public class RegearListener implements Listener {
     }
 
     private ItemStack createRegearShulkerItem() {
-        ItemStack item = new ItemStack(Material.CYAN_SHULKER_BOX, 1);
+        String matName = plugin.getConfig().getString("regear.item.material", "CYAN_SHULKER_BOX");
+        Material mat = Material.matchMaterial(matName != null ? matName : "CYAN_SHULKER_BOX");
+        if (mat == null || !mat.name().endsWith("SHULKER_BOX")) {
+            mat = Material.CYAN_SHULKER_BOX;
+        }
+
+        ItemStack item = new ItemStack(mat, 1);
         ItemMeta meta = item.getItemMeta();
 
         if (meta != null) {
             String nameRaw = plugin.getConfig().getString(
                     "regear.item.name",
-                    "<#89dceb><b><!italic>Shulker Regear</b>"
+                    "<!italic><#89dceb><b>Shulker Regear</b>"
             );
             meta.displayName(miniMessage.deserialize(nameRaw));
 
             List<String> loreRaw = plugin.getConfig().getStringList("regear.item.lore");
             if (loreRaw.isEmpty()) {
                 loreRaw = List.of(
-                        "<#a6adc8><!italic>Place on the ground to restock.",
-                        "<#6c7086><!italic>Automatically disappears after use."
+                        "<!italic><white><glyph:right_click></white> <#a6adc8>Place to restock inventory",
+                        "<!italic><#6c7086>Auto-removes after placement"
                 );
             }
 

@@ -20,6 +20,86 @@ totem:
     activation-limit-reached: "<glyph:warning_blue> <#f38ba8>You have already used your Totem for this kit! Totem activation denied."
 
 # ==============================================================
+#                 ENDER PEARL COOLDOWN SYSTEM
+# ==============================================================
+pearl-cooldown:
+  enabled: true
+  # Cooldown mac dinh (giay) khi nguoi choi chua chinh trong /setting
+  default-seconds: 3
+  # Cac moc giay nguoi choi co the chon trong menu /setting hoac lenh /setting pearl <giay>
+  available-options:
+    - 0
+    - 1
+    - 3
+    - 5
+    - 6
+    - 8
+    - 10
+    - 15
+  # Tu dong xoa cooldown pearl khi hoi sinh hoac khi load kit (/k1, /rekit...)
+  clear-on-respawn: true
+  clear-on-kit-load: true
+  send-chat-on-change: true
+
+  # Che do Force Cooldown theo tung World (Whitelist Force Cooldown):
+  # Neu enabled: true va nguoi choi dang o trong world co ten duoi day,
+  # he thong se BAT BUOC ap dung so giay cooldown cua world do (bo qua setting ca nhan).
+  force-worlds:
+    enabled: true
+    worlds:
+      ffa_diamond: 10
+      # cart_arena: 5
+      # duel_world: 3
+
+  messages:
+    cooldown-changed: "<glyph:warning_blue> <#a6e3a1>Your personal Ender Pearl cooldown has been set to <#89dceb><b>%seconds%s</b><#a6e3a1>!"
+    invalid-option: "<glyph:warning_blue> <#f38ba8>Invalid cooldown option! Available options: <#89dceb>%options%"
+    world-status-normal: "<#a6e3a1>✔ Active in current world"
+    world-status-forced: "<#f9e2af>⚠ Forced in this world: <#89dceb><b>%forced%s</b>"
+
+# ==============================================================
+#                 CUSTOMIZABLE /SETTING MENU
+# ==============================================================
+setting-menu:
+  title: "<#6c7086>✦ <#89dceb><b>Player Settings</b> <#6c7086>✦"
+  rows: 3
+  filler:
+    enabled: true
+    material: "GRAY_STAINED_GLASS_PANE"
+    name: " "
+  # Ban co the chinh sua hoac them bat ky item nao vao menu nay
+  # Cac loai type ho tro: PEARL_COOLDOWN, CLOSE, COMMAND, DECORATION
+  items:
+    pearl-cooldown:
+      enabled: true
+      type: "PEARL_COOLDOWN"
+      slot: 13
+      material: "ENDER_PEARL"
+      show-seconds-as-amount: true
+      name: "<#89dceb><b><!italic>Ender Pearl Cooldown</b>"
+      lore:
+        - "<#6c7086><!italic>Customize your personal Ender Pearl"
+        - "<#6c7086><!italic>cooldown duration for duels."
+        - ""
+        - "<#a6adc8><!italic>Personal Setting: <#89dceb><b>%current%s</b> <#6c7086>(Default: %default%s)"
+        - "<#a6adc8><!italic>Effective Now: <#f9e2af><b>%effective%s</b>"
+        - "<!italic>%world_status%"
+        - ""
+        - "<#a6adc8><!italic>Options: %options_list%"
+        - ""
+        - "<#a6e3a1><!italic>▸ Left-Click <#a6adc8>to increase cooldown"
+        - "<#f9e2af><!italic>▸ Right-Click <#a6adc8>to decrease cooldown"
+        - "<#f38ba8><!italic>▸ Shift-Click <#a6adc8>to reset to default"
+    close-button:
+      enabled: true
+      type: "CLOSE"
+      slot: 22
+      material: "BARRIER"
+      name: "<#f38ba8><b><!italic>Close Menu</b>"
+      lore:
+        - "<#6c7086><!italic>Click to close the settings menu."
+
+# ==============================================================
 #                      BACK ON DEATH FEATURE
 # ==============================================================
 back:
@@ -93,4 +173,3 @@ score:
 admin:
   messages:
     reload-success: "<glyph:warning_blue> <#a6e3a1>VCarterUtils configuration and regear whitelist reloaded successfully!"
-    

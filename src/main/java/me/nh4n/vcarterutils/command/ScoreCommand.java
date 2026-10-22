@@ -3,10 +3,6 @@ package me.nh4n.vcarterutils.command;
 import me.nh4n.vcarterutils.VCarterUtils;
 import me.nh4n.vcarterutils.manager.ScoreManager;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.event.ClickEvent;
-import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
@@ -29,12 +25,6 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
 
     private final VCarterUtils plugin;
     private final MiniMessage miniMessage;
-
-    private static final TextColor COLOR_SKY      = TextColor.fromHexString("#89dceb");
-    private static final TextColor COLOR_GREEN    = TextColor.fromHexString("#a6e3a1");
-    private static final TextColor COLOR_RED      = TextColor.fromHexString("#f38ba8");
-    private static final TextColor COLOR_SUBTEXT  = TextColor.fromHexString("#a6adc8");
-    private static final TextColor COLOR_OVERLAY  = TextColor.fromHexString("#6c7086");
 
     public ScoreCommand(VCarterUtils plugin) {
         this.plugin = plugin;
@@ -74,41 +64,44 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
         String sub = args[0].toLowerCase();
         ScoreManager manager = plugin.getScoreManager();
 
-        // 1. Lenh Reload Config: /score reload
+        // 1. /score reload
         if (sub.equals("reload")) {
             if (!sender.hasPermission("vcarterutils.admin")) {
-                sendMessage(sender, getPrefix().append(Component.text("You do not have permission to execute this command.", COLOR_RED)));
+                sendNoPerm(sender);
                 return;
             }
 
             plugin.reloadPluginConfig();
             String successMsg = plugin.getConfig().getString(
                     "admin.messages.reload-success",
-                    "<glyph:warning_blue> <#a6e3a1>VCarterUtils configuration and regear whitelist reloaded successfully!"
+                    "<glyph:warning_blue> <white><sprite:items:item/comparator></white> <#a6e3a1>VCarterUtils reloaded!"
             );
             sender.sendMessage(miniMessage.deserialize(successMsg));
             return;
         }
 
-        // 2. Lenh Admin Reset All: /score resetall
+        // 2. /score resetall
         if (sub.equals("resetall") || sub.equals("clearall")) {
             if (!sender.hasPermission("vcarterutils.admin")) {
-                sendMessage(sender, getPrefix().append(Component.text("You do not have permission to execute this command.", COLOR_RED)));
+                sendNoPerm(sender);
                 return;
             }
 
             manager.clearAll();
-            Component broadcastComp = getPrefix().append(Component.text("All 1v1 scores have been globally reset by an administrator.", COLOR_GREEN));
-            Bukkit.broadcast(broadcastComp);
+            String raw = plugin.getConfig().getString(
+                    "score.messages.global-reset-admin",
+                    "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#a6e3a1>All 1v1 scores reset by Admin."
+            );
+            Bukkit.broadcast(miniMessage.deserialize(raw));
             return;
         }
 
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(Component.text("This command can only be executed by players."));
+            sender.sendMessage(Component.text("Players only."));
             return;
         }
 
-        // 3. Lenh gui yeu cau reset: /score reset <player>
+        // 3. /score reset <player>
         if (sub.equals("reset")) {
             if (args.length < 2) {
                 sendUsage(player);
@@ -117,32 +110,43 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
 
             Player target = findPlayerCaseInsensitive(args[1]);
             if (target == null || !target.isOnline()) {
-                sendMessage(player, getPrefix()
-                        .append(Component.text("Player ", COLOR_RED))
-                        .append(Component.text(args[1], COLOR_SKY))
-                        .append(Component.text(" is not online.", COLOR_RED)));
+                String raw = plugin.getConfig().getString(
+                        "score.messages.player-not-found",
+                        "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#f38ba8>Player <#89dceb>%target% <#f38ba8>is offline."
+                );
+                player.sendMessage(miniMessage.deserialize(raw.replace("%target%", args[1])));
                 return;
             }
 
             if (target.getUniqueId().equals(player.getUniqueId())) {
-                sendMessage(player, getPrefix().append(Component.text("You cannot send a reset request to yourself.", COLOR_RED)));
+                String raw = plugin.getConfig().getString(
+                        "score.messages.cannot-target-self",
+                        "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#f38ba8>Cannot target yourself."
+                );
+                player.sendMessage(miniMessage.deserialize(raw));
                 return;
             }
 
             long timeout = plugin.getConfig().getLong("score.request-timeout-seconds", 60L);
             manager.createRequest(player.getUniqueId(), target.getUniqueId(), timeout);
 
-            sendMessage(player, getPrefix()
-                    .append(Component.text("Sent a 1v1 score reset request to ", COLOR_GREEN))
-                    .append(Component.text(target.getName(), COLOR_SKY, TextDecoration.BOLD))
-                    .append(Component.text(". Waiting for approval...", COLOR_GREEN)));
+            String sentRaw = plugin.getConfig().getString(
+                    "score.messages.request-sent",
+                    "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#a6e3a1>Reset request sent to <#89dceb><b>%target%</b>"
+            );
+            player.sendMessage(miniMessage.deserialize(sentRaw.replace("%target%", target.getName())));
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.2f);
 
-            sendInteractiveRequestMessage(target, player);
+            String recvRaw = plugin.getConfig().getString(
+                    "score.messages.request-received",
+                    "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#89dceb><b>%sender%</b> <#a6adc8>wants to reset 1v1 score: <click:run_command:'/score accept %sender%'><hover:show_text:'<#a6e3a1>Click to accept'><#a6e3a1><b>[ACCEPT]</b></hover></click> <click:run_command:'/score decline %sender%'><hover:show_text:'<#f38ba8>Click to decline'><#f38ba8><b>[DECLINE]</b></hover></click>"
+            );
+            target.sendMessage(miniMessage.deserialize(recvRaw.replace("%sender%", player.getName())));
+            target.playSound(target.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.2f);
             return;
         }
 
-        // 4. Lenh chap nhan yeu cau: /score accept <player>
+        // 4. /score accept <player>
         if (sub.equals("accept")) {
             if (args.length < 2) {
                 sendUsage(player);
@@ -151,22 +155,24 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
 
             Player requester = findPlayerCaseInsensitive(args[1]);
             if (requester == null || !manager.hasValidRequest(requester.getUniqueId(), player.getUniqueId())) {
-                sendMessage(player, getPrefix()
-                        .append(Component.text("You have no pending reset request from ", COLOR_RED))
-                        .append(Component.text(args[1], COLOR_SKY))
-                        .append(Component.text(".", COLOR_RED)));
+                String raw = plugin.getConfig().getString(
+                        "score.messages.no-pending-request",
+                        "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#f38ba8>No pending request from <#89dceb>%sender%"
+                );
+                player.sendMessage(miniMessage.deserialize(raw.replace("%sender%", args[1])));
                 return;
             }
 
             manager.removeRequest(requester.getUniqueId(), player.getUniqueId());
             manager.resetScoresBetween(requester.getUniqueId(), player.getUniqueId());
 
-            Component successMsg = getPrefix()
-                    .append(Component.text("1v1 score between ", COLOR_GREEN))
-                    .append(Component.text(player.getName(), COLOR_SKY, TextDecoration.BOLD))
-                    .append(Component.text(" and ", COLOR_GREEN))
-                    .append(Component.text(requester.getName(), COLOR_SKY, TextDecoration.BOLD))
-                    .append(Component.text(" has been reset!", COLOR_GREEN));
+            String successRaw = plugin.getConfig().getString(
+                    "score.messages.score-reset-success",
+                    "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#a6e3a1>Score reset: <#89dceb><b>%player1%</b> <#6c7086>vs <#89dceb><b>%player2%</b>"
+            );
+            Component successMsg = miniMessage.deserialize(
+                    successRaw.replace("%player1%", player.getName()).replace("%player2%", requester.getName())
+            );
 
             player.sendMessage(successMsg);
             requester.sendMessage(successMsg);
@@ -176,54 +182,30 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
             return;
         }
 
-        // 5. Lenh tu choi yeu cau: /score decline <player>
+        // 5. /score decline <player>
         if (sub.equals("decline") || sub.equals("deny")) {
             if (args.length < 2) {
                 sendUsage(player);
                 return;
             }
 
+            String declineRaw = plugin.getConfig().getString(
+                    "score.messages.request-declined",
+                    "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#f38ba8>Reset request with <#89dceb>%player% <#f38ba8>declined."
+            );
+
             Player requester = findPlayerCaseInsensitive(args[1]);
             if (requester != null && manager.hasValidRequest(requester.getUniqueId(), player.getUniqueId())) {
                 manager.removeRequest(requester.getUniqueId(), player.getUniqueId());
-
-                sendMessage(requester, getPrefix()
-                        .append(Component.text("Reset request with ", COLOR_RED))
-                        .append(Component.text(player.getName(), COLOR_SKY))
-                        .append(Component.text(" was declined.", COLOR_RED)));
+                requester.sendMessage(miniMessage.deserialize(declineRaw.replace("%player%", player.getName())));
                 requester.playSound(requester.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             }
 
-            sendMessage(player, getPrefix()
-                    .append(Component.text("Reset request with ", COLOR_RED))
-                    .append(Component.text(args[1], COLOR_SKY))
-                    .append(Component.text(" was declined.", COLOR_RED)));
+            player.sendMessage(miniMessage.deserialize(declineRaw.replace("%player%", args[1])));
             return;
         }
 
         sendUsage(sender);
-    }
-
-    private void sendInteractiveRequestMessage(Player target, Player sender) {
-        Component acceptButton = Component.text("[ACCEPT]", COLOR_GREEN, TextDecoration.BOLD)
-                .clickEvent(ClickEvent.runCommand("/score accept " + sender.getName()))
-                .hoverEvent(HoverEvent.showText(Component.text("Click to accept reset request", COLOR_GREEN)));
-
-        Component declineButton = Component.text("[DECLINE]", COLOR_RED, TextDecoration.BOLD)
-                .clickEvent(ClickEvent.runCommand("/score decline " + sender.getName()))
-                .hoverEvent(HoverEvent.showText(Component.text("Click to decline reset request", COLOR_RED)));
-
-        Component message = Component.text()
-                .append(getPrefix())
-                .append(Component.text(sender.getName(), COLOR_SKY, TextDecoration.BOLD))
-                .append(Component.text(" has requested to reset your 1v1 score! ", COLOR_SUBTEXT))
-                .append(acceptButton)
-                .append(Component.text(" "))
-                .append(declineButton)
-                .build();
-
-        target.sendMessage(message);
-        target.playSound(target.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.2f);
     }
 
     private Player findPlayerCaseInsensitive(String name) {
@@ -237,23 +219,20 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
         return null;
     }
 
-    private Component getPrefix() {
-        return miniMessage.deserialize("<glyph:warning_blue> ");
-    }
-
-    private void sendMessage(CommandSender sender, Component comp) {
-        sender.sendMessage(comp);
+    private void sendNoPerm(CommandSender sender) {
+        String raw = plugin.getConfig().getString(
+                "score.messages.no-permission",
+                "<glyph:warning_blue> <#f38ba8>No permission."
+        );
+        sender.sendMessage(miniMessage.deserialize(raw));
     }
 
     private void sendUsage(CommandSender sender) {
-        Component usage = getPrefix()
-                .append(Component.text("Usage: ", COLOR_SUBTEXT))
-                .append(Component.text("/score reset <player>", COLOR_SKY))
-                .append(Component.text(" | ", COLOR_OVERLAY))
-                .append(Component.text("/score accept <player>", COLOR_SKY))
-                .append(Component.text(" | ", COLOR_OVERLAY))
-                .append(Component.text("/score resetall", COLOR_SKY));
-        sender.sendMessage(usage);
+        String raw = plugin.getConfig().getString(
+                "score.messages.usage",
+                "<glyph:warning_blue> <white><sprite:items:item/diamond_sword></white> <#89dceb>/score reset <player> <#6c7086>| <#89dceb>accept <player> <#6c7086>| <#89dceb>resetall"
+        );
+        sender.sendMessage(miniMessage.deserialize(raw));
     }
 
     @Override

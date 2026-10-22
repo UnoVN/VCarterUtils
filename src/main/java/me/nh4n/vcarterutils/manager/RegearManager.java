@@ -18,14 +18,9 @@ public class RegearManager {
     private final VCarterUtils plugin;
     private final MiniMessage miniMessage;
 
-    // Cache danh sach whitelist da duoc loc bo hoan toan cac item bi cam
     private final Set<Material> cachedWhitelist = EnumSet.noneOf(Material.class);
-
-    // Snapshot layout kit goc cua tung nguoi choi (luu day du 41 slot khi vua load kit)
     private final Map<UUID, ItemStack[]> savedKitSnapshots = new ConcurrentHashMap<>();
-    // Combat Tag
     private final Map<UUID, Long> lastDamageTimes = new ConcurrentHashMap<>();
-    // Regear Cooldown
     private final Map<UUID, Long> lastRegearTimes = new ConcurrentHashMap<>();
 
     public RegearManager(VCarterUtils plugin) {
@@ -34,13 +29,6 @@ public class RegearManager {
         reload();
     }
 
-    /**
-     * Danh sach vat pham TUYET DOI KHONG TU DONG CAP MOI / REFILL SO LUONG:
-     * - Tat ca cac loai Kiem (giu nguyen do ben thuc chien)
-     * - Cung (Bow)
-     * - Phao hoa (Firework - giu nguyen so luong con lai, khong hoi them)
-     * - Chai EXP (giu nguyen so chai con lai, khong hoi them)
-     */
     public boolean isForbiddenFromRefill(Material mat) {
         if (mat == null) return true;
         if (mat.name().endsWith("_SWORD")) return true;
@@ -131,17 +119,11 @@ public class RegearManager {
         lastDamageTimes.put(playerId, System.currentTimeMillis());
     }
 
-    /**
-     * Thuat toan Regear chuyen sau:
-     * 1. Gom toan bo vat pham thuc te dang co (Phao hoa con lai, EXP con lai, Kiem da mon do ben).
-     * 2. Uu tien phuc hoi 100% Hotbar (Slot 0-8) ve y chang vi tri luc vua load kit ban dau.
-     * 3. Refill dung cac item Whitelist ma khong bao gio lam mat Phao hoa, EXP hay vat pham hop le.
-     */
     public boolean performRegear(Player player) {
         UUID uuid = player.getUniqueId();
         long now = System.currentTimeMillis();
 
-        // 1. Kiem tra Combat Tag
+        // 1. Combat Tag
         long damageCooldownSec = plugin.getConfig().getLong("regear.damage-cooldown-seconds", 5L);
         if (damageCooldownSec > 0) {
             Long lastDmg = lastDamageTimes.get(uuid);
@@ -156,7 +138,7 @@ public class RegearManager {
             }
         }
 
-        // 2. Kiem tra Cooldown giua 2 lan regear
+        // 2. Cooldown
         long regearCooldownSec = plugin.getConfig().getLong("regear.cooldown-seconds", 3L);
         if (regearCooldownSec > 0) {
             Long lastRg = lastRegearTimes.get(uuid);
@@ -171,7 +153,7 @@ public class RegearManager {
             }
         }
 
-        // 3. Kiem tra Snapshot kit
+        // 3. Snapshot check
         ItemStack[] snapshot = savedKitSnapshots.get(uuid);
         if (snapshot == null) {
             sendConfigMessage(player, "regear.messages.no-kit-loaded", "%seconds%", "0");
@@ -182,7 +164,6 @@ public class RegearManager {
         PlayerInventory inv = player.getInventory();
         ItemStack[] currentContents = inv.getContents();
 
-        // Thu thap toan bo vat pham thuc te vao pool de bao toan so luong va do ben
         List<ItemStack> currentPool = new ArrayList<>();
         for (ItemStack item : currentContents) {
             if (item != null && item.getType() != Material.AIR) {
@@ -192,7 +173,7 @@ public class RegearManager {
 
         ItemStack[] newContents = new ItemStack[currentContents.length];
 
-        // --- BUOC 1: Xu ly Giap (Slots 36 - 39) ---
+        // --- BUOC 1: Giap (Slots 36 - 39) ---
         for (int a = 36; a <= 39; a++) {
             ItemStack snapArmor = (a < snapshot.length) ? snapshot[a] : null;
             if (a == 38 && snapArmor != null && isWhitelisted(snapArmor.getType())) {
@@ -206,10 +187,9 @@ public class RegearManager {
             }
         }
 
-        // --- BUOC 2: Uu tien sap xep Hotbar (0 - 8) va Offhand (40) ve y chang kit ban dau ---
-        int[] priorityOrder = getSlotPriorityOrder(); // 0..8, 40, 9..35
+        // --- BUOC 2: Hotbar (0 - 8), Offhand (40) va Storage (9 - 35) ---
+        int[] priorityOrder = getSlotPriorityOrder();
 
-        // Phase 2.1: Phuc hoi cac vat pham khong refill (Phao hoa, EXP con lai, Kiem, Cung) ve dung slot Hotbar
         for (int slot : priorityOrder) {
             if (slot >= snapshot.length) continue;
             ItemStack snapItem = snapshot[slot];
@@ -217,15 +197,10 @@ public class RegearManager {
 
             if (isForbiddenFromRefill(snapItem.getType()) || !isWhitelisted(snapItem.getType())) {
                 ItemStack matched = extractMatchingAmount(currentPool, snapItem);
-                if (matched != null) {
-                    newContents[slot] = matched; // Tra vat pham thuc te ve dung slot goc!
-                } else {
-                    newContents[slot] = null;
-                }
+                newContents[slot] = matched;
             }
         }
 
-        // Phase 2.2: Refill cac vat pham thuoc Whitelist ve dung slot Hotbar va Inventory
         for (int slot : priorityOrder) {
             if (slot >= snapshot.length) continue;
             ItemStack snapItem = snapshot[slot];
@@ -233,17 +208,17 @@ public class RegearManager {
 
             if (isWhitelisted(snapItem.getType()) && !isForbiddenFromRefill(snapItem.getType())) {
                 newContents[slot] = snapItem.clone();
-                // Loai bo item tuong ung khoi currentPool de tranh bi nhan ban
                 removeFirstMatch(currentPool, snapItem);
             }
         }
 
-        // --- BUOC 3: Xu ly cac vat pham hop le con sot lai trong Pool (Chong mat Phao hoa & EXP) ---
+        // --- BUOC 3: Xu ly vat pham con sot lai (doc config regear.clear-junk-in-empty-slots) ---
+        boolean clearJunk = plugin.getConfig().getBoolean("regear.clear-junk-in-empty-slots", true);
+
         for (ItemStack leftover : currentPool) {
             if (leftover == null || leftover.getType() == Material.AIR) continue;
 
-            if (isItemInOriginalKit(leftover.getType(), snapshot)) {
-                // Thu gom gop vao cac stack da co trong kho do truoc
+            if (!clearJunk || isItemInOriginalKit(leftover.getType(), snapshot)) {
                 for (int s = 0; s <= 35; s++) {
                     ItemStack existing = newContents[s];
                     if (existing != null && existing.isSimilar(leftover) && existing.getAmount() < existing.getMaxStackSize()) {
@@ -254,7 +229,6 @@ public class RegearManager {
                         if (leftover.getAmount() <= 0) break;
                     }
                 }
-                // Neu van con du thi dat vao o trong cua inventory (9-35)
                 if (leftover.getAmount() > 0) {
                     int emptySlot = findFirstEmptyStorageSlot(newContents);
                     if (emptySlot != -1) {
@@ -262,10 +236,8 @@ public class RegearManager {
                     }
                 }
             }
-            // Cac khoi Dirt, Cobblestone, rac ngoai san khong co trong snapshot -> Tu dong bien mat
         }
 
-        // Cap nhat toan bo kho do
         inv.setContents(newContents);
         if (newContents.length > 40 && newContents[40] != null) {
             inv.setItemInOffHand(newContents[40]);
@@ -281,9 +253,6 @@ public class RegearManager {
         return true;
     }
 
-    /**
-     * Thu tu uu tien: Hotbar (0-8) xep truoc, sau do den Tay phu (40), roi moi den Rương (9-35)
-     */
     private int[] getSlotPriorityOrder() {
         int[] order = new int[37];
         int idx = 0;
@@ -297,9 +266,6 @@ public class RegearManager {
         return order;
     }
 
-    /**
-     * Trich xuat va tu dong gop cac coc vat pham (Phao hoa / EXP / Mui ten) bi tach le
-     */
     private ItemStack extractMatchingAmount(List<ItemStack> pool, ItemStack target) {
         if (target == null || target.getType() == Material.AIR) return null;
         ItemStack result = null;
@@ -393,4 +359,4 @@ public class RegearManager {
         lastRegearTimes.clear();
         cachedWhitelist.clear();
     }
-            }
+}

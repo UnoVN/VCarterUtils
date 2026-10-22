@@ -111,7 +111,7 @@ public class PearlManager {
             rawOptions = List.of(1, 3, 5, 6, 8, 10, 15);
         }
 
-        // Chi cho phep cac moc >= default-seconds (khong bao gio cho chinh thap hon mac dinh)
+        // Chi cho phep cac moc >= default-seconds (khong bao gio cho chinh duoi muc mac dinh)
         for (int val : rawOptions) {
             if (val >= def && !availableOptions.contains(val)) {
                 availableOptions.add(val);
@@ -123,9 +123,9 @@ public class PearlManager {
         }
         Collections.sort(availableOptions);
 
-        // Dam bao setting da luu cua nguoi choi khong thap hon muc mac dinh moi
         for (Map.Entry<UUID, Integer> entry : playerCooldownSettings.entrySet()) {
-            if (entry.getValue() < def) {
+            int val = entry.getValue();
+            if (val < def || !availableOptions.contains(val)) {
                 entry.setValue(def);
             }
         }
@@ -203,9 +203,6 @@ public class PearlManager {
         return plugin.getConfig().getBoolean("pearl-cooldown.clear-on-kit-load", true);
     }
 
-    /**
-     * Default cooldown cua Pearl luon >= 1s (muc binh thuong cua Vanilla)
-     */
     public int getDefaultSeconds() {
         return Math.max(1, plugin.getConfig().getInt("pearl-cooldown.default-seconds", 1));
     }

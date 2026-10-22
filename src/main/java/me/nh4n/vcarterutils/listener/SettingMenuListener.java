@@ -8,7 +8,9 @@ import me.nh4n.vcarterutils.manager.SettingMenuManager.AdminSettingMenuHolder;
 import me.nh4n.vcarterutils.manager.SettingMenuManager.AdminSlotAction;
 import me.nh4n.vcarterutils.manager.SettingMenuManager.MenuItemAction;
 import me.nh4n.vcarterutils.manager.SettingMenuManager.SettingMenuHolder;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -18,6 +20,8 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.InventoryHolder;
+
+import java.time.Duration;
 
 public class SettingMenuListener implements Listener {
 
@@ -68,8 +72,20 @@ public class SettingMenuListener implements Listener {
 
         if (type.equalsIgnoreCase("PEARL_COOLDOWN")) {
             PearlManager pearlManager = plugin.getPearlManager();
-            int newSeconds;
 
+            // Kiem tra neu dang bi Force Cooldown theo World hoac Global -> Chan va hien chu to
+            if (pearlManager.isWorldForced(player.getWorld())) {
+                int forcedSec = pearlManager.getEffectiveCooldownSeconds(player);
+                showLockedWarning(player, "pearl-cooldown", true, forcedSec);
+                return;
+            }
+            if (pearlManager.isGlobalForceEnabled()) {
+                int forcedSec = pearlManager.getEffectiveCooldownSeconds(player);
+                showLockedWarning(player, "pearl-cooldown", false, forcedSec);
+                return;
+            }
+
+            int newSeconds;
             if (click.isShiftClick()) {
                 newSeconds = pearlManager.resetToDefault(player.getUniqueId());
                 player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.5f);
@@ -95,8 +111,20 @@ public class SettingMenuListener implements Listener {
 
         if (type.equalsIgnoreCase("MACE_COOLDOWN")) {
             MaceManager maceManager = plugin.getMaceManager();
-            int newSeconds;
 
+            // Kiem tra neu dang bi Force Cooldown theo World hoac Global -> Chan va hien chu to
+            if (maceManager.isWorldForced(player.getWorld())) {
+                int forcedSec = maceManager.getEffectiveCooldownSeconds(player);
+                showLockedWarning(player, "mace-cooldown", true, forcedSec);
+                return;
+            }
+            if (maceManager.isGlobalForceEnabled()) {
+                int forcedSec = maceManager.getEffectiveCooldownSeconds(player);
+                showLockedWarning(player, "mace-cooldown", false, forcedSec);
+                return;
+            }
+
+            int newSeconds;
             if (click.isShiftClick()) {
                 newSeconds = maceManager.resetToDefault(player.getUniqueId());
                 player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.5f);
@@ -142,6 +170,49 @@ public class SettingMenuListener implements Listener {
                 player.performCommand(cleanCmd.replace("%player%", player.getName()));
             }
         }
+    }
+
+    public void showLockedWarning(Player player, String configPrefix, boolean isWorldForce, int forcedSec) {
+        player.closeInventory();
+        player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 0.8f);
+
+        String titleRaw = plugin.getConfig().getString(
+                configPrefix + ".messages.locked-title",
+                "<#f38ba8><b>COOLDOWN LOCKED!</b>"
+        );
+        String subtitleRaw = isWorldForce
+                ? plugin.getConfig().getString(
+                        configPrefix + ".messages.locked-subtitle-world",
+                        "<#f9e2af>Forced in this world: <#89dceb><b>%forced%s</b>"
+                  )
+                : plugin.getConfig().getString(
+                        configPrefix + ".messages.locked-subtitle-global",
+                        "<#f9e2af>Forced globally by Admin: <#89dceb><b>%forced%s</b>"
+                  );
+
+        Component titleComp = miniMessage.deserialize(titleRaw.replace("%forced%", String.valueOf(forcedSec)));
+        Component subtitleComp = miniMessage.deserialize(
+                subtitleRaw.replace("%forced%", String.valueOf(forcedSec))
+                           .replace("%world%", player.getWorld().getName())
+        );
+
+        Title.Times times = Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(2200), Duration.ofMillis(400));
+        player.showTitle(Title.title(titleComp, subtitleComp, times));
+
+        String chatRaw = isWorldForce
+                ? plugin.getConfig().getString(
+                        configPrefix + ".messages.locked-chat-world",
+                        "<glyph:warning_blue> <#f38ba8><b>CANNOT CHANGE!</b> <#a6adc8>Cooldown is forced to <#89dceb><b>%forced%s</b> <#a6adc8>in this world."
+                  )
+                : plugin.getConfig().getString(
+                        configPrefix + ".messages.locked-chat-global",
+                        "<glyph:warning_blue> <#f38ba8><b>CANNOT CHANGE!</b> <#a6adc8>Cooldown is forced globally to <#89dceb><b>%forced%s</b><#a6adc8>."
+                  );
+
+        player.sendMessage(miniMessage.deserialize(
+                chatRaw.replace("%forced%", String.valueOf(forcedSec))
+                       .replace("%world%", player.getWorld().getName())
+        ));
     }
 
     private void handleAdminMenuClick(Player admin, AdminSettingMenuHolder holder, int slot, ClickType click) {

@@ -30,16 +30,16 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(Component.text("This command can only be executed by players."));
+            sender.sendMessage(Component.text("Players only."));
             return true;
         }
 
-        // 1. Mo giao dien Admin: /setting admin
+        // 1. /setting admin
         if (args.length >= 1 && args[0].equalsIgnoreCase("admin")) {
             if (!player.hasPermission("vcarterutils.admin")) {
                 String noPerm = plugin.getConfig().getString(
                         "score.messages.no-permission",
-                        "<glyph:warning_blue> <#f38ba8>You do not have permission to execute this command."
+                        "<glyph:warning_blue> <#f38ba8>No permission."
                 );
                 player.sendMessage(miniMessage.deserialize(noPerm));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
@@ -51,7 +51,7 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // 2. Ho tro chinh nhanh qua lenh: /setting pearl <seconds>
+        // 2. /setting pearl <seconds>
         if (args.length >= 2 && args[0].equalsIgnoreCase("pearl")) {
             PearlManager pearlManager = plugin.getPearlManager();
             try {
@@ -59,7 +59,7 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
                 if (!pearlManager.getAvailableOptions().contains(seconds)) {
                     String invalidMsg = plugin.getConfig().getString(
                             "pearl-cooldown.messages.invalid-option",
-                            "<glyph:warning_blue> <#f38ba8>Invalid cooldown option! Available options: <#89dceb>%options%"
+                            "<glyph:warning_blue> <white><sprite:items:item/ender_pearl></white> <#f38ba8>Invalid option! Available: <#89dceb>%options%"
                     );
                     String joined = String.join("s, ", pearlManager.getAvailableOptions().stream().map(String::valueOf).toList()) + "s";
                     player.sendMessage(miniMessage.deserialize(invalidMsg.replace("%options%", joined)));
@@ -70,14 +70,14 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
                 pearlManager.setPlayerPersonalSeconds(player.getUniqueId(), seconds);
                 String raw = plugin.getConfig().getString(
                         "pearl-cooldown.messages.cooldown-changed",
-                        "<glyph:warning_blue> <#a6e3a1>Your personal Ender Pearl cooldown has been set to <#89dceb><b>%seconds%s</b><#a6e3a1>!"
+                        "<glyph:warning_blue> <white><sprite:items:item/ender_pearl></white> <#a6adc8>Pearl cooldown: <#89dceb><b>%seconds%s</b>"
                 );
                 player.sendMessage(miniMessage.deserialize(raw.replace("%seconds%", String.valueOf(seconds))));
                 player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.2f);
             } catch (NumberFormatException e) {
                 String invalidMsg = plugin.getConfig().getString(
                         "pearl-cooldown.messages.invalid-option",
-                        "<glyph:warning_blue> <#f38ba8>Invalid cooldown option! Available options: <#89dceb>%options%"
+                        "<glyph:warning_blue> <white><sprite:items:item/ender_pearl></white> <#f38ba8>Invalid option! Available: <#89dceb>%options%"
                 );
                 String joined = String.join("s, ", pearlManager.getAvailableOptions().stream().map(String::valueOf).toList()) + "s";
                 player.sendMessage(miniMessage.deserialize(invalidMsg.replace("%options%", joined)));
@@ -86,7 +86,7 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // 3. Ho tro chinh nhanh qua lenh: /setting mace <seconds>
+        // 3. /setting mace <seconds>
         if (args.length >= 2 && args[0].equalsIgnoreCase("mace")) {
             MaceManager maceManager = plugin.getMaceManager();
             try {
@@ -94,7 +94,7 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
                 if (!maceManager.getAvailableOptions().contains(seconds)) {
                     String invalidMsg = plugin.getConfig().getString(
                             "mace-cooldown.messages.invalid-option",
-                            "<glyph:warning_blue> <#f38ba8>Invalid cooldown option! Available options: <#89dceb>%options%"
+                            "<glyph:warning_blue> <white><sprite:items:item/mace></white> <#f38ba8>Invalid option! Available: <#89dceb>%options%"
                     );
                     String joined = String.join("s, ", maceManager.getAvailableOptions().stream().map(String::valueOf).toList()) + "s";
                     player.sendMessage(miniMessage.deserialize(invalidMsg.replace("%options%", joined)));
@@ -105,14 +105,14 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
                 maceManager.setPlayerPersonalSeconds(player.getUniqueId(), seconds);
                 String raw = plugin.getConfig().getString(
                         "mace-cooldown.messages.cooldown-changed",
-                        "<glyph:warning_blue> <#a6e3a1>Your personal Mace cooldown has been set to <#89dceb><b>%seconds%s</b><#a6e3a1>!"
+                        "<glyph:warning_blue> <white><sprite:items:item/mace></white> <#a6adc8>Mace cooldown: <#89dceb><b>%seconds%s</b>"
                 );
                 player.sendMessage(miniMessage.deserialize(raw.replace("%seconds%", String.valueOf(seconds))));
                 player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.2f);
             } catch (NumberFormatException e) {
                 String invalidMsg = plugin.getConfig().getString(
                         "mace-cooldown.messages.invalid-option",
-                        "<glyph:warning_blue> <#f38ba8>Invalid cooldown option! Available options: <#89dceb>%options%"
+                        "<glyph:warning_blue> <white><sprite:items:item/mace></white> <#f38ba8>Invalid option! Available: <#89dceb>%options%"
                 );
                 String joined = String.join("s, ", maceManager.getAvailableOptions().stream().map(String::valueOf).toList()) + "s";
                 player.sendMessage(miniMessage.deserialize(invalidMsg.replace("%options%", joined)));
@@ -121,7 +121,7 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // 4. Mo giao dien Player /setting mac dinh
+        // 4. Open /setting GUI
         plugin.getSettingMenuManager().openSettingMenu(player);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.7f, 1.2f);
         return true;

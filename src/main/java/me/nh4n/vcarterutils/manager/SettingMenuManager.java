@@ -121,7 +121,10 @@ public class SettingMenuManager {
                 List<String> loreRaw = itemSec.getStringList("lore");
                 List<Component> loreComp = new ArrayList<>();
                 for (String line : loreRaw) {
-                    loreComp.add(miniMessage.deserialize(applyPlaceholders(player, type, line)));
+                    String replaced = applyPlaceholders(player, type, line);
+                    for (String splitLine : replaced.split("\n")) {
+                        loreComp.add(miniMessage.deserialize(splitLine));
+                    }
                 }
                 meta.lore(loreComp);
 
@@ -136,10 +139,10 @@ public class SettingMenuManager {
 
             if (itemSec.getBoolean("show-seconds-as-amount", true)) {
                 if (type.equals("PEARL_COOLDOWN")) {
-                    int currentSec = plugin.getPearlManager().getPlayerPersonalSeconds(player.getUniqueId());
+                    int currentSec = plugin.getPearlManager().getEffectiveCooldownSeconds(player);
                     stack.setAmount(Math.max(1, Math.min(64, currentSec)));
                 } else if (type.equals("MACE_COOLDOWN")) {
-                    int currentSec = plugin.getMaceManager().getPlayerPersonalSeconds(player.getUniqueId());
+                    int currentSec = plugin.getMaceManager().getEffectiveCooldownSeconds(player);
                     stack.setAmount(Math.max(1, Math.min(64, currentSec)));
                 }
             }
@@ -496,14 +499,14 @@ public class SettingMenuManager {
             if (maceManager.isWorldForced(player.getWorld())) {
                 String forcedFormat = plugin.getConfig().getString(
                         "mace-cooldown.messages.world-status-forced",
-                        "<#f9e2af>● World forced: <#89dceb><b>%forced%s</b>"
+                        "<#f38ba8><b>✖ CANNOT CHANGE PERSONAL COOLDOWN</b>\n<!italic><#f9e2af><b>Reason:</b> <#a6adc8>Forced in this world <#89dceb><b>(%forced%s)</b>"
                 );
                 worldStatus = forcedFormat.replace("%forced%", String.valueOf(effectiveSec))
                                           .replace("%world%", player.getWorld().getName());
             } else if (maceManager.isGlobalForceEnabled()) {
                 String globalFormat = plugin.getConfig().getString(
                         "mace-cooldown.messages.world-status-global-forced",
-                        "<#f9e2af>● Global forced: <#89dceb><b>%forced%s</b>"
+                        "<#f38ba8><b>✖ CANNOT CHANGE PERSONAL COOLDOWN</b>\n<!italic><#f9e2af><b>Reason:</b> <#a6adc8>Forced globally by Admin <#89dceb><b>(%forced%s)</b>"
                 );
                 worldStatus = globalFormat.replace("%forced%", String.valueOf(effectiveSec));
             } else {
@@ -522,14 +525,14 @@ public class SettingMenuManager {
             if (pearlManager.isWorldForced(player.getWorld())) {
                 String forcedFormat = plugin.getConfig().getString(
                         "pearl-cooldown.messages.world-status-forced",
-                        "<#f9e2af>● World forced: <#89dceb><b>%forced%s</b>"
+                        "<#f38ba8><b>✖ CANNOT CHANGE PERSONAL COOLDOWN</b>\n<!italic><#f9e2af><b>Reason:</b> <#a6adc8>Forced in this world <#89dceb><b>(%forced%s)</b>"
                 );
                 worldStatus = forcedFormat.replace("%forced%", String.valueOf(effectiveSec))
                                           .replace("%world%", player.getWorld().getName());
             } else if (pearlManager.isGlobalForceEnabled()) {
                 String globalFormat = plugin.getConfig().getString(
                         "pearl-cooldown.messages.world-status-global-forced",
-                        "<#f9e2af>● Global forced: <#89dceb><b>%forced%s</b>"
+                        "<#f38ba8><b>✖ CANNOT CHANGE PERSONAL COOLDOWN</b>\n<!italic><#f9e2af><b>Reason:</b> <#a6adc8>Forced globally by Admin <#89dceb><b>(%forced%s)</b>"
                 );
                 worldStatus = globalFormat.replace("%forced%", String.valueOf(effectiveSec));
             } else {

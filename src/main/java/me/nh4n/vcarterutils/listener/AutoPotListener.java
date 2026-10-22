@@ -154,7 +154,7 @@ public class AutoPotListener implements Listener {
 
     /**
      * Cho PerPlayerKit nap xong kho do (sau 5 tick):
-     * 1. Reset luot dung Totem, xoa Pearl Cooldown (neu bat) va kiem tra gioi han Totem trong tui.
+     * 1. Reset luot dung Totem, xoa Pearl & Mace Cooldown (neu bat) va kiem tra gioi han Totem.
      * 2. Kiem tra blacklist world cua AutoPot va apply effect.
      * 3. Chup snapshot layout kit ban dau cho he thong Regear.
      */
@@ -172,6 +172,11 @@ public class AutoPotListener implements Listener {
         // XOA COOLDOWN ENDER PEARL KHI LOAD KIT NEU DUOC BAT
         if (plugin.getPearlManager().isEnabled() && plugin.getPearlManager().isClearOnKitLoad()) {
             plugin.getPearlManager().clearCooldown(player);
+        }
+
+        // XOA COOLDOWN MACE KHI LOAD KIT NEU DUOC BAT
+        if (plugin.getMaceManager().isEnabled() && plugin.getMaceManager().isClearOnKitLoad()) {
+            plugin.getMaceManager().clearCooldown(player);
         }
 
         BukkitTask task = new BukkitRunnable() {

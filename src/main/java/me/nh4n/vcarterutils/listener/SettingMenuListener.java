@@ -272,4 +272,106 @@ public class SettingMenuListener implements Listener {
                             : "<#f38ba8><b>OFF</b>";
                     String raw = plugin.getConfig().getString(
                             "admin-menu.messages.global-force-toggled",
-                            "<glyph:warning_blue> <#a6
+                            "<glyph:warning_blue> <#a6adc8>Global %type% Force: %status%"
+                    );
+                    admin.sendMessage(miniMessage.deserialize(raw.replace("%type%", "Mace").replace("%status%", statusStr)));
+                } else if (click == ClickType.SHIFT_RIGHT) {
+                    int sec = maceManager.getGlobalForceSeconds();
+                    maceManager.setDefaultSeconds(sec);
+                    admin.playSound(admin.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.3f);
+                    String raw = plugin.getConfig().getString(
+                            "admin-menu.messages.default-updated",
+                            "<glyph:warning_blue> <#a6e3a1>Default %type% cooldown set to <#89dceb><b>%seconds%s</b><#a6e3a1>."
+                    );
+                    admin.sendMessage(miniMessage.deserialize(raw.replace("%type%", "Mace").replace("%seconds%", String.valueOf(sec))));
+                } else if (click.isRightClick()) {
+                    maceManager.cycleGlobalForceSeconds(false);
+                    admin.playSound(admin.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 0.9f);
+                } else {
+                    maceManager.cycleGlobalForceSeconds(true);
+                    admin.playSound(admin.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.2f);
+                }
+                menuManager.refreshAdminMenu(admin);
+            }
+
+            case "WORLD_ITEM" -> {
+                String worldName = action.targetWorld();
+                if (worldName == null) return;
+
+                String raw = plugin.getConfig().getString(
+                        "admin-menu.messages.world-force-updated",
+                        "<glyph:warning_blue> <#89dceb><b>%world%</b> <#a6adc8>%type% Force: %status%"
+                );
+
+                if (click == ClickType.SHIFT_LEFT) {
+                    pearlManager.setWorldForceSeconds(worldName, -1);
+                    admin.playSound(admin.getLocation(), Sound.BLOCK_GLASS_BREAK, 0.7f, 1.2f);
+                    admin.sendMessage(miniMessage.deserialize(
+                            raw.replace("%world%", worldName).replace("%type%", "Pearl").replace("%status%", "<#f38ba8><b>OFF</b>")
+                    ));
+                } else if (click == ClickType.SHIFT_RIGHT) {
+                    maceManager.setWorldForceSeconds(worldName, -1);
+                    admin.playSound(admin.getLocation(), Sound.BLOCK_GLASS_BREAK, 0.7f, 1.2f);
+                    admin.sendMessage(miniMessage.deserialize(
+                            raw.replace("%world%", worldName).replace("%type%", "Mace").replace("%status%", "<#f38ba8><b>OFF</b>")
+                    ));
+                } else if (click.isRightClick()) {
+                    int newMaceSec = maceManager.cycleWorldForceSeconds(worldName);
+                    admin.playSound(admin.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.1f);
+                    String valStr = (newMaceSec < 0) ? "<#f38ba8><b>OFF</b>" : "<#a6e3a1><b>" + newMaceSec + "s</b>";
+                    admin.sendMessage(miniMessage.deserialize(
+                            raw.replace("%world%", worldName).replace("%type%", "Mace").replace("%status%", valStr)
+                    ));
+                } else {
+                    int newPearlSec = pearlManager.cycleWorldForceSeconds(worldName);
+                    admin.playSound(admin.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.2f);
+                    String valStr = (newPearlSec < 0) ? "<#f38ba8><b>OFF</b>" : "<#a6e3a1><b>" + newPearlSec + "s</b>";
+                    admin.sendMessage(miniMessage.deserialize(
+                            raw.replace("%world%", worldName).replace("%type%", "Pearl").replace("%status%", valStr)
+                    ));
+                }
+                menuManager.refreshAdminMenu(admin);
+            }
+
+            case "RESCAN" -> {
+                menuManager.refreshAdminMenu(admin);
+                admin.playSound(admin.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.4f);
+                String raw = plugin.getConfig().getString(
+                        "admin-menu.messages.world-rescanned",
+                        "<glyph:warning_blue> <#a6e3a1>World list rescanned."
+                );
+                admin.sendMessage(miniMessage.deserialize(raw));
+            }
+
+            case "PREV_PAGE" -> {
+                holder.setPage(Math.max(0, holder.getPage() - 1));
+                menuManager.refreshAdminMenu(admin);
+                admin.playSound(admin.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 1.0f, 1.0f);
+            }
+
+            case "NEXT_PAGE" -> {
+                holder.setPage(holder.getPage() + 1);
+                menuManager.refreshAdminMenu(admin);
+                admin.playSound(admin.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 1.0f, 1.0f);
+            }
+
+            case "OPEN_PLAYER_MENU" -> {
+                menuManager.openSettingMenu(admin);
+                admin.playSound(admin.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.1f);
+            }
+
+            case "CLOSE" -> {
+                admin.closeInventory();
+                admin.playSound(admin.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onInventoryDrag(InventoryDragEvent event) {
+        InventoryHolder topHolder = event.getView().getTopInventory().getHolder();
+        if (topHolder instanceof SettingMenuHolder || topHolder instanceof AdminSettingMenuHolder) {
+            event.setCancelled(true);
+        }
+    }
+}

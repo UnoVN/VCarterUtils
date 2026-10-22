@@ -18,13 +18,8 @@ public class PearlManager {
 
     private final VCarterUtils plugin;
 
-    // Luu cooldown pearl ca nhan cua nguoi choi (don vi: giay)
     private final Map<UUID, Integer> playerCooldownSettings = new ConcurrentHashMap<>();
-
-    // Luu danh sach cac moc giay cho phep chon
     private final List<Integer> availableOptions = new ArrayList<>();
-
-    // Luu Force Cooldown theo tung world: Map<WorldNameLowerCase, Seconds>
     private final Map<String, Integer> forcedWorldCooldowns = new ConcurrentHashMap<>();
 
     private boolean globalForceEnabled = false;
@@ -54,6 +49,7 @@ public class PearlManager {
 
     private void loadPlayerSettings() {
         playerCooldownSettings.clear();
+        int minAllowed = getDefaultSeconds();
         synchronized (VCarterUtils.class) {
             FileConfiguration dataConfig = YamlConfiguration.loadConfiguration(dataFile);
             ConfigurationSection section = dataConfig.getConfigurationSection("pearl-cooldown");
@@ -63,8 +59,8 @@ public class PearlManager {
             for (String key : section.getKeys(false)) {
                 try {
                     UUID uuid = UUID.fromString(key);
-                    int seconds = section.getInt(key, getDefaultSeconds());
-                    playerCooldownSettings.put(uuid, Math.max(0, seconds));
+                    int seconds = section.getInt(key, minAllowed);
+                    playerCooldownSettings.put(uuid, Math.max(minAllowed, seconds));
                 } catch (IllegalArgumentException ignored) {
                 }
             }
@@ -107,34 +103,42 @@ public class PearlManager {
     }
 
     public void reload() {
+        int def = getDefaultSeconds();
+
         availableOptions.clear();
         List<Integer> rawOptions = plugin.getConfig().getIntegerList("pearl-cooldown.available-options");
         if (rawOptions.isEmpty()) {
-            availableOptions.addAll(List.of(0, 1, 3, 5, 6, 8, 10, 15));
-        } else {
-            for (int val : rawOptions) {
-                if (val >= 0 && !availableOptions.contains(val)) {
-                    availableOptions.add(val);
-                }
-            }
-            Collections.sort(availableOptions);
+            rawOptions = List.of(1, 3, 5, 6, 8, 10, 15);
         }
 
-        int def = getDefaultSeconds();
+        // Chi cho phep cac moc >= default-seconds (khong bao gio cho chinh thap hon mac dinh)
+        for (int val : rawOptions) {
+            if (val >= def && !availableOptions.contains(val)) {
+                availableOptions.add(val);
+            }
+        }
+
         if (!availableOptions.contains(def)) {
             availableOptions.add(def);
-            Collections.sort(availableOptions);
+        }
+        Collections.sort(availableOptions);
+
+        // Dam bao setting da luu cua nguoi choi khong thap hon muc mac dinh moi
+        for (Map.Entry<UUID, Integer> entry : playerCooldownSettings.entrySet()) {
+            if (entry.getValue() < def) {
+                entry.setValue(def);
+            }
         }
 
         this.globalForceEnabled = plugin.getConfig().getBoolean("pearl-cooldown.global-force.enabled", false);
-        this.globalForceSeconds = Math.max(0, plugin.getConfig().getInt("pearl-cooldown.global-force.seconds", def));
+        this.globalForceSeconds = Math.max(def, plugin.getConfig().getInt("pearl-cooldown.global-force.seconds", def));
 
         forcedWorldCooldowns.clear();
         ConfigurationSection worldSection = plugin.getConfig().getConfigurationSection("pearl-cooldown.force-worlds.worlds");
         if (worldSection != null) {
             for (String worldName : worldSection.getKeys(false)) {
                 int sec = worldSection.getInt(worldName, -1);
-                if (sec >= 0) {
+                if (sec >= def) {
                     forcedWorldCooldowns.put(worldName.trim().toLowerCase(), sec);
                 }
             }
@@ -164,12 +168,12 @@ public class PearlManager {
     }
 
     public void setGlobalForceSeconds(int seconds) {
-        this.globalForceSeconds = Math.max(0, seconds);
+        this.globalForceSeconds = Math.max(getDefaultSeconds(), seconds);
         plugin.getConfig().set("pearl-cooldown.global-force.seconds", this.globalForceSeconds);
         plugin.saveConfig();
     }
 
-    public int cycleGlobalForceSeconds( boolean forward) {
+    public int cycleGlobalForceSeconds(boolean forward) {
         if (availableOptions.isEmpty()) {
             return globalForceSeconds;
         }
@@ -185,9 +189,10 @@ public class PearlManager {
     }
 
     public void setDefaultSeconds(int seconds) {
-        int clean = Math.max(0, seconds);
+        int clean = Math.max(1, seconds);
         plugin.getConfig().set("pearl-cooldown.default-seconds", clean);
         plugin.saveConfig();
+        reload();
     }
 
     public boolean isClearOnRespawn() {
@@ -198,8 +203,11 @@ public class PearlManager {
         return plugin.getConfig().getBoolean("pearl-cooldown.clear-on-kit-load", true);
     }
 
+    /**
+     * Default cooldown cua Pearl luon >= 1s (muc binh thuong cua Vanilla)
+     */
     public int getDefaultSeconds() {
-        return Math.max(0, plugin.getConfig().getInt("pearl-cooldown.default-seconds", 1));
+        return Math.max(1, plugin.getConfig().getInt("pearl-cooldown.default-seconds", 1));
     }
 
     public List<Integer> getAvailableOptions() {
@@ -236,10 +244,6 @@ public class PearlManager {
         return forcedWorldCooldowns.getOrDefault(worldName.trim().toLowerCase(), -1);
     }
 
-    /**
-     * Dat hoac xoa Force Cooldown cho 1 world cu the va luu ngay vao config.yml
-     * Neu seconds < 0: Xoa force cooldown cua world do.
-     */
     public void setWorldForceSeconds(String worldName, int seconds) {
         if (worldName == null || worldName.trim().isEmpty()) {
             return;
@@ -247,7 +251,6 @@ public class PearlManager {
         String cleanKey = worldName.trim();
         String lowerKey = cleanKey.toLowerCase();
 
-        // Xoa key cu khong phan biet hoa thuong trong config de tranh trung lap
         ConfigurationSection sec = plugin.getConfig().getConfigurationSection("pearl-cooldown.force-worlds.worlds");
         if (sec != null) {
             for (String existingKey : new HashSet<>(sec.getKeys(false))) {
@@ -257,7 +260,7 @@ public class PearlManager {
             }
         }
 
-        if (seconds < 0) {
+        if (seconds < getDefaultSeconds()) {
             forcedWorldCooldowns.remove(lowerKey);
         } else {
             forcedWorldCooldowns.put(lowerKey, seconds);
@@ -267,9 +270,6 @@ public class PearlManager {
         plugin.saveConfig();
     }
 
-    /**
-     * Xoay vong moc Force Cooldown cho 1 world: OFF (-1) -> opt0 -> opt1 -> ... -> OFF (-1)
-     */
     public int cycleWorldForceSeconds(String worldName) {
         int current = getForcedWorldSeconds(worldName);
         if (availableOptions.isEmpty()) {
@@ -296,11 +296,13 @@ public class PearlManager {
     }
 
     public int getPlayerPersonalSeconds(UUID uuid) {
-        return playerCooldownSettings.getOrDefault(uuid, getDefaultSeconds());
+        int def = getDefaultSeconds();
+        int val = playerCooldownSettings.getOrDefault(uuid, def);
+        return Math.max(def, val);
     }
 
     public void setPlayerPersonalSeconds(UUID uuid, int seconds) {
-        int clean = Math.max(0, seconds);
+        int clean = Math.max(getDefaultSeconds(), seconds);
         playerCooldownSettings.put(uuid, clean);
         savePlayerSettingAsync(uuid, clean);
     }
@@ -335,24 +337,18 @@ public class PearlManager {
         return def;
     }
 
-    /**
-     * Thu tu uu tien Cooldown:
-     * 1. Force World Cooldown (neu world hien tai nam trong danh sach force)
-     * 2. Global Force Cooldown (neu Admin dang bat Global Force)
-     * 3. Personal Setting cua nguoi choi (mac dinh: 1s)
-     */
     public int getEffectiveCooldownSeconds(Player player) {
         if (player == null) {
             return getDefaultSeconds();
         }
         if (isWorldForced(player.getWorld())) {
             int forced = getForcedWorldSeconds(player.getWorld());
-            if (forced >= 0) {
+            if (forced >= getDefaultSeconds()) {
                 return forced;
             }
         }
         if (globalForceEnabled) {
-            return globalForceSeconds;
+            return Math.max(getDefaultSeconds(), globalForceSeconds);
         }
         return getPlayerPersonalSeconds(player.getUniqueId());
     }

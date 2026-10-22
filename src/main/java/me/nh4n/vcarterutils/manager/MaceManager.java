@@ -115,7 +115,7 @@ public class MaceManager {
             rawOptions = List.of(1, 3, 5, 6, 8, 10, 15);
         }
 
-        // Chi cho phep cac moc >= default-seconds (khong bao gio cho chinh thap hon mac dinh)
+        // Chi cho phep cac moc >= default-seconds (khong bao gio cho chinh duoi muc mac dinh)
         for (int val : rawOptions) {
             if (val >= def && !availableOptions.contains(val)) {
                 availableOptions.add(val);
@@ -127,9 +127,9 @@ public class MaceManager {
         }
         Collections.sort(availableOptions);
 
-        // Dam bao setting da luu cua nguoi choi khong thap hon muc mac dinh moi
         for (Map.Entry<UUID, Integer> entry : playerCooldownSettings.entrySet()) {
-            if (entry.getValue() < def) {
+            int val = entry.getValue();
+            if (val < def || !availableOptions.contains(val)) {
                 entry.setValue(def);
             }
         }
@@ -219,9 +219,6 @@ public class MaceManager {
         return plugin.getConfig().getBoolean("mace-cooldown.clear-on-kit-load", true);
     }
 
-    /**
-     * Default cooldown cua Mace luon >= 1s (khong cho phep chinh duoi muc mac dinh)
-     */
     public int getDefaultSeconds() {
         return Math.max(1, plugin.getConfig().getInt("mace-cooldown.default-seconds", 1));
     }

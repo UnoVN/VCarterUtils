@@ -86,7 +86,7 @@ public class SettingMenuListener implements Listener {
             if (plugin.getConfig().getBoolean("pearl-cooldown.send-chat-on-change", true)) {
                 String raw = plugin.getConfig().getString(
                         "pearl-cooldown.messages.cooldown-changed",
-                        "<glyph:warning_blue> <white><sprite:items:item/ender_pearl></white> <#a6adc8>Pearl cooldown: <#89dceb><b>%seconds%s</b>"
+                        "<glyph:warning_blue> <#a6adc8>Pearl cooldown set to <#89dceb><b>%seconds%s</b><#a6adc8>."
                 );
                 player.sendMessage(miniMessage.deserialize(raw.replace("%seconds%", String.valueOf(newSeconds))));
             }
@@ -113,7 +113,7 @@ public class SettingMenuListener implements Listener {
             if (plugin.getConfig().getBoolean("mace-cooldown.send-chat-on-change", true)) {
                 String raw = plugin.getConfig().getString(
                         "mace-cooldown.messages.cooldown-changed",
-                        "<glyph:warning_blue> <white><sprite:items:item/mace></white> <#a6adc8>Mace cooldown: <#89dceb><b>%seconds%s</b>"
+                        "<glyph:warning_blue> <#a6adc8>Mace cooldown set to <#89dceb><b>%seconds%s</b><#a6adc8>."
                 );
                 player.sendMessage(miniMessage.deserialize(raw.replace("%seconds%", String.valueOf(newSeconds))));
             }
@@ -167,7 +167,7 @@ public class SettingMenuListener implements Listener {
                     pearlManager.setGlobalForceEnabled(nextState);
                     admin.playSound(admin.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, nextState ? 1.5f : 0.8f);
                     admin.sendMessage(miniMessage.deserialize(
-                            "<glyph:warning_blue> <white><sprite:items:item/ender_pearl></white> <#a6adc8>Global Force: " +
+                            "<glyph:warning_blue> <#a6adc8>Global Pearl Force: " +
                             (nextState ? "<#a6e3a1><b>ON</b> <#6c7086>(" + pearlManager.getGlobalForceSeconds() + "s)" : "<#f38ba8><b>OFF</b>")
                     ));
                 } else if (click == ClickType.SHIFT_RIGHT) {
@@ -175,7 +175,7 @@ public class SettingMenuListener implements Listener {
                     pearlManager.setDefaultSeconds(sec);
                     admin.playSound(admin.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.3f);
                     admin.sendMessage(miniMessage.deserialize(
-                            "<glyph:warning_blue> <white><sprite:items:item/ender_pearl></white> <#a6e3a1>Default Pearl set to <#89dceb><b>" + sec + "s</b>"
+                            "<glyph:warning_blue> <#a6e3a1>Default Pearl cooldown set to <#89dceb><b>" + sec + "s</b><#a6e3a1>."
                     ));
                 } else if (click.isRightClick()) {
                     pearlManager.cycleGlobalForceSeconds(false);
@@ -193,7 +193,7 @@ public class SettingMenuListener implements Listener {
                     maceManager.setGlobalForceEnabled(nextState);
                     admin.playSound(admin.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, nextState ? 1.5f : 0.8f);
                     admin.sendMessage(miniMessage.deserialize(
-                            "<glyph:warning_blue> <white><sprite:items:item/mace></white> <#a6adc8>Global Force: " +
+                            "<glyph:warning_blue> <#a6adc8>Global Mace Force: " +
                             (nextState ? "<#a6e3a1><b>ON</b> <#6c7086>(" + maceManager.getGlobalForceSeconds() + "s)" : "<#f38ba8><b>OFF</b>")
                     ));
                 } else if (click == ClickType.SHIFT_RIGHT) {
@@ -201,7 +201,7 @@ public class SettingMenuListener implements Listener {
                     maceManager.setDefaultSeconds(sec);
                     admin.playSound(admin.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.3f);
                     admin.sendMessage(miniMessage.deserialize(
-                            "<glyph:warning_blue> <white><sprite:items:item/mace></white> <#a6e3a1>Default Mace set to <#89dceb><b>" + sec + "s</b>"
+                            "<glyph:warning_blue> <#a6e3a1>Default Mace cooldown set to <#89dceb><b>" + sec + "s</b><#a6e3a1>."
                     ));
                 } else if (click.isRightClick()) {
                     maceManager.cycleGlobalForceSeconds(false);
@@ -221,27 +221,27 @@ public class SettingMenuListener implements Listener {
                     pearlManager.setWorldForceSeconds(worldName, -1);
                     admin.playSound(admin.getLocation(), Sound.BLOCK_GLASS_BREAK, 0.7f, 1.2f);
                     admin.sendMessage(miniMessage.deserialize(
-                            "<glyph:warning_blue> <white><sprite:items:item/ender_pearl></white> <#89dceb><b>" + worldName + "</b> <#a6adc8>Pearl Force: <#f38ba8><b>OFF</b>"
+                            "<glyph:warning_blue> <#89dceb><b>" + worldName + "</b> <#a6adc8>Pearl Force: <#f38ba8><b>OFF</b>"
                     ));
                 } else if (click == ClickType.SHIFT_RIGHT) {
                     maceManager.setWorldForceSeconds(worldName, -1);
                     admin.playSound(admin.getLocation(), Sound.BLOCK_GLASS_BREAK, 0.7f, 1.2f);
                     admin.sendMessage(miniMessage.deserialize(
-                            "<glyph:warning_blue> <white><sprite:items:item/mace></white> <#89dceb><b>" + worldName + "</b> <#a6adc8>Mace Force: <#f38ba8><b>OFF</b>"
+                            "<glyph:warning_blue> <#89dceb><b>" + worldName + "</b> <#a6adc8>Mace Force: <#f38ba8><b>OFF</b>"
                     ));
                 } else if (click.isRightClick()) {
                     int newMaceSec = maceManager.cycleWorldForceSeconds(worldName);
                     admin.playSound(admin.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.1f);
                     String valStr = (newMaceSec < 0) ? "<#f38ba8><b>OFF</b>" : "<#a6e3a1><b>" + newMaceSec + "s</b>";
                     admin.sendMessage(miniMessage.deserialize(
-                            "<glyph:warning_blue> <white><sprite:items:item/mace></white> <#89dceb><b>" + worldName + "</b> <#a6adc8>Mace Force: " + valStr
+                            "<glyph:warning_blue> <#89dceb><b>" + worldName + "</b> <#a6adc8>Mace Force: " + valStr
                     ));
                 } else {
                     int newPearlSec = pearlManager.cycleWorldForceSeconds(worldName);
                     admin.playSound(admin.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.2f);
                     String valStr = (newPearlSec < 0) ? "<#f38ba8><b>OFF</b>" : "<#a6e3a1><b>" + newPearlSec + "s</b>";
                     admin.sendMessage(miniMessage.deserialize(
-                            "<glyph:warning_blue> <white><sprite:items:item/ender_pearl></white> <#89dceb><b>" + worldName + "</b> <#a6adc8>Pearl Force: " + valStr
+                            "<glyph:warning_blue> <#89dceb><b>" + worldName + "</b> <#a6adc8>Pearl Force: " + valStr
                     ));
                 }
                 menuManager.refreshAdminMenu(admin);
@@ -251,7 +251,7 @@ public class SettingMenuListener implements Listener {
                 menuManager.refreshAdminMenu(admin);
                 admin.playSound(admin.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.4f);
                 admin.sendMessage(miniMessage.deserialize(
-                        "<glyph:warning_blue> <white><sprite:items:item/recovery_compass></white> <#a6e3a1>Worlds rescanned!"
+                        "<glyph:warning_blue> <#a6e3a1>World list rescanned."
                 ));
             }
 

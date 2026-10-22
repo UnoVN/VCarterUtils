@@ -23,6 +23,7 @@ import me.nh4n.vcarterutils.manager.TotemManager;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -57,9 +58,10 @@ public final class VCarterUtils extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
+        // Chi tao config.yml neu file chua ton tai va ngat lien ket defaults ngam cua .jar
         saveDefaultConfig();
-        getConfig().options().copyDefaults(true);
-        saveConfig();
+        reloadConfig();
+        getConfig().setDefaults(new YamlConfiguration());
 
         this.scoreManager = new ScoreManager();
         this.regearManager = new RegearManager(this);
@@ -95,28 +97,24 @@ public final class VCarterUtils extends JavaPlugin {
         pluginManager.registerEvents(settingMenuListener, this);
         pluginManager.registerEvents(scoreCommand, this);
 
-        // Dang ky Lenh /score
         PluginCommand scoreCmd = getCommand("score");
         if (scoreCmd != null) {
             scoreCmd.setExecutor(scoreCommand);
             scoreCmd.setTabCompleter(scoreCommand);
         }
 
-        // Dang ky Lenh /vcarterutils (/vcu, /vcarter)
         PluginCommand vcuCmd = getCommand("vcarterutils");
         if (vcuCmd != null) {
             vcuCmd.setExecutor(mainCommand);
             vcuCmd.setTabCompleter(mainCommand);
         }
 
-        // Dang ky Lenh /back
         PluginCommand backCmd = getCommand("back");
         if (backCmd != null) {
             backCmd.setExecutor(backCommand);
             backCmd.setTabCompleter(backCommand);
         }
 
-        // Dang ky Lenh /setting (/settings, /options, /vsetting)
         PluginCommand settingCmd = getCommand("setting");
         if (settingCmd != null) {
             settingCmd.setExecutor(settingCommand);
@@ -135,6 +133,8 @@ public final class VCarterUtils extends JavaPlugin {
 
     public void reloadPluginConfig() {
         reloadConfig();
+        getConfig().setDefaults(new YamlConfiguration());
+
         if (regearManager != null) {
             regearManager.reload();
         }
@@ -175,7 +175,7 @@ public final class VCarterUtils extends JavaPlugin {
 
             if (getConfig().getBoolean("score.auto-reset.broadcast", true)) {
                 String msg = getConfig().getString("score.messages.global-reset-auto",
-                        "<glyph:warning_blue> <#a6e3a1>All 1v1 scores have been automatically reset (Hourly Schedule).");
+                        "<glyph:warning_blue> <#a6e3a1>All 1v1 scores have been automatically reset.");
                 Bukkit.broadcast(MiniMessage.miniMessage().deserialize(msg));
             }
         }, ticks, ticks);

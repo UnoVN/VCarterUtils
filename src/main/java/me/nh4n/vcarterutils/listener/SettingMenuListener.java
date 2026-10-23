@@ -148,6 +148,22 @@ public class SettingMenuListener implements Listener {
             return;
         }
 
+        if (type.equalsIgnoreCase("XBOW_COUNTER_TOGGLE")) {
+            boolean enabled = plugin.getXbowManager().togglePlayerSetting(player.getUniqueId());
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, enabled ? 1.5f : 0.8f);
+            menuManager.refreshMenu(player);
+
+            String statusStr = enabled
+                    ? plugin.getConfig().getString("xbow-counter.messages.status-enabled", "<#a6e3a1><b>ENABLED</b>")
+                    : plugin.getConfig().getString("xbow-counter.messages.status-disabled", "<#f38ba8><b>DISABLED</b>");
+            String raw = plugin.getConfig().getString(
+                    "xbow-counter.messages.toggled",
+                    "<glyph:warning_blue> <#a6adc8>Xbow tick counter: %status%"
+            );
+            player.sendMessage(miniMessage.deserialize(raw.replace("%status%", statusStr)));
+            return;
+        }
+
         if (type.equalsIgnoreCase("ADMIN_MENU")) {
             if (player.hasPermission("vcarterutils.admin")) {
                 menuManager.openAdminSettingMenu(player, 0);

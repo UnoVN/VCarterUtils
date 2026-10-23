@@ -48,6 +48,7 @@ lobby-hotbar:
     world-removed: "<glyph:warning_blue> <#f38ba8>Removed <#89dceb><b>%world%</b> <#f38ba8>from Lobby Hotbar worlds."
   # Slot 0..8 tuong ung voi O 1..9 tren thanh Hotbar:
   # O 1 (slot 0): rtpq | O 2 (slot 1): rtp | O 5 (slot 4 - Chinh giua): quick-back | O 8 (slot 7): decor | O 9 (slot 8): settings
+  # Ho tro Nexo custom item qua "nexo-id" hoac "material: nexo:<id>"
   items:
     rtpq:
       enabled: true
@@ -78,7 +79,8 @@ lobby-hotbar:
     decor:
       enabled: true
       slot: 7
-      material: "AMETHYST_SHARD"
+      nexo-id: "cosmetic"
+      material: "nexo:cosmetic"
       command: "decor"
       name: "<!italic><#f9e2af><b>Decorations</b> <#6c7086>(/decor)"
       lore:
@@ -86,7 +88,8 @@ lobby-hotbar:
     settings:
       enabled: true
       slot: 8
-      material: "COMPARATOR"
+      nexo-id: "settings"
+      material: "nexo:settings"
       command: "settings"
       name: "<!italic><#89dceb><b>Settings</b> <#6c7086>(/settings)"
       lore:
@@ -253,6 +256,7 @@ setting-menu:
       enabled: true
       type: "ADMIN_MENU"
       slot: 4
+      nexo-id: "settings"
       material: "COMPARATOR"
       name: "<!italic><#f38ba8><b>Admin Manager</b>"
       lore:

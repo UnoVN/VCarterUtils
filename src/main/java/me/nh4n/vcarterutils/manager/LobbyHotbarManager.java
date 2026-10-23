@@ -32,7 +32,6 @@ public class LobbyHotbarManager {
     private final Set<String> lobbyWorlds = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Map<UUID, Boolean> playerToggleSettings = new ConcurrentHashMap<>();
     private final Map<UUID, ItemStack[]> savedHotbars = new ConcurrentHashMap<>();
-    // Danh dau nguoi choi vua chet de doi PerPlayerKit nap kit xong moi apply Lobby Hotbar
     private final Set<UUID> respawningPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     private File dataFile;
@@ -252,10 +251,6 @@ public class LobbyHotbarManager {
         return savedHotbars.containsKey(uuid);
     }
 
-    /**
-     * Luu tat ca cac vat pham that (khong phai item Lobby) dang co tren Hotbar (slots 0-8)
-     * sau do thay the bang Lobby Hotbar.
-     */
     public void applyLobbyHotbar(Player player) {
         if (player == null || !player.isOnline()) return;
         if (!isEnabled() || !isPlayerEnabled(player.getUniqueId()) || !isLobbyWorld(player.getWorld())) {
@@ -265,7 +260,7 @@ public class LobbyHotbarManager {
         UUID uuid = player.getUniqueId();
         PlayerInventory inv = player.getInventory();
 
-        // Kiem tra xem tren hotbar (0-8) hien tai co vat pham that nao khong (vd kit do PerPlayerKit vua nap)
+        // Kiem tra xem tren hotbar (0-8) hien tai co vat pham that nao khong
         boolean hasRealItemsInHotbar = false;
         for (int i = 0; i < 9; i++) {
             ItemStack item = inv.getItem(i);
@@ -275,7 +270,7 @@ public class LobbyHotbarManager {
             }
         }
 
-        // Neu co vat pham that tren hotbar -> Luu/Cap nhat day du vao savedHotbars
+        // Neu co vat pham that tren hotbar -> Luu/Cap nhat day du 9 o vao savedHotbars
         if (hasRealItemsInHotbar) {
             ItemStack[] currentBar = new ItemStack[9];
             for (int i = 0; i < 9; i++) {
@@ -299,7 +294,7 @@ public class LobbyHotbarManager {
         if (itemsSec == null) return;
 
         boolean canUseBack = canPlayerUseBack(player);
-        int autoSelectSlot = -1;
+        int backItemSlot = -1;
 
         for (String key : itemsSec.getKeys(false)) {
             ConfigurationSection itemSec = itemsSec.getConfigurationSection(key);
@@ -343,14 +338,14 @@ public class LobbyHotbarManager {
 
             inv.setItem(slot, stack);
 
-            // Neu nguoi choi vua chet va co item /back -> Tu dong cam san tren tay de chi can chuot phai
-            if (isBackItem && canUseBack && itemSec.getBoolean("auto-select-on-respawn", true)) {
-                autoSelectSlot = slot;
+            if (isBackItem && canUseBack) {
+                backItemSlot = slot;
             }
         }
 
-        if (autoSelectSlot >= 0 && autoSelectSlot <= 8) {
-            inv.setHeldItemSlot(autoSelectSlot);
+        // Neu co item /back (o chinh giua - slot 4 / o so 5), luon force select o do de nguoi choi chi can Right-Click
+        if (backItemSlot >= 0 && backItemSlot <= 8) {
+            inv.setHeldItemSlot(backItemSlot);
         }
     }
 

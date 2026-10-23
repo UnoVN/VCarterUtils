@@ -39,14 +39,12 @@ public class BackCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // 1. Kiem tra xem world hien tai co bi blacklist khong
         if (manager.isWorldBlacklisted(player.getWorld())) {
             sendMsg(player, "back.messages.world-blacklisted");
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             return true;
         }
 
-        // 2. Kiem tra xem co toa do tu tran luu trong bo nho khong
         Location deathLoc = manager.getDeathLocation(player.getUniqueId());
         if (deathLoc == null || deathLoc.getWorld() == null) {
             sendMsg(player, "back.messages.no-death-location");
@@ -54,20 +52,22 @@ public class BackCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // 3. Kiem tra xem world vua chet co bi blacklist khong
         if (manager.isWorldBlacklisted(deathLoc.getWorld())) {
             sendMsg(player, "back.messages.world-blacklisted");
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             return true;
         }
 
-        // 4. Dich chuyen bat dong bo an toan qua Paper API (teleportAsync)
         player.teleportAsync(deathLoc).thenAccept(success -> {
             if (success) {
                 player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
                 sendMsg(player, "back.messages.teleported");
-                // Xoa toa do sau khi da su dung de tranh spam teleport
                 manager.clearDeathLocation(player.getUniqueId());
+
+                // Neu nguoi choi back ve mot vi tri van nam trong Lobby World, cap nhat lai Lobby Hotbar de an item /back
+                if (plugin.getLobbyHotbarManager().isLobbyWorld(player.getWorld())) {
+                    plugin.getLobbyHotbarManager().applyLobbyHotbar(player);
+                }
             }
         });
 

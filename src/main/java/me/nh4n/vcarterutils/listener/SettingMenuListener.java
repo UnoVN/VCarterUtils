@@ -39,33 +39,23 @@ public class SettingMenuListener implements Listener {
 
         if (topHolder instanceof SettingMenuHolder holder) {
             event.setCancelled(true);
-            if (!(event.getWhoClicked() instanceof Player player)) {
-                return;
-            }
-            if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getView().getTopInventory())) {
-                return;
-            }
+            if (!(event.getWhoClicked() instanceof Player player)) return;
+            if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getView().getTopInventory())) return;
             handlePlayerMenuClick(player, holder, event.getSlot(), event.getClick());
             return;
         }
 
         if (topHolder instanceof AdminSettingMenuHolder adminHolder) {
             event.setCancelled(true);
-            if (!(event.getWhoClicked() instanceof Player admin)) {
-                return;
-            }
-            if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getView().getTopInventory())) {
-                return;
-            }
+            if (!(event.getWhoClicked() instanceof Player admin)) return;
+            if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getView().getTopInventory())) return;
             handleAdminMenuClick(admin, adminHolder, event.getSlot(), event.getClick());
         }
     }
 
     private void handlePlayerMenuClick(Player player, SettingMenuHolder holder, int slot, ClickType click) {
         MenuItemAction action = holder.getSlotAction(slot);
-        if (action == null) {
-            return;
-        }
+        if (action == null) return;
 
         String type = action.type();
         SettingMenuManager menuManager = plugin.getSettingMenuManager();
@@ -74,13 +64,11 @@ public class SettingMenuListener implements Listener {
             PearlManager pearlManager = plugin.getPearlManager();
 
             if (pearlManager.isWorldForced(player.getWorld())) {
-                int forcedSec = pearlManager.getEffectiveCooldownSeconds(player);
-                showLockedWarning(player, "pearl-cooldown", true, forcedSec);
+                showLockedWarning(player, "pearl-cooldown", true, pearlManager.getEffectiveCooldownSeconds(player));
                 return;
             }
             if (pearlManager.isGlobalForceEnabled()) {
-                int forcedSec = pearlManager.getEffectiveCooldownSeconds(player);
-                showLockedWarning(player, "pearl-cooldown", false, forcedSec);
+                showLockedWarning(player, "pearl-cooldown", false, pearlManager.getEffectiveCooldownSeconds(player));
                 return;
             }
 
@@ -112,13 +100,11 @@ public class SettingMenuListener implements Listener {
             MaceManager maceManager = plugin.getMaceManager();
 
             if (maceManager.isWorldForced(player.getWorld())) {
-                int forcedSec = maceManager.getEffectiveCooldownSeconds(player);
-                showLockedWarning(player, "mace-cooldown", true, forcedSec);
+                showLockedWarning(player, "mace-cooldown", true, maceManager.getEffectiveCooldownSeconds(player));
                 return;
             }
             if (maceManager.isGlobalForceEnabled()) {
-                int forcedSec = maceManager.getEffectiveCooldownSeconds(player);
-                showLockedWarning(player, "mace-cooldown", false, forcedSec);
+                showLockedWarning(player, "mace-cooldown", false, maceManager.getEffectiveCooldownSeconds(player));
                 return;
             }
 
@@ -143,6 +129,22 @@ public class SettingMenuListener implements Listener {
                 );
                 player.sendMessage(miniMessage.deserialize(raw.replace("%seconds%", String.valueOf(newSeconds))));
             }
+            return;
+        }
+
+        if (type.equalsIgnoreCase("LOBBY_HOTBAR_TOGGLE")) {
+            boolean enabled = plugin.getLobbyHotbarManager().togglePlayerSetting(player);
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, enabled ? 1.5f : 0.8f);
+            menuManager.refreshMenu(player);
+
+            String statusStr = enabled
+                    ? plugin.getConfig().getString("lobby-hotbar.messages.status-enabled", "<#a6e3a1><b>ENABLED</b>")
+                    : plugin.getConfig().getString("lobby-hotbar.messages.status-disabled", "<#f38ba8><b>DISABLED</b>");
+            String raw = plugin.getConfig().getString(
+                    "lobby-hotbar.messages.toggled",
+                    "<glyph:warning_blue> <#a6adc8>Lobby hotbar: %status%"
+            );
+            player.sendMessage(miniMessage.deserialize(raw.replace("%status%", statusStr)));
             return;
         }
 
@@ -220,9 +222,7 @@ public class SettingMenuListener implements Listener {
         }
 
         AdminSlotAction action = holder.getSlotAction(slot);
-        if (action == null) {
-            return;
-        }
+        if (action == null) return;
 
         String actType = action.actionType();
         PearlManager pearlManager = plugin.getPearlManager();

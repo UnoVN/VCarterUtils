@@ -20,6 +20,64 @@ totem:
     activation-limit-reached: "<glyph:warning_blue> <#f38ba8>You already used your Totem for this kit."
 
 # ==============================================================
+#                     LOBBY HOTBAR SYSTEM
+# ==============================================================
+lobby-hotbar:
+  enabled: true
+  # Dung lenh /vcu setlobby de them/xoa world hien tai vao danh sach nay
+  worlds:
+    - "world"
+    - "lobby"
+  messages:
+    toggled: "<glyph:warning_blue> <#a6adc8>Lobby hotbar: %status%"
+    status-enabled: "<#a6e3a1><b>ENABLED</b>"
+    status-disabled: "<#f38ba8><b>DISABLED</b>"
+    world-added: "<glyph:warning_blue> <#a6e3a1>Added <#89dceb><b>%world%</b> <#a6e3a1>to Lobby Hotbar worlds."
+    world-removed: "<glyph:warning_blue> <#f38ba8>Removed <#89dceb><b>%world%</b> <#f38ba8>from Lobby Hotbar worlds."
+  items:
+    rtpq:
+      enabled: true
+      slot: 0
+      material: "ENDER_EYE"
+      command: "rtpq"
+      name: "<!italic><#a6e3a1><b>RTP Queue</b> <#6c7086>(/rtpq)"
+      lore:
+        - "<!italic><white><glyph:right_click></white> <#a6adc8>Join 1v1 matchmaking queue"
+    rtp:
+      enabled: true
+      slot: 1
+      material: "COMPASS"
+      command: "rtp"
+      name: "<!italic><#89dceb><b>Random Teleport</b> <#6c7086>(/rtp)"
+      lore:
+        - "<!italic><white><glyph:right_click></white> <#a6adc8>Teleport to a random location"
+    decor:
+      enabled: true
+      slot: 4
+      material: "AMETHYST_SHARD"
+      command: "decor"
+      name: "<!italic><#f9e2af><b>Decorations</b> <#6c7086>(/decor)"
+      lore:
+        - "<!italic><white><glyph:right_click></white> <#a6adc8>Open cosmetics & decorations"
+    quick-back:
+      enabled: true
+      only-show-when-can-back: true
+      slot: 7
+      material: "RECOVERY_COMPASS"
+      command: "back"
+      name: "<!italic><#f38ba8><b>Return to Death Location</b> <#6c7086>(/back)"
+      lore:
+        - "<!italic><white><glyph:right_click></white> <#a6adc8>Teleport back to where you died"
+    settings:
+      enabled: true
+      slot: 8
+      material: "COMPARATOR"
+      command: "settings"
+      name: "<!italic><#89dceb><b>Settings</b> <#6c7086>(/settings)"
+      lore:
+        - "<!italic><white><glyph:right_click></white> <#a6adc8>Configure personal PvP settings"
+
+# ==============================================================
 #                 ENDER PEARL COOLDOWN SYSTEM
 # ==============================================================
 pearl-cooldown:
@@ -115,6 +173,7 @@ setting-menu:
     selected: "<#a6e3a1><b>[%seconds%s]</b>"
     unselected: "<#6c7086>%seconds%s"
     separator: " <#6c7086>• "
+  # Types: PEARL_COOLDOWN, MACE_COOLDOWN, LOBBY_HOTBAR_TOGGLE, ADMIN_MENU, CLOSE, COMMAND, DECORATION
   items:
     pearl-cooldown:
       enabled: true
@@ -133,6 +192,19 @@ setting-menu:
         - ""
         - "<!italic><white><glyph:left_click></white> <#a6e3a1>Increase <#6c7086>| <white><glyph:right_click></white> <#f9e2af>Decrease"
         - "<!italic><#f38ba8>Shift + <white><glyph:left_click></white> <#a6adc8>Reset default"
+    lobby-hotbar-toggle:
+      enabled: true
+      type: "LOBBY_HOTBAR_TOGGLE"
+      slot: 13
+      material: "NETHER_STAR"
+      name: "<!italic><#89dceb><b>Lobby Hotbar</b>"
+      lore:
+        - ""
+        - "<!italic><#a6adc8>Status: %lobby_hotbar_status%"
+        - "<!italic><#6c7086>Replaces your hotbar with quick"
+        - "<!italic><#6c7086>shortcut items while in the lobby."
+        - ""
+        - "<!italic><white><glyph:left_click></white> <#89dceb>Toggle ON/OFF"
     mace-cooldown:
       enabled: true
       type: "MACE_COOLDOWN"

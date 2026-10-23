@@ -42,10 +42,6 @@ public class SettingMenuManager {
         }
     }
 
-    // ==============================================================
-    //                    PLAYER /SETTING MENU
-    // ==============================================================
-
     public void openSettingMenu(Player player) {
         int rows = Math.max(1, Math.min(6, plugin.getConfig().getInt("setting-menu.rows", 3)));
         int size = rows * 9;
@@ -137,7 +133,6 @@ public class SettingMenuManager {
                 stack.setItemMeta(meta);
             }
 
-            // Hien thi dung so giay Personal Setting cua nguoi choi tren so luong item
             if (itemSec.getBoolean("show-seconds-as-amount", true)) {
                 if (type.equals("PEARL_COOLDOWN")) {
                     int personalSec = plugin.getPearlManager().getPlayerPersonalSeconds(player.getUniqueId());
@@ -152,10 +147,6 @@ public class SettingMenuManager {
             holder.setSlotAction(slot, new MenuItemAction(key, type, itemSec.getString("command", "")));
         }
     }
-
-    // ==============================================================
-    //                  ADMIN /SETTING ADMIN MENU
-    // ==============================================================
 
     public void openAdminSettingMenu(Player admin, int page) {
         String titleRaw = plugin.getConfig().getString(
@@ -188,7 +179,6 @@ public class SettingMenuManager {
         PearlManager pearlManager = plugin.getPearlManager();
         MaceManager maceManager = plugin.getMaceManager();
 
-        // --- SLOT 2: GLOBAL PEARL SETTING ---
         boolean pearlGlobalOn = pearlManager.isGlobalForceEnabled();
         int pearlGlobalSec = pearlManager.getGlobalForceSeconds();
         int pearlDefSec = pearlManager.getDefaultSeconds();
@@ -213,7 +203,6 @@ public class SettingMenuManager {
         inv.setItem(2, globalPearlItem);
         holder.setSlotAction(2, new AdminSlotAction("GLOBAL_PEARL", null));
 
-        // --- SLOT 4: WORLD SCANNER INFO ---
         List<DiscoveredWorld> allWorlds = scanAllWorlds();
         int totalPages = Math.max(1, (int) Math.ceil(allWorlds.size() / 27.0));
         int currentPage = Math.max(0, Math.min(holder.getPage(), totalPages - 1));
@@ -233,7 +222,6 @@ public class SettingMenuManager {
         inv.setItem(4, scannerItem);
         holder.setSlotAction(4, new AdminSlotAction("RESCAN", null));
 
-        // --- SLOT 6: GLOBAL MACE SETTING ---
         boolean maceGlobalOn = maceManager.isGlobalForceEnabled();
         int maceGlobalSec = maceManager.getGlobalForceSeconds();
         int maceDefSec = maceManager.getDefaultSeconds();
@@ -258,7 +246,6 @@ public class SettingMenuManager {
         inv.setItem(6, globalMaceItem);
         holder.setSlotAction(6, new AdminSlotAction("GLOBAL_MACE", null));
 
-        // --- SLOTS 18..44: WORLD LIST (27 WORLDS PER PAGE) ---
         int startIndex = currentPage * 27;
         int endIndex = Math.min(startIndex + 27, allWorlds.size());
 
@@ -273,12 +260,8 @@ public class SettingMenuManager {
 
             Material iconMat = getWorldIconMaterial(dw, hasAnyForce);
 
-            String pearlDisplay = (forcedPearl >= 0)
-                    ? "<#a6e3a1><b>" + forcedPearl + "s</b>"
-                    : "<#6c7086>OFF";
-            String maceDisplay = (forcedMace >= 0)
-                    ? "<#a6e3a1><b>" + forcedMace + "s</b>"
-                    : "<#6c7086>OFF";
+            String pearlDisplay = (forcedPearl >= 0) ? "<#a6e3a1><b>" + forcedPearl + "s</b>" : "<#6c7086>OFF";
+            String maceDisplay = (forcedMace >= 0) ? "<#a6e3a1><b>" + forcedMace + "s</b>" : "<#6c7086>OFF";
 
             List<String> wLore = List.of(
                     "<!italic>" + (dw.loaded() ? "<#a6e3a1>● Loaded" : "<#f9e2af>○ Unloaded") + " <#6c7086>• " + dw.source(),
@@ -301,7 +284,6 @@ public class SettingMenuManager {
             guiSlot++;
         }
 
-        // --- BOTTOM NAVIGATION BAR (SLOTS 45..53) ---
         if (currentPage > 0) {
             ItemStack prevBtn = createSimpleItem(
                     Material.ARROW,
@@ -340,9 +322,7 @@ public class SettingMenuManager {
     }
 
     private Material getWorldIconMaterial(DiscoveredWorld dw, boolean hasAnyForce) {
-        if (hasAnyForce) {
-            return Material.EMERALD_BLOCK;
-        }
+        if (hasAnyForce) return Material.EMERALD_BLOCK;
         World w = Bukkit.getWorld(dw.name());
         if (w != null) {
             return switch (w.getEnvironment()) {
@@ -425,9 +405,7 @@ public class SettingMenuManager {
     }
 
     private void addDiscoveredWorld(Map<String, DiscoveredWorld> map, String worldName, String source) {
-        if (worldName == null || worldName.trim().isEmpty()) {
-            return;
-        }
+        if (worldName == null || worldName.trim().isEmpty()) return;
         String clean = worldName.trim();
         String lower = clean.toLowerCase();
         DiscoveredWorld existing = map.get(lower);
@@ -442,14 +420,10 @@ public class SettingMenuManager {
     private void scanMultiverseReflection(Map<String, DiscoveredWorld> map) {
         try {
             Plugin mv = Bukkit.getPluginManager().getPlugin("Multiverse-Core");
-            if (mv == null || !mv.isEnabled()) {
-                return;
-            }
+            if (mv == null || !mv.isEnabled()) return;
             Method getMVWorldManager = mv.getClass().getMethod("getMVWorldManager");
             Object worldManager = getMVWorldManager.invoke(mv);
-            if (worldManager == null) {
-                return;
-            }
+            if (worldManager == null) return;
 
             Method getUnloadedWorlds = worldManager.getClass().getMethod("getUnloadedWorlds");
             Object unloadedObj = getUnloadedWorlds.invoke(worldManager);
@@ -485,9 +459,17 @@ public class SettingMenuManager {
     }
 
     private String applyPlaceholders(Player player, String itemType, String input) {
-        if (input == null) {
-            return "";
-        }
+        if (input == null) return "";
+
+        boolean lobbyBarOn = plugin.getLobbyHotbarManager().isPlayerEnabled(player.getUniqueId());
+        String lobbyStatus = lobbyBarOn
+                ? plugin.getConfig().getString("lobby-hotbar.messages.status-enabled", "<#a6e3a1><b>ENABLED</b>")
+                : plugin.getConfig().getString("lobby-hotbar.messages.status-disabled", "<#f38ba8><b>DISABLED</b>");
+
+        boolean xbowOn = plugin.getXbowManager().isPlayerEnabled(player.getUniqueId());
+        String xbowStatus = xbowOn
+                ? plugin.getConfig().getString("xbow-counter.messages.status-enabled", "<#a6e3a1><b>ENABLED</b>")
+                : plugin.getConfig().getString("xbow-counter.messages.status-disabled", "<#f38ba8><b>DISABLED</b>");
 
         int personalSec;
         int defaultSec;
@@ -556,7 +538,9 @@ public class SettingMenuManager {
                 .replace("%default%", String.valueOf(defaultSec))
                 .replace("%effective%", String.valueOf(effectiveSec))
                 .replace("%world_status%", worldStatus)
-                .replace("%options_list%", optionsBar);
+                .replace("%options_list%", optionsBar)
+                .replace("%lobby_hotbar_status%", lobbyStatus)
+                .replace("%xbow_counter_status%", xbowStatus);
     }
 
     private String buildOptionsBar(int currentSec, List<Integer> options) {
@@ -579,9 +563,7 @@ public class SettingMenuManager {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < options.size(); i++) {
             int opt = options.get(i);
-            if (i > 0) {
-                sb.append(separator);
-            }
+            if (i > 0) sb.append(separator);
             if (opt == currentSec) {
                 sb.append(selectedFormat.replace("%seconds%", String.valueOf(opt)));
             } else {

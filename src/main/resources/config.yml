@@ -20,11 +20,23 @@ totem:
     activation-limit-reached: "<glyph:warning_blue> <#f38ba8>You already used your Totem for this kit."
 
 # ==============================================================
+#                   XBOW TICK SPEED COUNTER
+# ==============================================================
+xbow-counter:
+  enabled: true
+  display-duration-seconds: 3
+  max-setup-ticks: 200
+  action-bar-format: "<#89dceb><b>Xbow Speed:</b> <#a6e3a1><b>%ticks% ticks</b> <#6c7086>(<#f9e2af>%seconds%s<#6c7086>)"
+  messages:
+    toggled: "<glyph:warning_blue> <#a6adc8>Xbow tick counter: %status%"
+    status-enabled: "<#a6e3a1><b>ENABLED</b>"
+    status-disabled: "<#f38ba8><b>DISABLED</b>"
+
+# ==============================================================
 #                     LOBBY HOTBAR SYSTEM
 # ==============================================================
 lobby-hotbar:
   enabled: true
-  # Dung lenh /vcu setlobby de them/xoa world hien tai vao danh sach nay
   worlds:
     - "world"
     - "lobby"
@@ -173,12 +185,12 @@ setting-menu:
     selected: "<#a6e3a1><b>[%seconds%s]</b>"
     unselected: "<#6c7086>%seconds%s"
     separator: " <#6c7086>• "
-  # Types: PEARL_COOLDOWN, MACE_COOLDOWN, LOBBY_HOTBAR_TOGGLE, ADMIN_MENU, CLOSE, COMMAND, DECORATION
+  # Types: PEARL_COOLDOWN, MACE_COOLDOWN, XBOW_COUNTER_TOGGLE, LOBBY_HOTBAR_TOGGLE, ADMIN_MENU, CLOSE, COMMAND, DECORATION
   items:
     pearl-cooldown:
       enabled: true
       type: "PEARL_COOLDOWN"
-      slot: 11
+      slot: 10
       material: "ENDER_PEARL"
       show-seconds-as-amount: true
       name: "<!italic><#89dceb><b>Pearl Cooldown</b>"
@@ -192,23 +204,10 @@ setting-menu:
         - ""
         - "<!italic><white><glyph:left_click></white> <#a6e3a1>Increase <#6c7086>| <white><glyph:right_click></white> <#f9e2af>Decrease"
         - "<!italic><#f38ba8>Shift + <white><glyph:left_click></white> <#a6adc8>Reset default"
-    lobby-hotbar-toggle:
-      enabled: true
-      type: "LOBBY_HOTBAR_TOGGLE"
-      slot: 13
-      material: "NETHER_STAR"
-      name: "<!italic><#89dceb><b>Lobby Hotbar</b>"
-      lore:
-        - ""
-        - "<!italic><#a6adc8>Status: %lobby_hotbar_status%"
-        - "<!italic><#6c7086>Replaces your hotbar with quick"
-        - "<!italic><#6c7086>shortcut items while in the lobby."
-        - ""
-        - "<!italic><white><glyph:left_click></white> <#89dceb>Toggle ON/OFF"
     mace-cooldown:
       enabled: true
       type: "MACE_COOLDOWN"
-      slot: 15
+      slot: 12
       material: "MACE"
       show-seconds-as-amount: true
       name: "<!italic><#89dceb><b>Mace Cooldown</b>"
@@ -222,6 +221,32 @@ setting-menu:
         - ""
         - "<!italic><white><glyph:left_click></white> <#a6e3a1>Increase <#6c7086>| <white><glyph:right_click></white> <#f9e2af>Decrease"
         - "<!italic><#f38ba8>Shift + <white><glyph:left_click></white> <#a6adc8>Reset default"
+    xbow-counter-toggle:
+      enabled: true
+      type: "XBOW_COUNTER_TOGGLE"
+      slot: 14
+      material: "CROSSBOW"
+      name: "<!italic><#89dceb><b>Xbow Tick Counter</b>"
+      lore:
+        - ""
+        - "<!italic><#a6adc8>Status: %xbow_counter_status%"
+        - "<!italic><#6c7086>Displays how many ticks your"
+        - "<!italic><#6c7086>Xbow cart setup took on Action Bar."
+        - ""
+        - "<!italic><white><glyph:left_click></white> <#89dceb>Toggle ON/OFF"
+    lobby-hotbar-toggle:
+      enabled: true
+      type: "LOBBY_HOTBAR_TOGGLE"
+      slot: 16
+      material: "NETHER_STAR"
+      name: "<!italic><#89dceb><b>Lobby Hotbar</b>"
+      lore:
+        - ""
+        - "<!italic><#a6adc8>Status: %lobby_hotbar_status%"
+        - "<!italic><#6c7086>Replaces your hotbar with quick"
+        - "<!italic><#6c7086>shortcut items while in the lobby."
+        - ""
+        - "<!italic><white><glyph:left_click></white> <#89dceb>Toggle ON/OFF"
     admin-panel:
       enabled: true
       type: "ADMIN_MENU"
@@ -262,75 +287,4 @@ back:
   blacklisted-worlds:
     - "ffa_diamond"
   messages:
-    death-notify: "<glyph:warning_blue> <#a6adc8>You died! Click <click:run_command:'/back'><hover:show_text:'<#a6e3a1>Click to teleport back'><#89dceb><b>[HERE]</b></hover></click> <#a6adc8>or type <#89dceb>/back<#a6adc8>."
-    teleported: "<glyph:warning_blue> <#a6e3a1>Teleported to your last death location."
-    no-death-location: "<glyph:warning_blue> <#f38ba8>No previous death location found."
-    world-blacklisted: "<glyph:warning_blue> <#f38ba8>You cannot use <#89dceb>/back <#f38ba8>in this world."
-
-# ==============================================================
-#                      SHULKER REGEAR SYSTEM
-# ==============================================================
-regear:
-  damage-cooldown-seconds: 5
-  cooldown-seconds: 3
-  clear-junk-in-empty-slots: true
-  announcement:
-    enabled: true
-    broadcast: true
-    message: "<glyph:warning_blue> <#89dceb><b>%player%</b> <#a6adc8>regeared"
-
-  whitelist:
-    - ENDER_PEARL
-    - TNT_MINECART
-    - SPLASH_POTION
-    - CROSSBOW
-    - ELYTRA
-    - COBWEB
-    - ARROWS
-    - AXES
-    - PICKAXES
-    - PLANKS
-    - WOOD
-    - RAILS
-
-  item:
-    material: "CYAN_SHULKER_BOX"
-    name: "<!italic><#89dceb><b>Shulker Regear</b>"
-    lore:
-      - "<!italic><white><glyph:right_click></white> <#a6adc8>Place to restock inventory"
-      - "<!italic><#6c7086>Auto-removes after placement"
-
-  messages:
-    already-have-shulker: "<glyph:warning_blue> <#f38ba8>You already have a <#89dceb>Regear Shulker<#f38ba8>."
-    inventory-full: "<glyph:warning_blue> <#f38ba8>Inventory is full! Free up at least 1 slot."
-    received-shulker: "<glyph:warning_blue> <#a6e3a1>Received <#89dceb><b>Shulker Regear</b><#a6e3a1>. Place it to restock."
-    combat-tagged: "<glyph:warning_blue> <#f38ba8>In combat! Wait <#f9e2af><b>%seconds%s</b> <#f38ba8>to regear."
-    on-cooldown: "<glyph:warning_blue> <#f38ba8>Regear is on cooldown for <#f9e2af><b>%seconds%s</b><#f38ba8>."
-    no-kit-loaded: "<glyph:warning_blue> <#f38ba8>Load a kit first <#89dceb>(/k1)<#f38ba8>."
-    success: "<glyph:warning_blue> <#a6e3a1>Inventory restocked."
-
-# ==============================================================
-#                        1V1 SCORE SYSTEM
-# ==============================================================
-score:
-  auto-reset:
-    enabled: true
-    interval-minutes: 60
-    broadcast: true
-  request-timeout-seconds: 60
-  messages:
-    no-permission: "<glyph:warning_blue> <#f38ba8>You do not have permission."
-    player-not-found: "<glyph:warning_blue> <#f38ba8>Player <#89dceb>%target% <#f38ba8>is not online."
-    cannot-target-self: "<glyph:warning_blue> <#f38ba8>You cannot target yourself."
-    request-sent: "<glyph:warning_blue> <#a6e3a1>Sent score reset request to <#89dceb><b>%target%</b><#a6e3a1>."
-    request-received: "<glyph:warning_blue> <#89dceb><b>%sender%</b> <#a6adc8>wants to reset 1v1 score: <click:run_command:'/score accept %sender%'><hover:show_text:'<#a6e3a1>Click to accept'><#a6e3a1><b>[ACCEPT]</b></hover></click> <click:run_command:'/score decline %sender%'><hover:show_text:'<#f38ba8>Click to decline'><#f38ba8><b>[DECLINE]</b></hover></click>"
-    no-pending-request: "<glyph:warning_blue> <#f38ba8>No pending request from <#89dceb>%sender%<#f38ba8>."
-    request-declined: "<glyph:warning_blue> <#f38ba8>Reset request with <#89dceb>%player% <#f38ba8>was declined."
-    score-reset-success: "<glyph:warning_blue> <#a6e3a1>1v1 score reset between <#89dceb><b>%player1%</b> <#a6e3a1>and <#89dceb><b>%player2%</b><#a6e3a1>."
-    global-reset-admin: "<glyph:warning_blue> <#a6e3a1>All 1v1 scores have been reset by an admin."
-    global-reset-auto: "<glyph:warning_blue> <#a6e3a1>All 1v1 scores have been automatically reset."
-    usage: "<glyph:warning_blue> <#a6adc8>Usage: <#89dceb>/score reset <player> <#6c7086>| <#89dceb>accept <player> <#6c7086>| <#89dceb>resetall"
-
-admin:
-  messages:
-    reload-success: "<glyph:warning_blue> <#a6e3a1>VCarterUtils configuration reloaded."
+    death-notify: "<glyph:warning_blue> <#a6adc

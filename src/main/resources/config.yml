@@ -46,20 +46,12 @@ lobby-hotbar:
     status-disabled: "<#f38ba8><b>DISABLED</b>"
     world-added: "<glyph:warning_blue> <#a6e3a1>Added <#89dceb><b>%world%</b> <#a6e3a1>to Lobby Hotbar worlds."
     world-removed: "<glyph:warning_blue> <#f38ba8>Removed <#89dceb><b>%world%</b> <#f38ba8>from Lobby Hotbar worlds."
+  # Slot 0..8 tuong ung voi O 1..9 tren thanh Hotbar:
+  # O 1 (slot 0): rtpq | O 2 (slot 1): rtp | O 5 (slot 4 - Chinh giua): quick-back | O 8 (slot 7): decor | O 9 (slot 8): settings
   items:
-    quick-back:
-      enabled: true
-      only-show-when-can-back: true
-      auto-select-on-respawn: true
-      slot: 0
-      material: "RECOVERY_COMPASS"
-      command: "back"
-      name: "<!italic><#f38ba8><b>Return to Death Location</b> <#6c7086>(/back)"
-      lore:
-        - "<!italic><white><glyph:right_click></white> <#a6adc8>Teleport back to where you died"
     rtpq:
       enabled: true
-      slot: 1
+      slot: 0
       material: "ENDER_EYE"
       command: "rtpq"
       name: "<!italic><#a6e3a1><b>RTP Queue</b> <#6c7086>(/rtpq)"
@@ -67,15 +59,25 @@ lobby-hotbar:
         - "<!italic><white><glyph:right_click></white> <#a6adc8>Join 1v1 matchmaking queue"
     rtp:
       enabled: true
-      slot: 2
+      slot: 1
       material: "COMPASS"
       command: "rtp"
       name: "<!italic><#89dceb><b>Random Teleport</b> <#6c7086>(/rtp)"
       lore:
         - "<!italic><white><glyph:right_click></white> <#a6adc8>Teleport to a random location"
+    quick-back:
+      enabled: true
+      only-show-when-can-back: true
+      auto-select-on-respawn: true
+      slot: 4
+      material: "RECOVERY_COMPASS"
+      command: "back"
+      name: "<!italic><#f38ba8><b>Return to Death Location</b> <#6c7086>(/back)"
+      lore:
+        - "<!italic><white><glyph:right_click></white> <#a6adc8>Teleport back to where you died"
     decor:
       enabled: true
-      slot: 4
+      slot: 7
       material: "AMETHYST_SHARD"
       command: "decor"
       name: "<!italic><#f9e2af><b>Decorations</b> <#6c7086>(/decor)"
@@ -322,3 +324,40 @@ regear:
     material: "CYAN_SHULKER_BOX"
     name: "<!italic><#89dceb><b>Shulker Regear</b>"
     lore:
+      - "<!italic><white><glyph:right_click></white> <#a6adc8>Place to restock inventory"
+      - "<!italic><#6c7086>Auto-removes after placement"
+
+  messages:
+    already-have-shulker: "<glyph:warning_blue> <#f38ba8>You already have a <#89dceb>Regear Shulker<#f38ba8>."
+    inventory-full: "<glyph:warning_blue> <#f38ba8>Inventory is full! Free up at least 1 slot."
+    received-shulker: "<glyph:warning_blue> <#a6e3a1>Received <#89dceb><b>Shulker Regear</b><#a6e3a1>. Place it to restock."
+    combat-tagged: "<glyph:warning_blue> <#f38ba8>In combat! Wait <#f9e2af><b>%seconds%s</b> <#f38ba8>to regear."
+    on-cooldown: "<glyph:warning_blue> <#f38ba8>Regear is on cooldown for <#f9e2af><b>%seconds%s</b><#f38ba8>."
+    no-kit-loaded: "<glyph:warning_blue> <#f38ba8>Load a kit first <#89dceb>(/k1)<#f38ba8>."
+    success: "<glyph:warning_blue> <#a6e3a1>Inventory restocked."
+
+# ==============================================================
+#                        1V1 SCORE SYSTEM
+# ==============================================================
+score:
+  auto-reset:
+    enabled: true
+    interval-minutes: 60
+    broadcast: true
+  request-timeout-seconds: 60
+  messages:
+    no-permission: "<glyph:warning_blue> <#f38ba8>You do not have permission."
+    player-not-found: "<glyph:warning_blue> <#f38ba8>Player <#89dceb>%target% <#f38ba8>is not online."
+    cannot-target-self: "<glyph:warning_blue> <#f38ba8>You cannot target yourself."
+    request-sent: "<glyph:warning_blue> <#a6e3a1>Sent score reset request to <#89dceb><b>%target%</b><#a6e3a1>."
+    request-received: "<glyph:warning_blue> <#89dceb><b>%sender%</b> <#a6adc8>wants to reset 1v1 score: <click:run_command:'/score accept %sender%'><hover:show_text:'<#a6e3a1>Click to accept'><#a6e3a1><b>[ACCEPT]</b></hover></click> <click:run_command:'/score decline %sender%'><hover:show_text:'<#f38ba8>Click to decline'><#f38ba8><b>[DECLINE]</b></hover></click>"
+    no-pending-request: "<glyph:warning_blue> <#f38ba8>No pending request from <#89dceb>%sender%<#f38ba8>."
+    request-declined: "<glyph:warning_blue> <#f38ba8>Reset request with <#89dceb>%player% <#f38ba8>was declined."
+    score-reset-success: "<glyph:warning_blue> <#a6e3a1>1v1 score reset between <#89dceb><b>%player1%</b> <#a6e3a1>and <#89dceb><b>%player2%</b><#a6e3a1>."
+    global-reset-admin: "<glyph:warning_blue> <#a6e3a1>All 1v1 scores have been reset by an admin."
+    global-reset-auto: "<glyph:warning_blue> <#a6e3a1>All 1v1 scores have been automatically reset."
+    usage: "<glyph:warning_blue> <#a6adc8>Usage: <#89dceb>/score reset <player> <#6c7086>| <#89dceb>accept <player> <#6c7086>| <#89dceb>resetall"
+
+admin:
+  messages:
+    reload-success: "<glyph:warning_blue> <#a6e3a1>VCarterUtils configuration reloaded."

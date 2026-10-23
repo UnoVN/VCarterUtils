@@ -4,6 +4,7 @@ import me.nh4n.vcarterutils.command.BackCommand;
 import me.nh4n.vcarterutils.command.MainCommand;
 import me.nh4n.vcarterutils.command.ScoreCommand;
 import me.nh4n.vcarterutils.command.SettingCommand;
+import me.nh4n.vcarterutils.hook.NexoHook;
 import me.nh4n.vcarterutils.hook.VCarterExpansion;
 import me.nh4n.vcarterutils.listener.AutoPotListener;
 import me.nh4n.vcarterutils.listener.BackListener;
@@ -69,6 +70,8 @@ public final class VCarterUtils extends JavaPlugin {
         saveDefaultConfig();
         reloadConfig();
         getConfig().setDefaults(new YamlConfiguration());
+
+        NexoHook.init(this);
 
         this.scoreManager = new ScoreManager();
         this.regearManager = new RegearManager(this);

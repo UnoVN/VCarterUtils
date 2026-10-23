@@ -1,6 +1,7 @@
 package me.nh4n.vcarterutils.manager;
 
 import me.nh4n.vcarterutils.VCarterUtils;
+import me.nh4n.vcarterutils.hook.NexoHook;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
@@ -260,7 +261,6 @@ public class LobbyHotbarManager {
         UUID uuid = player.getUniqueId();
         PlayerInventory inv = player.getInventory();
 
-        // Kiem tra xem tren hotbar (0-8) hien tai co vat pham that nao khong
         boolean hasRealItemsInHotbar = false;
         for (int i = 0; i < 9; i++) {
             ItemStack item = inv.getItem(i);
@@ -270,7 +270,6 @@ public class LobbyHotbarManager {
             }
         }
 
-        // Neu co vat pham that tren hotbar -> Luu/Cap nhat day du 9 o vao savedHotbars
         if (hasRealItemsInHotbar) {
             ItemStack[] currentBar = new ItemStack[9];
             for (int i = 0; i < 9; i++) {
@@ -285,7 +284,6 @@ public class LobbyHotbarManager {
             savePlayerHotbarAsync(uuid, currentBar);
         }
 
-        // Xoa sach 9 o hotbar de dat Lobby Hotbar
         for (int i = 0; i < 9; i++) {
             inv.setItem(i, null);
         }
@@ -308,23 +306,26 @@ public class LobbyHotbarManager {
             int slot = itemSec.getInt("slot", -1);
             if (slot < 0 || slot > 8) continue;
 
-            String matName = itemSec.getString("material", "COMPASS");
-            Material mat = Material.matchMaterial(matName != null ? matName : "COMPASS");
-            if (mat == null || mat == Material.AIR) mat = Material.COMPASS;
+            // Ho tro lay Custom Item tu Nexo (nexo-id hoac material: "nexo:<id>") hoac Material thuong
+            ItemStack stack = NexoHook.createItemFromSection(itemSec, Material.COMPASS);
+            stack.setAmount(1);
 
             String cmd = itemSec.getString("command", "");
-            String nameRaw = itemSec.getString("name", "<!italic><#89dceb><b>Item</b>");
+            String nameRaw = itemSec.getString("name", "");
             List<String> loreRaw = itemSec.getStringList("lore");
 
-            ItemStack stack = new ItemStack(mat, 1);
             ItemMeta meta = stack.getItemMeta();
             if (meta != null) {
-                meta.displayName(miniMessage.deserialize(nameRaw));
-                List<Component> loreComp = new ArrayList<>();
-                for (String line : loreRaw) {
-                    loreComp.add(miniMessage.deserialize(line));
+                if (nameRaw != null && !nameRaw.isEmpty()) {
+                    meta.displayName(miniMessage.deserialize(nameRaw));
                 }
-                meta.lore(loreComp);
+                if (loreRaw != null && !loreRaw.isEmpty()) {
+                    List<Component> loreComp = new ArrayList<>();
+                    for (String line : loreRaw) {
+                        loreComp.add(miniMessage.deserialize(line));
+                    }
+                    meta.lore(loreComp);
+                }
 
                 int cmdModel = itemSec.getInt("custom-model-data", 0);
                 if (cmdModel > 0) {
@@ -343,7 +344,6 @@ public class LobbyHotbarManager {
             }
         }
 
-        // Neu co item /back (o chinh giua - slot 4 / o so 5), luon force select o do de nguoi choi chi can Right-Click
         if (backItemSlot >= 0 && backItemSlot <= 8) {
             inv.setHeldItemSlot(backItemSlot);
         }

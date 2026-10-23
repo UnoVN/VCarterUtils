@@ -32,6 +32,8 @@ public class LobbyHotbarManager {
     private final Set<String> lobbyWorlds = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Map<UUID, Boolean> playerToggleSettings = new ConcurrentHashMap<>();
     private final Map<UUID, ItemStack[]> savedHotbars = new ConcurrentHashMap<>();
+    // Danh dau nguoi choi vua chet de doi PerPlayerKit nap kit xong moi apply Lobby Hotbar
+    private final Set<UUID> respawningPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     private File dataFile;
 
@@ -82,10 +84,16 @@ public class LobbyHotbarManager {
                         ConfigurationSection pSec = savedSec.getConfigurationSection(key);
                         if (pSec != null) {
                             ItemStack[] hotbar = new ItemStack[9];
+                            boolean hasAny = false;
                             for (int i = 0; i < 9; i++) {
                                 hotbar[i] = pSec.getItemStack("slot_" + i, null);
+                                if (hotbar[i] != null && hotbar[i].getType() != Material.AIR) {
+                                    hasAny = true;
+                                }
                             }
-                            savedHotbars.put(uuid, hotbar);
+                            if (hasAny) {
+                                savedHotbars.put(uuid, hotbar);
+                            }
                         }
                     } catch (IllegalArgumentException ignored) {
                     }
@@ -182,6 +190,20 @@ public class LobbyHotbarManager {
         return lobbyWorlds.contains(world.getName().trim().toLowerCase());
     }
 
+    public void markRespawning(UUID uuid) {
+        respawningPlayers.add(uuid);
+        savedHotbars.remove(uuid);
+        savePlayerHotbarAsync(uuid, null);
+    }
+
+    public void unmarkRespawning(UUID uuid) {
+        respawningPlayers.remove(uuid);
+    }
+
+    public boolean isRespawning(UUID uuid) {
+        return respawningPlayers.contains(uuid);
+    }
+
     public boolean toggleLobbyWorld(String worldName) {
         if (worldName == null || worldName.trim().isEmpty()) return false;
         String clean = worldName.trim();
@@ -230,6 +252,10 @@ public class LobbyHotbarManager {
         return savedHotbars.containsKey(uuid);
     }
 
+    /**
+     * Luu tat ca cac vat pham that (khong phai item Lobby) dang co tren Hotbar (slots 0-8)
+     * sau do thay the bang Lobby Hotbar.
+     */
     public void applyLobbyHotbar(Player player) {
         if (player == null || !player.isOnline()) return;
         if (!isEnabled() || !isPlayerEnabled(player.getUniqueId()) || !isLobbyWorld(player.getWorld())) {
@@ -239,8 +265,18 @@ public class LobbyHotbarManager {
         UUID uuid = player.getUniqueId();
         PlayerInventory inv = player.getInventory();
 
-        // Neu chua luu hotbar that cua nguoi choi -> Luu 9 o hotbar hien tai (bo qua item lobby)
-        if (!savedHotbars.containsKey(uuid)) {
+        // Kiem tra xem tren hotbar (0-8) hien tai co vat pham that nao khong (vd kit do PerPlayerKit vua nap)
+        boolean hasRealItemsInHotbar = false;
+        for (int i = 0; i < 9; i++) {
+            ItemStack item = inv.getItem(i);
+            if (item != null && item.getType() != Material.AIR && !isLobbyItem(item)) {
+                hasRealItemsInHotbar = true;
+                break;
+            }
+        }
+
+        // Neu co vat pham that tren hotbar -> Luu/Cap nhat day du vao savedHotbars
+        if (hasRealItemsInHotbar) {
             ItemStack[] currentBar = new ItemStack[9];
             for (int i = 0; i < 9; i++) {
                 ItemStack item = inv.getItem(i);
@@ -263,12 +299,14 @@ public class LobbyHotbarManager {
         if (itemsSec == null) return;
 
         boolean canUseBack = canPlayerUseBack(player);
+        int autoSelectSlot = -1;
 
         for (String key : itemsSec.getKeys(false)) {
             ConfigurationSection itemSec = itemsSec.getConfigurationSection(key);
             if (itemSec == null || !itemSec.getBoolean("enabled", true)) continue;
 
-            if (itemSec.getBoolean("only-show-when-can-back", false) && !canUseBack) {
+            boolean isBackItem = itemSec.getBoolean("only-show-when-can-back", false);
+            if (isBackItem && !canUseBack) {
                 continue;
             }
 
@@ -304,6 +342,15 @@ public class LobbyHotbarManager {
             }
 
             inv.setItem(slot, stack);
+
+            // Neu nguoi choi vua chet va co item /back -> Tu dong cam san tren tay de chi can chuot phai
+            if (isBackItem && canUseBack && itemSec.getBoolean("auto-select-on-respawn", true)) {
+                autoSelectSlot = slot;
+            }
+        }
+
+        if (autoSelectSlot >= 0 && autoSelectSlot <= 8) {
+            inv.setHeldItemSlot(autoSelectSlot);
         }
     }
 
@@ -312,10 +359,8 @@ public class LobbyHotbarManager {
         UUID uuid = player.getUniqueId();
         PlayerInventory inv = player.getInventory();
 
-        // Xoa tat ca vat pham Lobby Hotbar dang co trong nguoi
         removeAllLobbyItems(inv);
 
-        // Khoi phuc 9 o hotbar da luu neu co
         ItemStack[] saved = savedHotbars.remove(uuid);
         if (saved != null) {
             for (int i = 0; i < 9; i++) {
@@ -325,10 +370,6 @@ public class LobbyHotbarManager {
         }
     }
 
-    /**
-     * Khi nguoi choi go lenh load kit (/k1, /rekit...) ngay tai Lobby:
-     * Xoa Lobby Hotbar va xoa ban luu cu de PerPlayerKit nap kit moi vao hotbar.
-     */
     public void onPlayerLoadKit(Player player) {
         if (player == null) return;
         UUID uuid = player.getUniqueId();
@@ -389,5 +430,6 @@ public class LobbyHotbarManager {
     public void clearAll() {
         saveAllDataSync();
         lobbyWorlds.clear();
+        respawningPlayers.clear();
     }
 }

@@ -27,8 +27,6 @@ public class AutoPotListener implements Listener {
 
     private final VCarterUtils plugin;
     private final Map<UUID, BukkitTask> activeScanners = new ConcurrentHashMap<>();
-
-    // Ghi nho danh sach loai hieu ung da apply boi AutoPot tu kit truoc cua tung player
     private final Map<UUID, Set<PotionEffectType>> lastAutoPotEffectTypes = new ConcurrentHashMap<>();
 
     private static final Set<String> NON_LOAD_SUBCOMMANDS = Set.of(
@@ -44,6 +42,8 @@ public class AutoPotListener implements Listener {
         String msg = event.getMessage().trim();
         if (isKitLoadCommand(msg)) {
             Player player = event.getPlayer();
+            // Neu nguoi choi load kit ngay o Lobby -> Xoa Lobby Hotbar va huy ban luu cu
+            plugin.getLobbyHotbarManager().onPlayerLoadKit(player);
             scheduleKitProcess(player);
         }
     }
@@ -51,11 +51,10 @@ public class AutoPotListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
-        // Reset luot kich hoat totem khi chet va hoi sinh
         plugin.getTotemManager().resetActivations(player.getUniqueId());
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (player.isOnline()) {
+            if (player.isOnline() && !plugin.getLobbyHotbarManager().hasAnyLobbyItem(player)) {
                 scheduleKitProcess(player);
             }
         }, 10L);
@@ -152,12 +151,6 @@ public class AutoPotListener implements Listener {
         return false;
     }
 
-    /**
-     * Cho PerPlayerKit nap xong kho do (sau 5 tick):
-     * 1. Reset luot dung Totem, xoa Pearl & Mace Cooldown (neu bat) va kiem tra gioi han Totem.
-     * 2. Kiem tra blacklist world cua AutoPot va apply effect.
-     * 3. Chup snapshot layout kit ban dau cho he thong Regear.
-     */
     private void scheduleKitProcess(Player player) {
         UUID uuid = player.getUniqueId();
 
@@ -166,15 +159,12 @@ public class AutoPotListener implements Listener {
             oldTask.cancel();
         }
 
-        // RESET LUOT DUNG TOTEM KHI LOAD/REKIT
         plugin.getTotemManager().resetActivations(uuid);
 
-        // XOA COOLDOWN ENDER PEARL KHI LOAD KIT NEU DUOC BAT
         if (plugin.getPearlManager().isEnabled() && plugin.getPearlManager().isClearOnKitLoad()) {
             plugin.getPearlManager().clearCooldown(player);
         }
 
-        // XOA COOLDOWN MACE KHI LOAD KIT NEU DUOC BAT
         if (plugin.getMaceManager().isEnabled() && plugin.getMaceManager().isClearOnKitLoad()) {
             plugin.getMaceManager().clearCooldown(player);
         }
@@ -187,16 +177,15 @@ public class AutoPotListener implements Listener {
                     return;
                 }
 
-                // Xu ly gioi han Totem trong kho do ngay sau khi kit nap xong
                 plugin.getTotemManager().enforceInventoryLimit(player);
 
-                // Kiem tra blacklist world: chi apply AutoPot neu world duoc phep
                 if (isAutoPotEnabledFor(player)) {
                     syncKitEffects(player);
                 }
 
-                // Chup snapshot layout kit ban dau phuc vu Regear
-                plugin.getRegearManager().saveKitSnapshot(player);
+                if (!plugin.getLobbyHotbarManager().hasAnyLobbyItem(player)) {
+                    plugin.getRegearManager().saveKitSnapshot(player);
+                }
 
                 activeScanners.remove(uuid);
             }

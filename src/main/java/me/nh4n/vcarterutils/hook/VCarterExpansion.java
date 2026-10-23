@@ -44,7 +44,6 @@ public class VCarterExpansion extends PlaceholderExpansion {
             return "";
         }
 
-        // Format placeholder: %vcarterutils_score_<ten_doi_thu>%
         if (params.startsWith("score_")) {
             String opponentName = params.substring(6);
             Player opponent = null;
@@ -61,7 +60,6 @@ public class VCarterExpansion extends PlaceholderExpansion {
             return String.valueOf(kills);
         }
 
-        // --- ENDER PEARL PLACEHOLDERS ---
         if (params.equalsIgnoreCase("pearl_cooldown")) {
             return String.valueOf(plugin.getPearlManager().getEffectiveCooldownSeconds(player));
         }
@@ -78,7 +76,6 @@ public class VCarterExpansion extends PlaceholderExpansion {
             return String.format(Locale.US, "%.1f", ticks / 20.0);
         }
 
-        // --- MACE PLACEHOLDERS ---
         if (params.equalsIgnoreCase("mace_cooldown")) {
             return String.valueOf(plugin.getMaceManager().getEffectiveCooldownSeconds(player));
         }
@@ -93,6 +90,16 @@ public class VCarterExpansion extends PlaceholderExpansion {
                 return "0";
             }
             return String.format(Locale.US, "%.1f", ticks / 20.0);
+        }
+
+        if (params.equalsIgnoreCase("xbow_last_ticks")) {
+            int last = plugin.getXbowManager().getLastTicks(player.getUniqueId());
+            return last > 0 ? String.valueOf(last) : "-";
+        }
+
+        if (params.equalsIgnoreCase("xbow_best_ticks")) {
+            int best = plugin.getXbowManager().getBestTicks(player.getUniqueId());
+            return best > 0 ? String.valueOf(best) : "-";
         }
 
         return null;

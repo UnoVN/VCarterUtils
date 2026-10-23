@@ -11,6 +11,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.*;
@@ -29,6 +30,15 @@ public class LobbyHotbarListener implements Listener {
         this.plugin = plugin;
     }
 
+    /**
+     * Khi nguoi choi tu tran: Danh dau dang respawn va xoa savedHotbar cu
+     * de tranh PlayerChangedWorldEvent o Tick 0 luu nham hotbar rong truoc khi PerPlayerKit nap kit!
+     */
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        plugin.getLobbyHotbarManager().markRespawning(event.getEntity().getUniqueId());
+    }
+
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
@@ -41,41 +51,29 @@ public class LobbyHotbarListener implements Listener {
             } else if (manager.hasSavedHotbar(player.getUniqueId()) || manager.hasAnyLobbyItem(player)) {
                 manager.restorePlayerHotbar(player);
             }
-        }, 2L);
+        }, 4L);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onWorldChange(PlayerChangedWorldEvent event) {
         Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
         LobbyHotbarManager manager = plugin.getLobbyHotbarManager();
         World currentWorld = player.getWorld();
 
         if (manager.isLobbyWorld(currentWorld)) {
-            if (manager.isEnabled() && manager.isPlayerEnabled(player.getUniqueId())) {
+            // Neu nguoi choi chuyen world do vua chet & hoi sinh ve Lobby:
+            // AutoPotListener se xu ly o Tick 6 (sau khi PerPlayerKit nap xong kit).
+            if (manager.isRespawning(uuid)) {
+                return;
+            }
+            if (manager.isEnabled() && manager.isPlayerEnabled(uuid)) {
                 manager.applyLobbyHotbar(player);
             }
         } else {
-            // Di chuyen sang world khac ma chua load kit o lobby -> Khoi phuc hotbar da luu
+            manager.unmarkRespawning(uuid);
             manager.restorePlayerHotbar(player);
         }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onPlayerRespawn(PlayerRespawnEvent event) {
-        Player player = event.getPlayer();
-        LobbyHotbarManager manager = plugin.getLobbyHotbarManager();
-        World respawnWorld = event.getRespawnLocation().getWorld();
-
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!player.isOnline()) return;
-            if (manager.isLobbyWorld(respawnWorld != null ? respawnWorld : player.getWorld())) {
-                if (manager.isEnabled() && manager.isPlayerEnabled(player.getUniqueId())) {
-                    manager.applyLobbyHotbar(player);
-                }
-            } else {
-                manager.restorePlayerHotbar(player);
-            }
-        }, 3L);
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
@@ -155,6 +153,8 @@ public class LobbyHotbarListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        lastInteractTimes.remove(event.getPlayer().getUniqueId());
+        UUID uuid = event.getPlayer().getUniqueId();
+        lastInteractTimes.remove(uuid);
+        plugin.getLobbyHotbarManager().unmarkRespawning(uuid);
     }
 }

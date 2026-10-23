@@ -1,6 +1,7 @@
 package me.nh4n.vcarterutils.listener;
 
 import me.nh4n.vcarterutils.VCarterUtils;
+import me.nh4n.vcarterutils.manager.LobbyHotbarManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -42,22 +43,21 @@ public class AutoPotListener implements Listener {
         String msg = event.getMessage().trim();
         if (isKitLoadCommand(msg)) {
             Player player = event.getPlayer();
-            // Neu nguoi choi load kit ngay o Lobby -> Xoa Lobby Hotbar va huy ban luu cu
             plugin.getLobbyHotbarManager().onPlayerLoadKit(player);
-            scheduleKitProcess(player);
+            scheduleKitProcess(player, false);
         }
     }
 
+    /**
+     * Khi nguoi choi hoi sinh:
+     * Doi 5 ticks cho PerPlayerKit nap day du kit vao kho do,
+     * sau do chup Snapshot kit, luu 9 o Hotbar cua kit do vao savedHotbars roi moi dat Lobby Hotbar!
+     */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
         plugin.getTotemManager().resetActivations(player.getUniqueId());
-
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (player.isOnline() && !plugin.getLobbyHotbarManager().hasAnyLobbyItem(player)) {
-                scheduleKitProcess(player);
-            }
-        }, 10L);
+        scheduleKitProcess(player, true);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -151,7 +151,7 @@ public class AutoPotListener implements Listener {
         return false;
     }
 
-    private void scheduleKitProcess(Player player) {
+    private void scheduleKitProcess(Player player, boolean fromRespawn) {
         UUID uuid = player.getUniqueId();
 
         BukkitTask oldTask = activeScanners.remove(uuid);
@@ -172,19 +172,32 @@ public class AutoPotListener implements Listener {
         BukkitTask task = new BukkitRunnable() {
             @Override
             public void run() {
+                LobbyHotbarManager lobbyManager = plugin.getLobbyHotbarManager();
                 if (!player.isOnline()) {
+                    lobbyManager.unmarkRespawning(uuid);
                     activeScanners.remove(uuid);
                     return;
                 }
 
+                // 1. Kiem tra gioi han Totem cua bo kit PerPlayerKit vua nap
                 plugin.getTotemManager().enforceInventoryLimit(player);
 
+                // 2. Dong bo hieu ung thuoc AutoPot
                 if (isAutoPotEnabledFor(player)) {
                     syncKitEffects(player);
                 }
 
-                if (!plugin.getLobbyHotbarManager().hasAnyLobbyItem(player)) {
+                // 3. Chup Snapshot day du 41 slots cua bo kit truoc khi thay Lobby Hotbar
+                if (!lobbyManager.hasAnyLobbyItem(player)) {
                     plugin.getRegearManager().saveKitSnapshot(player);
+                }
+
+                // 4. Neu day la lan hoi sinh ve Lobby World -> Luu 9 o Hotbar cua kit vua nap va thay bang Lobby Hotbar
+                if (fromRespawn) {
+                    lobbyManager.unmarkRespawning(uuid);
+                    if (lobbyManager.isLobbyWorld(player.getWorld()) && lobbyManager.isEnabled() && lobbyManager.isPlayerEnabled(uuid)) {
+                        lobbyManager.applyLobbyHotbar(player);
+                    }
                 }
 
                 activeScanners.remove(uuid);

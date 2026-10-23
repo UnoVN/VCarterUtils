@@ -1,6 +1,7 @@
 package me.nh4n.vcarterutils.manager;
 
 import me.nh4n.vcarterutils.VCarterUtils;
+import me.nh4n.vcarterutils.hook.NexoHook;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
@@ -68,13 +69,15 @@ public class SettingMenuManager {
         holder.clearSlotActions();
 
         if (plugin.getConfig().getBoolean("setting-menu.filler.enabled", true)) {
-            String fillerMatName = plugin.getConfig().getString("setting-menu.filler.material", "GRAY_STAINED_GLASS_PANE");
-            Material fillerMat = Material.matchMaterial(fillerMatName != null ? fillerMatName : "GRAY_STAINED_GLASS_PANE");
-            if (fillerMat == null) {
-                fillerMat = Material.GRAY_STAINED_GLASS_PANE;
+            ConfigurationSection fillerSec = plugin.getConfig().getConfigurationSection("setting-menu.filler");
+            ItemStack filler = NexoHook.createItemFromSection(fillerSec, Material.GRAY_STAINED_GLASS_PANE);
+            ItemMeta fillerMeta = filler.getItemMeta();
+            if (fillerMeta != null) {
+                String fillerName = plugin.getConfig().getString("setting-menu.filler.name", " ");
+                fillerMeta.displayName(miniMessage.deserialize(fillerName));
+                fillerMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
+                filler.setItemMeta(fillerMeta);
             }
-
-            ItemStack filler = createSimpleItem(fillerMat, plugin.getConfig().getString("setting-menu.filler.name", " "), List.of());
             for (int i = 0; i < inv.getSize(); i++) {
                 inv.setItem(i, filler);
             }
@@ -101,13 +104,8 @@ public class SettingMenuManager {
                 continue;
             }
 
-            String matName = itemSec.getString("material", "ENDER_PEARL");
-            Material mat = Material.matchMaterial(matName != null ? matName : "ENDER_PEARL");
-            if (mat == null || mat == Material.AIR) {
-                mat = Material.STONE;
-            }
-
-            ItemStack stack = new ItemStack(mat);
+            // Ho tro Nexo item (nexo-id hoac material: "nexo:<id>") va Material thuong
+            ItemStack stack = NexoHook.createItemFromSection(itemSec, Material.STONE);
             ItemMeta meta = stack.getItemMeta();
 
             if (meta != null) {

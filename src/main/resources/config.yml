@@ -47,9 +47,19 @@ lobby-hotbar:
     world-added: "<glyph:warning_blue> <#a6e3a1>Added <#89dceb><b>%world%</b> <#a6e3a1>to Lobby Hotbar worlds."
     world-removed: "<glyph:warning_blue> <#f38ba8>Removed <#89dceb><b>%world%</b> <#f38ba8>from Lobby Hotbar worlds."
   items:
+    quick-back:
+      enabled: true
+      only-show-when-can-back: true
+      auto-select-on-respawn: true
+      slot: 0
+      material: "RECOVERY_COMPASS"
+      command: "back"
+      name: "<!italic><#f38ba8><b>Return to Death Location</b> <#6c7086>(/back)"
+      lore:
+        - "<!italic><white><glyph:right_click></white> <#a6adc8>Teleport back to where you died"
     rtpq:
       enabled: true
-      slot: 0
+      slot: 1
       material: "ENDER_EYE"
       command: "rtpq"
       name: "<!italic><#a6e3a1><b>RTP Queue</b> <#6c7086>(/rtpq)"
@@ -57,7 +67,7 @@ lobby-hotbar:
         - "<!italic><white><glyph:right_click></white> <#a6adc8>Join 1v1 matchmaking queue"
     rtp:
       enabled: true
-      slot: 1
+      slot: 2
       material: "COMPASS"
       command: "rtp"
       name: "<!italic><#89dceb><b>Random Teleport</b> <#6c7086>(/rtp)"
@@ -71,15 +81,6 @@ lobby-hotbar:
       name: "<!italic><#f9e2af><b>Decorations</b> <#6c7086>(/decor)"
       lore:
         - "<!italic><white><glyph:right_click></white> <#a6adc8>Open cosmetics & decorations"
-    quick-back:
-      enabled: true
-      only-show-when-can-back: true
-      slot: 7
-      material: "RECOVERY_COMPASS"
-      command: "back"
-      name: "<!italic><#f38ba8><b>Return to Death Location</b> <#6c7086>(/back)"
-      lore:
-        - "<!italic><white><glyph:right_click></white> <#a6adc8>Teleport back to where you died"
     settings:
       enabled: true
       slot: 8
@@ -185,7 +186,6 @@ setting-menu:
     selected: "<#a6e3a1><b>[%seconds%s]</b>"
     unselected: "<#6c7086>%seconds%s"
     separator: " <#6c7086>• "
-  # Types: PEARL_COOLDOWN, MACE_COOLDOWN, XBOW_COUNTER_TOGGLE, LOBBY_HOTBAR_TOGGLE, ADMIN_MENU, CLOSE, COMMAND, DECORATION
   items:
     pearl-cooldown:
       enabled: true
@@ -287,4 +287,38 @@ back:
   blacklisted-worlds:
     - "ffa_diamond"
   messages:
-    death-notify: "<glyph:warning_blue> <#a6adc
+    death-notify: "<glyph:warning_blue> <#a6adc8>You died! Click <click:run_command:'/back'><hover:show_text:'<#a6e3a1>Click to teleport back'><#89dceb><b>[HERE]</b></hover></click> <#a6adc8>or type <#89dceb>/back<#a6adc8>."
+    teleported: "<glyph:warning_blue> <#a6e3a1>Teleported to your last death location."
+    no-death-location: "<glyph:warning_blue> <#f38ba8>No previous death location found."
+    world-blacklisted: "<glyph:warning_blue> <#f38ba8>You cannot use <#89dceb>/back <#f38ba8>in this world."
+
+# ==============================================================
+#                      SHULKER REGEAR SYSTEM
+# ==============================================================
+regear:
+  damage-cooldown-seconds: 5
+  cooldown-seconds: 3
+  clear-junk-in-empty-slots: true
+  announcement:
+    enabled: true
+    broadcast: true
+    message: "<glyph:warning_blue> <#89dceb><b>%player%</b> <#a6adc8>regeared"
+
+  whitelist:
+    - ENDER_PEARL
+    - TNT_MINECART
+    - SPLASH_POTION
+    - CROSSBOW
+    - ELYTRA
+    - COBWEB
+    - ARROWS
+    - AXES
+    - PICKAXES
+    - PLANKS
+    - WOOD
+    - RAILS
+
+  item:
+    material: "CYAN_SHULKER_BOX"
+    name: "<!italic><#89dceb><b>Shulker Regear</b>"
+    lore:

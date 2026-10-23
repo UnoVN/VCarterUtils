@@ -531,6 +531,8 @@ public class SettingMenuManager {
             optionsBar = buildOptionsBar(personalSec, pearlManager.getAvailableOptions());
         }
 
+        String genericStatus = "XBOW_COUNTER_TOGGLE".equalsIgnoreCase(itemType) ? xbowStatus : lobbyStatus;
+
         return input
                 .replace("%player%", player.getName())
                 .replace("%world%", player.getWorld().getName())
@@ -540,7 +542,8 @@ public class SettingMenuManager {
                 .replace("%world_status%", worldStatus)
                 .replace("%options_list%", optionsBar)
                 .replace("%lobby_hotbar_status%", lobbyStatus)
-                .replace("%xbow_counter_status%", xbowStatus);
+                .replace("%xbow_counter_status%", xbowStatus)
+                .replace("%status%", genericStatus);
     }
 
     private String buildOptionsBar(int currentSec, List<Integer> options) {

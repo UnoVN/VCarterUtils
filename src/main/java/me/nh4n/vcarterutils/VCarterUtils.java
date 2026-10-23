@@ -14,6 +14,7 @@ import me.nh4n.vcarterutils.listener.PearlListener;
 import me.nh4n.vcarterutils.listener.RegearListener;
 import me.nh4n.vcarterutils.listener.SettingMenuListener;
 import me.nh4n.vcarterutils.listener.TotemListener;
+import me.nh4n.vcarterutils.listener.XbowListener;
 import me.nh4n.vcarterutils.manager.BackManager;
 import me.nh4n.vcarterutils.manager.LobbyHotbarManager;
 import me.nh4n.vcarterutils.manager.MaceManager;
@@ -22,6 +23,7 @@ import me.nh4n.vcarterutils.manager.RegearManager;
 import me.nh4n.vcarterutils.manager.ScoreManager;
 import me.nh4n.vcarterutils.manager.SettingMenuManager;
 import me.nh4n.vcarterutils.manager.TotemManager;
+import me.nh4n.vcarterutils.manager.XbowManager;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
@@ -40,6 +42,7 @@ public final class VCarterUtils extends JavaPlugin {
     private PearlManager pearlManager;
     private MaceManager maceManager;
     private LobbyHotbarManager lobbyHotbarManager;
+    private XbowManager xbowManager;
     private SettingMenuManager settingMenuManager;
 
     private KillDeathListener killDeathListener;
@@ -50,6 +53,7 @@ public final class VCarterUtils extends JavaPlugin {
     private PearlListener pearlListener;
     private MaceListener maceListener;
     private LobbyHotbarListener lobbyHotbarListener;
+    private XbowListener xbowListener;
     private SettingMenuListener settingMenuListener;
 
     private ScoreCommand scoreCommand;
@@ -73,6 +77,7 @@ public final class VCarterUtils extends JavaPlugin {
         this.pearlManager = new PearlManager(this);
         this.maceManager = new MaceManager(this);
         this.lobbyHotbarManager = new LobbyHotbarManager(this);
+        this.xbowManager = new XbowManager(this);
         this.settingMenuManager = new SettingMenuManager(this);
 
         this.killDeathListener = new KillDeathListener(this);
@@ -83,6 +88,7 @@ public final class VCarterUtils extends JavaPlugin {
         this.pearlListener = new PearlListener(this);
         this.maceListener = new MaceListener(this);
         this.lobbyHotbarListener = new LobbyHotbarListener(this);
+        this.xbowListener = new XbowListener(this);
         this.settingMenuListener = new SettingMenuListener(this);
 
         this.scoreCommand = new ScoreCommand(this);
@@ -100,6 +106,7 @@ public final class VCarterUtils extends JavaPlugin {
         pluginManager.registerEvents(pearlListener, this);
         pluginManager.registerEvents(maceListener, this);
         pluginManager.registerEvents(lobbyHotbarListener, this);
+        pluginManager.registerEvents(xbowListener, this);
         pluginManager.registerEvents(settingMenuListener, this);
         pluginManager.registerEvents(scoreCommand, this);
 
@@ -158,6 +165,9 @@ public final class VCarterUtils extends JavaPlugin {
         }
         if (lobbyHotbarManager != null) {
             lobbyHotbarManager.reload();
+        }
+        if (xbowManager != null) {
+            xbowManager.reload();
         }
         if (settingMenuManager != null) {
             settingMenuManager.reload();
@@ -219,6 +229,9 @@ public final class VCarterUtils extends JavaPlugin {
         if (lobbyHotbarManager != null) {
             lobbyHotbarManager.clearAll();
         }
+        if (xbowManager != null) {
+            xbowManager.clearAll();
+        }
         if (scoreManager != null) {
             scoreManager.clearAll();
         }
@@ -255,6 +268,10 @@ public final class VCarterUtils extends JavaPlugin {
 
     public LobbyHotbarManager getLobbyHotbarManager() {
         return lobbyHotbarManager;
+    }
+
+    public XbowManager getXbowManager() {
+        return xbowManager;
     }
 
     public SettingMenuManager getSettingMenuManager() {

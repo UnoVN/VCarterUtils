@@ -1,0 +1,17 @@
+# Maven & Java build outputs
+target/
+*.jar
+*.war
+*.ear
+*.class
+
+# IDE & editor files
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS artifacts
+.DS_Store
+Thumbs.db

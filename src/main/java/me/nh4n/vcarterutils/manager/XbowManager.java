@@ -28,6 +28,10 @@ public class XbowManager {
     private final Map<UUID, Integer> bestXbowTicks = new ConcurrentHashMap<>();
     private final Map<UUID, BukkitTask> activeActionBarTasks = new ConcurrentHashMap<>();
 
+    private volatile boolean cachedEnabled = true;
+    private volatile int cachedMaxSetupTicks = 200;
+    private volatile int cachedDisplayDurationSeconds = 3;
+
     private File dataFile;
 
     public XbowManager(VCarterUtils plugin) {
@@ -53,15 +57,31 @@ public class XbowManager {
 
     private void loadPlayerSettings() {
         playerToggleSettings.clear();
+        bestXbowTicks.clear();
         synchronized (VCarterUtils.class) {
             FileConfiguration cfg = YamlConfiguration.loadConfiguration(dataFile);
             ConfigurationSection sec = cfg.getConfigurationSection("xbow-counter-enabled");
-            if (sec == null) return;
-            for (String key : sec.getKeys(false)) {
-                try {
-                    UUID uuid = UUID.fromString(key);
-                    playerToggleSettings.put(uuid, sec.getBoolean(key, true));
-                } catch (IllegalArgumentException ignored) {
+            if (sec != null) {
+                for (String key : sec.getKeys(false)) {
+                    try {
+                        UUID uuid = UUID.fromString(key);
+                        playerToggleSettings.put(uuid, sec.getBoolean(key, true));
+                    } catch (IllegalArgumentException ignored) {
+                    }
+                }
+            }
+
+            ConfigurationSection bestSec = cfg.getConfigurationSection("xbow-counter-best");
+            if (bestSec != null) {
+                for (String key : bestSec.getKeys(false)) {
+                    try {
+                        UUID uuid = UUID.fromString(key);
+                        int best = bestSec.getInt(key, 0);
+                        if (best > 0) {
+                            bestXbowTicks.put(uuid, best);
+                        }
+                    } catch (IllegalArgumentException ignored) {
+                    }
                 }
             }
         }
@@ -73,6 +93,9 @@ public class XbowManager {
             FileConfiguration cfg = YamlConfiguration.loadConfiguration(dataFile);
             for (Map.Entry<UUID, Boolean> entry : playerToggleSettings.entrySet()) {
                 cfg.set("xbow-counter-enabled." + entry.getKey().toString(), entry.getValue());
+            }
+            for (Map.Entry<UUID, Integer> entry : bestXbowTicks.entrySet()) {
+                cfg.set("xbow-counter-best." + entry.getKey().toString(), entry.getValue());
             }
             try {
                 cfg.save(dataFile);
@@ -97,19 +120,37 @@ public class XbowManager {
         });
     }
 
+    private void savePlayerBestAsync(UUID uuid, int bestTicks) {
+        if (dataFile == null) return;
+        final File fileToSave = this.dataFile;
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            synchronized (VCarterUtils.class) {
+                FileConfiguration cfg = YamlConfiguration.loadConfiguration(fileToSave);
+                cfg.set("xbow-counter-best." + uuid.toString(), bestTicks);
+                try {
+                    cfg.save(fileToSave);
+                } catch (IOException ignored) {
+                }
+            }
+        });
+    }
+
     public void reload() {
+        this.cachedEnabled = plugin.getConfig().getBoolean("xbow-counter.enabled", true);
+        this.cachedMaxSetupTicks = Math.max(20, plugin.getConfig().getInt("xbow-counter.max-setup-ticks", 200));
+        this.cachedDisplayDurationSeconds = Math.max(1, plugin.getConfig().getInt("xbow-counter.display-duration-seconds", 3));
     }
 
     public boolean isEnabled() {
-        return plugin.getConfig().getBoolean("xbow-counter.enabled", true);
+        return cachedEnabled;
     }
 
     public int getMaxSetupTicks() {
-        return Math.max(20, plugin.getConfig().getInt("xbow-counter.max-setup-ticks", 200));
+        return cachedMaxSetupTicks;
     }
 
     public int getDisplayDurationSeconds() {
-        return Math.max(1, plugin.getConfig().getInt("xbow-counter.display-duration-seconds", 3));
+        return cachedDisplayDurationSeconds;
     }
 
     public boolean isPlayerEnabled(UUID uuid) {
@@ -144,6 +185,7 @@ public class XbowManager {
         int currentBest = bestXbowTicks.getOrDefault(uuid, Integer.MAX_VALUE);
         if (cleanTicks < currentBest) {
             bestXbowTicks.put(uuid, cleanTicks);
+            savePlayerBestAsync(uuid, cleanTicks);
         }
 
         if (!isPlayerEnabled(uuid)) {
@@ -152,11 +194,11 @@ public class XbowManager {
 
         String rawFormat = plugin.getConfig().getString(
                 "xbow-counter.action-bar-format",
-                "<#89dceb><b>Xbow Speed:</b> <#a6e3a1><b>%ticks% ticks</b> <#6c7086>(<#f9e2af>%seconds%s<#6c7086>)"
+                "<white><sprite:items:item/crossbow_standby></white> <#89dceb><b>xʙᴏᴡ sᴘᴇᴇᴅ</b> <#6c7086>» <#a6e3a1><b>%ticks% ᴛɪᴄᴋs</b> <#6c7086>(<#f9e2af>%seconds%s<#6c7086>)"
         );
 
         String secFormatted = String.format(Locale.US, "%.2f", cleanTicks / 20.0);
-        Component actionBarComp = miniMessage.deserialize(
+        Component actionBarComp = plugin.parseMessage(
                 rawFormat.replace("%ticks%", String.valueOf(cleanTicks))
                          .replace("%seconds%", secFormatted)
         );
@@ -168,7 +210,9 @@ public class XbowManager {
         UUID uuid = player.getUniqueId();
         stopActionBarTask(uuid);
 
-        int totalRuns = durationSeconds * 2;
+        player.sendActionBar(component);
+
+        int totalRuns = Math.max(1, (durationSeconds * 2) - 1);
         BukkitTask task = new BukkitRunnable() {
             int runs = 0;
 
@@ -182,7 +226,7 @@ public class XbowManager {
                 player.sendActionBar(component);
                 runs++;
             }
-        }.runTaskTimer(plugin, 0L, 10L);
+        }.runTaskTimer(plugin, 10L, 10L);
 
         activeActionBarTasks.put(uuid, task);
     }

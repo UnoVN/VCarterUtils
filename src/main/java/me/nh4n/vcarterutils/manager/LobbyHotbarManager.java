@@ -306,7 +306,7 @@ public class LobbyHotbarManager {
             int slot = itemSec.getInt("slot", -1);
             if (slot < 0 || slot > 8) continue;
 
-            // Ho tro lay Custom Item tu Nexo (nexo-id hoac material: "nexo:<id>") hoac Material thuong
+            // Supports Nexo custom items (nexo-id or material: "nexo:<id>") or standard Bukkit Material
             ItemStack stack = NexoHook.createItemFromSection(itemSec, Material.COMPASS);
             stack.setAmount(1);
 
@@ -317,12 +317,12 @@ public class LobbyHotbarManager {
             ItemMeta meta = stack.getItemMeta();
             if (meta != null) {
                 if (nameRaw != null && !nameRaw.isEmpty()) {
-                    meta.displayName(miniMessage.deserialize(nameRaw));
+                    meta.displayName(plugin.parseMessage(nameRaw));
                 }
                 if (loreRaw != null && !loreRaw.isEmpty()) {
                     List<Component> loreComp = new ArrayList<>();
                     for (String line : loreRaw) {
-                        loreComp.add(miniMessage.deserialize(line));
+                        loreComp.add(plugin.parseMessage(line));
                     }
                     meta.lore(loreComp);
                 }
@@ -346,6 +346,8 @@ public class LobbyHotbarManager {
 
         if (backItemSlot >= 0 && backItemSlot <= 8) {
             inv.setHeldItemSlot(backItemSlot);
+        } else if (inv.getItem(inv.getHeldItemSlot()) == null) {
+            inv.setHeldItemSlot(0);
         }
     }
 
@@ -410,7 +412,7 @@ public class LobbyHotbarManager {
         if (!backManager.isEnabled() || backManager.isWorldBlacklisted(player.getWorld())) {
             return false;
         }
-        Location deathLoc = backManager.getDeathLocation(player.getUniqueId());
+        Location deathLoc = backManager.getValidDeathLocation(player);
         return deathLoc != null && deathLoc.getWorld() != null && !backManager.isWorldBlacklisted(deathLoc.getWorld());
     }
 

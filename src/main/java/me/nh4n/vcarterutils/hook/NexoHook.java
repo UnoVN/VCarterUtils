@@ -31,7 +31,7 @@ public final class NexoHook {
             itemFromIdMethod = nexoItemsClass.getMethod("itemFromId", String.class);
             initialized = true;
 
-            // Lang nghe su kien NexoItemsLoadedEvent (khi server khoi dong hoac /nexo reload)
+            // Listen for NexoItemsLoadedEvent (on server boot or /nexo reload)
             Class<? extends Event> eventClass = Class.forName("com.nexomc.nexo.api.events.NexoItemsLoadedEvent")
                     .asSubclass(Event.class);
             Bukkit.getPluginManager().registerEvent(
@@ -87,7 +87,7 @@ public final class NexoHook {
                 ItemStack cloned = stack.clone();
                 ItemMeta meta = cloned.getItemMeta();
                 if (meta != null) {
-                    // Xoa nexo:id khoi PDC cua ban sao de Nexo khong tu dong reset ten/lore hoac dat nham Furniture
+                    // Remove nexo:id from clone PDC to prevent Nexo auto-resetting name/lore or placing furniture
                     meta.getPersistentDataContainer().remove(NEXO_ID_KEY);
                     cloned.setItemMeta(meta);
                 }
@@ -99,10 +99,10 @@ public final class NexoHook {
     }
 
     /**
-     * Tao ItemStack tu ConfigurationSection:
-     * 1. Uu tien "nexo-id" (vd: nexo-id: "settings" hoac "cosmetic")
-     * 2. Hoac "material" co tien to "nexo:" (vd: material: "nexo:settings")
-     * 3. Fallback ve Material thuong cua Bukkit neu Nexo chua load item do.
+     * Creates an ItemStack from a ConfigurationSection:
+     * 1. Prioritize "nexo-id" (e.g. nexo-id: "settings" or "cosmetic")
+     * 2. Or "material" starting with "nexo:" prefix (e.g. material: "nexo:settings")
+     * 3. Fallback to standard Bukkit Material if Nexo has not loaded the item.
      */
     public static ItemStack createItemFromSection(ConfigurationSection sec, Material fallbackMaterial) {
         if (sec != null) {
@@ -131,5 +131,31 @@ public final class NexoHook {
             }
         }
         return new ItemStack(fallbackMaterial != null ? fallbackMaterial : Material.COMPASS, 1);
+    }
+
+    /**
+     * Helper to create an ItemStack from either a Nexo ID (e.g. "nexo:next" or "next")
+     * or fallback to a standard Bukkit Material.
+     */
+    public static ItemStack createItem(String nexoIdOrMat, Material fallbackMaterial) {
+        if (nexoIdOrMat != null && !nexoIdOrMat.trim().isEmpty()) {
+            String trimmed = nexoIdOrMat.trim();
+            if (trimmed.toLowerCase().startsWith("nexo:")) {
+                ItemStack nexoStack = getItemFromNexoId(trimmed.substring(5));
+                if (nexoStack != null) {
+                    return nexoStack;
+                }
+            } else {
+                ItemStack nexoStack = getItemFromNexoId(trimmed);
+                if (nexoStack != null) {
+                    return nexoStack;
+                }
+            }
+            Material mat = Material.matchMaterial(trimmed);
+            if (mat != null && mat != Material.AIR) {
+                return new ItemStack(mat, 1);
+            }
+        }
+        return new ItemStack(fallbackMaterial != null ? fallbackMaterial : Material.STONE, 1);
     }
 }

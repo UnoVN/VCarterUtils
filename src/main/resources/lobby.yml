@@ -1,0 +1,95 @@
+# ==============================================================
+#                     LOBBY HOTBAR SYSTEM
+# ==============================================================
+# Provides quick lobby shortcuts on hotbar slots 0..8 (1..9 in game).
+# Supports vanilla Bukkit materials or Nexo custom items (nexo-id or material: nexo:<id>).
+# ==============================================================
+
+lobby-hotbar:
+  enabled: true
+  worlds:
+    - "world"
+    - "lobby"
+  messages:
+    toggled: "%prefix_info%%c_text%ʟᴏʙʙʏ ʜᴏᴛʙᴀʀ %c_muted%» %status%"
+    status-enabled: "%c_success%<b>✔ ᴇɴᴀʙʟᴇᴅ</b>"
+    status-disabled: "%c_error%<b>✖ ᴅɪsᴀʙʟᴇᴅ</b>"
+    world-added: "%prefix_admin%%c_purple%<b>ʟᴏʙʙʏ</b> %c_muted%» %c_success%Added %c_primary%<b>%world%</b> %c_success%to Lobby Hotbar worlds."
+    world-removed: "%prefix_admin%%c_purple%<b>ʟᴏʙʙʏ</b> %c_muted%» %c_error%Removed %c_primary%<b>%world%</b> %c_error%from Lobby Hotbar worlds."
+
+  # Slot layout (0..8 corresponds to Hotbar 1..9):
+  # Slot 0 (Hotbar 1): Matchmaking Queue (IRON_SWORD)
+  # Slot 1 (Hotbar 2): Random Teleport (COMPASS)
+  # Slot 4 (Hotbar 5 - Center): Return to Death Location (RECOVERY_COMPASS)
+  # Slot 7 (Hotbar 8): Cosmetic (nexo:cosmetic)
+  # Slot 8 (Hotbar 9): Settings (nexo:settings)
+  items:
+    rtpq:
+      enabled: true
+      slot: 0
+      material: "IRON_SWORD"
+      command: "rtpq"
+      name: "<!italic><#a6e3a1><b>Matchmaking Queue</b> <#6c7086>▪ <#a6adc8>/rtpq"
+      lore:
+        - "<!italic><#6c7086>ᴄᴏᴍᴘᴇᴛɪᴛɪᴠᴇ ᴅᴜᴇʟs"
+        - ""
+        - "<!italic><#a6adc8>Join the 1v1 matchmaking queue"
+        - "<!italic><#a6adc8>and fight other players."
+        - ""
+        - "<!italic><white><glyph:right_click></white> <#a6e3a1>ᴊᴏɪɴ ǫᴜᴇᴜᴇ"
+    rtp:
+      enabled: true
+      slot: 1
+      material: "COMPASS"
+      command: "rtp"
+      name: "<!italic><#89dceb><b>Random Teleport</b> <#6c7086>▪ <#a6adc8>/rtp"
+      lore:
+        - "<!italic><#6c7086>ᴡᴏʀʟᴅ ᴇxᴘʟᴏʀᴀᴛɪᴏɴ"
+        - ""
+        - "<!italic><#a6adc8>Teleport to a safe random"
+        - "<!italic><#a6adc8>location in the world."
+        - ""
+        - "<!italic><white><glyph:right_click></white> <#89dceb>ᴛᴇʟᴇᴘᴏʀᴛ"
+    quick-back:
+      enabled: true
+      only-show-when-can-back: true
+      auto-select-on-respawn: true
+      slot: 4
+      material: "RECOVERY_COMPASS"
+      command: "back"
+      name: "<!italic><#f38ba8><b>Return to Death Location</b> <#6c7086>▪ <#a6adc8>/back"
+      lore:
+        - "<!italic><#6c7086>ɪɴsᴛᴀɴᴛ ʀᴇᴄᴏᴠᴇʀʏ"
+        - ""
+        - "<!italic><#a6adc8>Teleport directly back to"
+        - "<!italic><#a6adc8>where you last died."
+        - ""
+        - "<!italic><white><glyph:right_click></white> <#f38ba8>ʀᴇᴛᴜʀɴ ɴᴏᴡ"
+    cosmetic:
+      enabled: true
+      slot: 7
+      nexo-id: "cosmetic"
+      material: "nexo:cosmetic"
+      command: "decor"
+      name: "<!italic><#f9e2af><b>Cosmetic</b> <#6c7086>▪ <#a6adc8>/decor"
+      lore:
+        - "<!italic><#6c7086>ᴠɪsᴜᴀʟ ᴄᴜsᴛᴏᴍɪᴢᴀᴛɪᴏɴ"
+        - ""
+        - "<!italic><#a6adc8>Customize your cosmetics,"
+        - "<!italic><#a6adc8>outfits, and visual effects."
+        - ""
+        - "<!italic><white><glyph:right_click></white> <#f9e2af>ᴏᴘᴇɴ sᴛᴜᴅɪᴏ"
+    settings:
+      enabled: true
+      slot: 8
+      nexo-id: "settings"
+      material: "nexo:settings"
+      command: "settings"
+      name: "<!italic><#89dceb><b>Settings</b> <#6c7086>▪ <#a6adc8>/settings"
+      lore:
+        - "<!italic><#6c7086>ᴘᴇʀsᴏɴᴀʟ ᴘʀᴇꜰᴇʀᴇɴᴄᴇs"
+        - ""
+        - "<!italic><#a6adc8>Configure personal PvP cooldowns,"
+        - "<!italic><#a6adc8>training mode, and HUD options."
+        - ""
+        - "<!italic><white><glyph:right_click></white> <#89dceb>ᴏᴘᴇɴ sᴇᴛᴛɪɴɢs"

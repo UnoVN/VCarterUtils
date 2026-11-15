@@ -1,0 +1,16 @@
+# ==============================================================
+#                   XBOW TICK SPEED COUNTER
+# ==============================================================
+# Measures and displays setup ticks and seconds on the action bar
+# when loading and preparing a crossbow cart setup.
+# ==============================================================
+
+xbow-counter:
+  enabled: true
+  display-duration-seconds: 3
+  max-setup-ticks: 200
+  action-bar-format: "<white><sprite:items:item/crossbow_standby></white> %c_primary%<b>xʙᴏᴡ sᴘᴇᴇᴅ</b> %c_muted%» %c_success%<b>%ticks% ᴛɪᴄᴋs</b> %c_muted%(%c_warning%%seconds%s%c_muted%)"
+  messages:
+    toggled: "%prefix_info%%c_text%xʙᴏᴡ ᴄᴏᴜɴᴛᴇʀ %c_muted%» %status%"
+    status-enabled: "%c_success%<b>✔ ᴇɴᴀʙʟᴇᴅ</b>"
+    status-disabled: "%c_error%<b>✖ ᴅɪsᴀʙʟᴇᴅ</b>"

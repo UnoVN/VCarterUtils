@@ -2,11 +2,9 @@ package me.nh4n.vcarterutils.listener;
 
 import me.nh4n.vcarterutils.VCarterUtils;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -15,34 +13,44 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockExplodeEvent;
+import org.bukkit.event.block.BlockPistonExtendEvent;
+import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RegearListener implements Listener {
 
     private final VCarterUtils plugin;
-    private final NamespacedKey regearKey;
-    private final MiniMessage miniMessage;
+    private final Set<Location> activeRegearBlocks = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     public RegearListener(VCarterUtils plugin) {
         this.plugin = plugin;
-        this.regearKey = new NamespacedKey(plugin, "vcarter_regear_shulker");
-        this.miniMessage = MiniMessage.miniMessage();
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerDamage(EntityDamageEvent event) {
         if (event.getEntity() instanceof Player player) {
             plugin.getRegearManager().recordDamage(player.getUniqueId());
+        }
+        if (event instanceof org.bukkit.event.entity.EntityDamageByEntityEvent edbe) {
+            if (edbe.getDamager() instanceof Player damager) {
+                plugin.getRegearManager().recordDamage(damager.getUniqueId());
+            }
         }
     }
 
@@ -83,22 +91,57 @@ public class RegearListener implements Listener {
         }
 
         Player player = event.getPlayer();
+
+        // Check immediately at placement if regear can proceed. If not, cancel block placement,
+        // send cooldown/combat message, and preserve item in hand without phantom placement.
+        if (!plugin.getRegearManager().canRegear(player, true)) {
+            event.setCancelled(true);
+            return;
+        }
+
+        EquipmentSlot hand = event.getHand();
         Block block = event.getBlockPlaced();
         Location loc = block.getLocation();
 
         block.setMetadata("VCarter_Regear_Block", new FixedMetadataValue(plugin, true));
+        activeRegearBlocks.add(loc);
 
         Bukkit.getScheduler().runTask(plugin, () -> {
-            if (block.hasMetadata("VCarter_Regear_Block") || block.getType().name().endsWith("SHULKER_BOX")) {
+            activeRegearBlocks.remove(loc);
+            Block liveBlock = loc.getBlock();
+
+            if (block.hasMetadata("VCarter_Regear_Block")) {
                 block.removeMetadata("VCarter_Regear_Block", plugin);
-                block.setType(Material.AIR);
-                loc.getWorld().playSound(loc, Sound.BLOCK_SHULKER_BOX_CLOSE, 1.0f, 1.2f);
+            }
+            if (liveBlock.hasMetadata("VCarter_Regear_Block")) {
+                liveBlock.removeMetadata("VCarter_Regear_Block", plugin);
+            }
+            if (liveBlock.getType().name().endsWith("SHULKER_BOX") || block.getType().name().endsWith("SHULKER_BOX")) {
+                liveBlock.setType(Material.AIR, false);
+                if (loc.getWorld() != null) {
+                    loc.getWorld().playSound(loc, Sound.BLOCK_SHULKER_BOX_CLOSE, 1.0f, 1.2f);
+                }
             }
 
             if (player.isOnline()) {
+                player.sendBlockChange(loc, Material.AIR.createBlockData());
+
+                // Ensure the placed Regear Shulker is consumed from hand/inventory before restocking
+                ItemStack inHand = player.getInventory().getItem(hand);
+                if (isRegearItem(inHand)) {
+                    player.getInventory().setItem(hand, null);
+                }
+                plugin.getRegearManager().removeAllRegearItems(player);
+
                 boolean success = plugin.getRegearManager().performRegear(player);
-                if (!success) {
-                    player.getInventory().addItem(createRegearShulkerItem());
+                if (success) {
+                    plugin.getRegearManager().removeAllRegearItems(player);
+                    player.updateInventory();
+                } else {
+                    if (!hasRegearShulker(player)) {
+                        player.getInventory().addItem(createRegearShulkerItem());
+                    }
+                    player.updateInventory();
                 }
             }
         });
@@ -120,7 +163,53 @@ public class RegearListener implements Listener {
         if (block.hasMetadata("VCarter_Regear_Block")) {
             event.setDropItems(false);
             block.removeMetadata("VCarter_Regear_Block", plugin);
+            activeRegearBlocks.remove(block.getLocation());
         }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityExplode(EntityExplodeEvent event) {
+        event.blockList().removeIf(b -> b.hasMetadata("VCarter_Regear_Block"));
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onBlockExplode(BlockExplodeEvent event) {
+        event.blockList().removeIf(b -> b.hasMetadata("VCarter_Regear_Block"));
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPistonExtend(BlockPistonExtendEvent event) {
+        for (Block b : event.getBlocks()) {
+            if (b.hasMetadata("VCarter_Regear_Block")) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPistonRetract(BlockPistonRetractEvent event) {
+        for (Block b : event.getBlocks()) {
+            if (b.hasMetadata("VCarter_Regear_Block")) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    public void clearAll() {
+        for (Location loc : activeRegearBlocks) {
+            if (loc != null && loc.getWorld() != null) {
+                Block b = loc.getBlock();
+                if (b.hasMetadata("VCarter_Regear_Block")) {
+                    b.removeMetadata("VCarter_Regear_Block", plugin);
+                }
+                if (b.getType().name().endsWith("SHULKER_BOX")) {
+                    b.setType(Material.AIR, false);
+                }
+            }
+        }
+        activeRegearBlocks.clear();
     }
 
     private boolean hasRegearShulker(Player player) {
@@ -129,15 +218,12 @@ public class RegearListener implements Listener {
                 return true;
             }
         }
-        return false;
+        return isRegearItem(player.getInventory().getItemInOffHand())
+                || isRegearItem(player.getItemOnCursor());
     }
 
-    private boolean isRegearItem(ItemStack item) {
-        if (item == null || item.getType() == Material.AIR || !item.hasItemMeta()) {
-            return false;
-        }
-        ItemMeta meta = item.getItemMeta();
-        return meta.getPersistentDataContainer().has(regearKey, PersistentDataType.BYTE);
+    public boolean isRegearItem(ItemStack item) {
+        return plugin.getRegearManager().isRegearItem(item);
     }
 
     private ItemStack createRegearShulkerItem() {
@@ -155,7 +241,7 @@ public class RegearListener implements Listener {
                     "regear.item.name",
                     "<!italic><#89dceb><b>Shulker Regear</b>"
             );
-            meta.displayName(miniMessage.deserialize(nameRaw));
+            meta.displayName(plugin.parseMessage(nameRaw));
 
             List<String> loreRaw = plugin.getConfig().getStringList("regear.item.lore");
             if (loreRaw.isEmpty()) {
@@ -167,11 +253,11 @@ public class RegearListener implements Listener {
 
             List<Component> loreComponents = new ArrayList<>();
             for (String line : loreRaw) {
-                loreComponents.add(miniMessage.deserialize(line));
+                loreComponents.add(plugin.parseMessage(line));
             }
             meta.lore(loreComponents);
 
-            meta.getPersistentDataContainer().set(regearKey, PersistentDataType.BYTE, (byte) 1);
+            meta.getPersistentDataContainer().set(plugin.getRegearManager().getRegearKey(), PersistentDataType.BYTE, (byte) 1);
             item.setItemMeta(meta);
         }
 
@@ -181,7 +267,7 @@ public class RegearListener implements Listener {
     private void sendMsg(Player player, String configPath) {
         String raw = plugin.getConfig().getString(configPath);
         if (raw != null && !raw.isEmpty()) {
-            player.sendMessage(miniMessage.deserialize(raw));
+            player.sendMessage(plugin.parseMessage(raw));
         }
     }
 }

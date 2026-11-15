@@ -1,0 +1,131 @@
+# ==============================================================
+#                 SETTING & ADMIN GUI MENUS
+# ==============================================================
+# Configures layout, items, slots, and styling for /setting and /setting admin.
+# Follows the Catppuccin color palette and Nexo glyph integrations.
+# ==============================================================
+
+setting-menu:
+  title: "<#6c7086>✦ <#89dceb><b>ᴘᴇʀsᴏɴᴀʟ sᴇᴛᴛɪɴɢs</b> <#6c7086>✦"
+  rows: 3
+  filler:
+    enabled: true
+    material: "GRAY_STAINED_GLASS_PANE"
+    name: " "
+  options-format:
+    selected: "<#a6e3a1><b>[%seconds%s]</b>"
+    unselected: "<#6c7086>%seconds%s"
+    separator: " <#6c7086>• "
+  items:
+    pearl-cooldown:
+      enabled: true
+      type: "PEARL_COOLDOWN"
+      slot: 11
+      material: "ENDER_PEARL"
+      show-seconds-as-amount: true
+      name: "<!italic><white><sprite:items:item/ender_pearl></white> <#89dceb><b>Pearl Cooldown</b>"
+      lore:
+        - "<!italic><#6c7086>ᴘᴇʀsᴏɴᴀʟ ᴘᴠᴘ sᴇᴛᴛɪɴɢ"
+        - ""
+        - "<!italic><#6c7086>▪ <#a6adc8>ᴘᴇʀsᴏɴᴀʟ: <#89dceb><b>%current%s</b> <#6c7086>(ᴅᴇꜰᴀᴜʟᴛ: %default%s)"
+        - "<!italic><#6c7086>▪ <#a6adc8>ᴇꜰꜰᴇᴄᴛɪᴠᴇ: <#f9e2af><b>%effective%s</b>"
+        - "<!italic>%world_status%"
+        - ""
+        - "<!italic><#6c7086>▪ <#a6adc8>ᴘʀᴇsᴇᴛs: %options_list%"
+        - ""
+        - "<!italic><white><glyph:left_click></white> <#a6e3a1>ɪɴᴄʀᴇᴀsᴇ <#6c7086>│ <white><glyph:right_click></white> <#f9e2af>ᴅᴇᴄʀᴇᴀsᴇ"
+        - "<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:left_click></white> <#a6adc8>ʀᴇsᴇᴛ ᴅᴇꜰᴀᴜʟᴛ"
+    mace-cooldown:
+      enabled: true
+      type: "MACE_COOLDOWN"
+      slot: 12
+      material: "MACE"
+      show-seconds-as-amount: true
+      name: "<!italic><white><sprite:items:item/mace></white> <#89dceb><b>Mace Cooldown</b>"
+      lore:
+        - "<!italic><#6c7086>ᴘᴇʀsᴏɴᴀʟ ᴘᴠᴘ sᴇᴛᴛɪɴɢ"
+        - ""
+        - "<!italic><#6c7086>▪ <#a6adc8>ᴘᴇʀsᴏɴᴀʟ: <#89dceb><b>%current%s</b> <#6c7086>(ᴅᴇꜰᴀᴜʟᴛ: %default%s)"
+        - "<!italic><#6c7086>▪ <#a6adc8>ᴇꜰꜰᴇᴄᴛɪᴠᴇ: <#f9e2af><b>%effective%s</b>"
+        - "<!italic>%world_status%"
+        - ""
+        - "<!italic><#6c7086>▪ <#a6adc8>ᴘʀᴇsᴇᴛs: %options_list%"
+        - ""
+        - "<!italic><white><glyph:left_click></white> <#a6e3a1>ɪɴᴄʀᴇᴀsᴇ <#6c7086>│ <white><glyph:right_click></white> <#f9e2af>ᴅᴇᴄʀᴇᴀsᴇ"
+        - "<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:left_click></white> <#a6adc8>ʀᴇsᴇᴛ ᴅᴇꜰᴀᴜʟᴛ"
+    training-mode:
+      enabled: true
+      type: "TRAINING_MODE_TOGGLE"
+      slot: 13
+      material: "TARGET"
+      name: "<!italic><white><sprite:items:item/totem_of_undying></white> <#89dceb><b>Training Mode</b>"
+      lore:
+        - "<!italic><#6c7086>ᴘʀᴀᴄᴛɪᴄᴇ & sᴀɴᴅʙᴏx"
+        - ""
+        - "<!italic><#6c7086>▪ <#a6adc8>sᴛᴀᴛᴜs: %training_status%"
+        - ""
+        - "<!italic><#a6adc8>Infinite totem, blocks, auto-refill,"
+        - "<!italic><#a6adc8>consumables, and crossbow auto-reload."
+        - ""
+        - "<!italic><white><glyph:left_click></white> <#89dceb>ᴏᴘᴛɪᴏɴs <#6c7086>│ <white><glyph:right_click></white> <#a6e3a1>ǫᴜɪᴄᴋ ᴛᴏɢɢʟᴇ"
+    xbow-counter-toggle:
+      enabled: true
+      type: "XBOW_COUNTER_TOGGLE"
+      slot: 14
+      material: "CROSSBOW"
+      name: "<!italic><white><sprite:items:item/crossbow_standby></white> <#89dceb><b>Xbow Tick Counter</b>"
+      lore:
+        - "<!italic><#6c7086>ᴀᴄᴛɪᴏɴʙᴀʀ ʜᴜᴅ"
+        - ""
+        - "<!italic><#6c7086>▪ <#a6adc8>sᴛᴀᴛᴜs: %xbow_counter_status%"
+        - ""
+        - "<!italic><#a6adc8>Displays how many ticks your"
+        - "<!italic><#a6adc8>Xbow cart setup took on Action Bar."
+        - ""
+        - "<!italic><white><glyph:left_click></white> <#89dceb>ᴛᴏɢɢʟᴇ ᴏɴ/ᴏꜰꜰ"
+    lobby-hotbar-toggle:
+      enabled: true
+      type: "LOBBY_HOTBAR_TOGGLE"
+      slot: 15
+      material: "NETHER_STAR"
+      name: "<!italic><white><sprite:items:item/compass_16></white> <#89dceb><b>Lobby Hotbar</b>"
+      lore:
+        - "<!italic><#6c7086>ʟᴏʙʙʏ ᴜᴛɪʟɪᴛʏ"
+        - ""
+        - "<!italic><#6c7086>▪ <#a6adc8>sᴛᴀᴛᴜs: %lobby_hotbar_status%"
+        - ""
+        - "<!italic><#a6adc8>Replaces your hotbar with quick"
+        - "<!italic><#a6adc8>shortcut items while in the lobby."
+        - ""
+        - "<!italic><white><glyph:left_click></white> <#89dceb>ᴛᴏɢɢʟᴇ ᴏɴ/ᴏꜰꜰ"
+    admin-panel:
+      enabled: true
+      type: "ADMIN_MENU"
+      slot: 4
+      nexo-id: "admin_setting"
+      material: "nexo:admin_setting"
+      name: "<!italic><#cba6f7><b>World Manager</b>"
+      lore:
+        - "<!italic><#6c7086>ᴀᴅᴍɪɴɪsᴛʀᴀᴛᴏʀ ᴘᴀɴᴇʟ"
+        - ""
+        - "<!italic><#a6adc8>Configure per-world & global cooldowns,"
+        - "<!italic><#a6adc8>Mace, Pearl, and Combat Tag timers."
+        - ""
+        - "<!italic><white><glyph:left_click></white> <#cba6f7>ᴏᴘᴇɴ ᴡᴏʀʟᴅ ᴍᴀɴᴀɢᴇʀ"
+    close-button:
+      enabled: true
+      type: "CLOSE"
+      slot: 22
+      nexo-id: "cancel"
+      material: "nexo:cancel"
+      name: "<!italic><#f38ba8><b>✖ Close</b>"
+      lore:
+        - "<!italic><white><glyph:left_click></white> <#6c7086>ᴄʟᴏsᴇ ᴍᴇɴᴜ"
+
+admin-menu:
+  title: "<#6c7086>✦ <#cba6f7><b>ᴡᴏʀʟᴅ ᴍᴀɴᴀɢᴇʀ</b> <#6c7086>✦"
+  messages:
+    global-force-toggled: "%prefix_admin%%c_purple%<b>ɢʟᴏʙᴀʟ</b> %c_muted%» %c_text%%type% Force: %status%"
+    default-updated: "%prefix_admin%%c_purple%<b>ᴅᴇꜰᴀᴜʟᴛ</b> %c_muted%» %c_text%Default %type% set to %c_primary%<b>%seconds%s</b>%c_text%."
+    world-force-updated: "%prefix_admin%%c_primary%<b>%world%</b> %c_muted%• %c_text%%type% Force %c_muted%» %status%"
+    world-rescanned: "%prefix_info%%c_success%<b>sᴄᴀɴɴᴇʀ</b> %c_muted%» %c_text%World list rescanned successfully."

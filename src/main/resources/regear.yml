@@ -1,0 +1,58 @@
+# ==============================================================
+#                      SHULKER REGEAR SYSTEM
+# ==============================================================
+# Restocks inventory from a snapshot when placing a Shulker Box.
+# Supports item whitelisting, durability preservation, and junk clearing.
+# ==============================================================
+
+regear:
+  # Combat/damage cooldown in seconds before allowing regear (set to 0 to completely disable)
+  damage-cooldown-seconds: 5
+  # Regear usage cooldown in seconds (set to 0 to completely disable)
+  cooldown-seconds: 3
+  # Whether to check FoCombatTag combat state (set to false or set damage-cooldown-seconds to 0 to ignore combat tag)
+  check-combat-tag: true
+  clear-junk-in-empty-slots: true
+  announcement:
+    enabled: true
+    broadcast: true
+    message: "<glyph:warning_blue> <#89dceb><b>%player%</b> <#a6adc8>regeared"
+
+  # Items that can be refilled and restocked from snapshot
+  whitelist:
+    - ENDER_PEARL
+    - TNT_MINECART
+    - SPLASH_POTION
+    - CROSSBOW
+    - COBWEB
+    - ARROWS
+    - AXES
+    - PICKAXES
+    - PLANKS
+    - WOOD
+    - RAILS
+
+  # Items that preserve their current state and durability:
+  # - Not cloned from snapshot (keeps current damaged state, like armor/elytra)
+  # - Not cleared or replaced when regearing
+  preserve-items:
+    - ELYTRA
+    - FLINT_AND_STEEL
+    - BOW
+    - SWORDS
+
+  item:
+    material: "CYAN_SHULKER_BOX"
+    name: "<!italic><#89dceb><b>Shulker Regear</b>"
+    lore:
+      - "<!italic><white><glyph:right_click></white> <#a6adc8>Place to restock inventory"
+      - "<!italic><#6c7086>Auto-removes after placement"
+
+  messages:
+    already-have-shulker: "<glyph:warning_blue> <#f38ba8>You already have a <#89dceb>Regear Shulker<#f38ba8>."
+    inventory-full: "<glyph:warning_blue> <#f38ba8>Inventory is full! Free up at least 1 slot."
+    received-shulker: "<glyph:warning_blue> <#a6e3a1>Received <#89dceb><b>Shulker Regear</b><#a6e3a1>. Place it to restock."
+    combat-tagged: "<glyph:warning_blue> <#f38ba8>In combat! Wait <#f9e2af><b>%seconds%s</b> <#f38ba8>to regear."
+    on-cooldown: "<glyph:warning_blue> <#f38ba8>Regear is on cooldown for <#f9e2af><b>%seconds%s</b><#f38ba8>."
+    no-kit-loaded: "<glyph:warning_blue> <#f38ba8>Load a kit first <#89dceb>(/k1)<#f38ba8>."
+    success: "<glyph:warning_blue> <#a6e3a1>Inventory restocked."

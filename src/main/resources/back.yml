@@ -1,0 +1,16 @@
+# ==============================================================
+#                      BACK ON DEATH FEATURE
+# ==============================================================
+# Allows players to teleport back to their previous death location
+# using /back or via the death notification clickable message.
+# ==============================================================
+
+back:
+  enabled: true
+  blacklisted-worlds: []
+  messages:
+    death-notify: "<white><sprite:items:item/recovery_compass_16></white> %c_text%ʏᴏᴜ ᴅɪᴇᴅ %c_muted%» %c_text%Click <click:run_command:'/back'><hover:show_text:'%c_success%▸ Click to return to death location'>%c_primary%<b>[ʀᴇᴛᴜʀɴ ʜᴇʀᴇ]</b></hover></click> %c_text%or type %c_primary%/back%c_text%."
+    teleported: "<white><sprite:items:item/recovery_compass_16></white> %c_success%<b>ʀᴇᴛᴜʀɴᴇᴅ</b> %c_muted%» %c_text%Teleported to your last death location."
+    no-death-location: "%prefix_error%%c_error%<b>ɴᴏ ʟᴏᴄᴀᴛɪᴏɴ</b> %c_muted%» %c_text%No previous death location found."
+    world-blacklisted: "%prefix_warning%%c_purple%<b>ʀᴇsᴛʀɪᴄᴛᴇᴅ</b> %c_muted%» %c_text%You cannot use %c_primary%/back %c_text%in this world."
+    teleport-failed: "%prefix_error%%c_error%<b>ᴛᴇʟᴇᴘᴏʀᴛ ꜰᴀɪʟᴇᴅ</b> %c_muted%» %c_text%Destination was blocked or unsafe."

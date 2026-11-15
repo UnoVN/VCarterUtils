@@ -74,9 +74,9 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
             plugin.reloadPluginConfig();
             String successMsg = plugin.getConfig().getString(
                     "admin.messages.reload-success",
-                    "<glyph:warning_blue> <#a6e3a1>VCarterUtils configuration reloaded."
+                    "%prefix_admin%%c_success%<b>ʀᴇʟᴏᴀᴅᴇᴅ</b> %c_muted%» %c_text%VCarterUtils configuration synchronized."
             );
-            sender.sendMessage(miniMessage.deserialize(successMsg));
+            sender.sendMessage(plugin.parseMessage(successMsg));
             return;
         }
 
@@ -90,9 +90,9 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
             manager.clearAll();
             String raw = plugin.getConfig().getString(
                     "score.messages.global-reset-admin",
-                    "<glyph:warning_blue> <#a6e3a1>All 1v1 scores have been reset by an admin."
+                    "%prefix_admin%%c_success%All 1v1 scores have been reset by an admin."
             );
-            Bukkit.broadcast(miniMessage.deserialize(raw));
+            Bukkit.broadcast(plugin.parseMessage(raw));
             return;
         }
 
@@ -112,18 +112,18 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
             if (target == null || !target.isOnline()) {
                 String raw = plugin.getConfig().getString(
                         "score.messages.player-not-found",
-                        "<glyph:warning_blue> <#f38ba8>Player <#89dceb>%target% <#f38ba8>is not online."
+                        "%prefix_error%%c_error%<b>ɴᴏᴛ ꜰᴏᴜɴᴅ</b> %c_muted%» %c_text%Player %c_primary%%target% %c_text%is not online."
                 );
-                player.sendMessage(miniMessage.deserialize(raw.replace("%target%", args[1])));
+                player.sendMessage(plugin.parseMessage(raw.replace("%target%", args[1])));
                 return;
             }
 
             if (target.getUniqueId().equals(player.getUniqueId())) {
                 String raw = plugin.getConfig().getString(
                         "score.messages.cannot-target-self",
-                        "<glyph:warning_blue> <#f38ba8>You cannot target yourself."
+                        "%prefix_error%%c_error%<b>ɪɴᴠᴀʟɪᴅ</b> %c_muted%» %c_text%You cannot target yourself."
                 );
-                player.sendMessage(miniMessage.deserialize(raw));
+                player.sendMessage(plugin.parseMessage(raw));
                 return;
             }
 
@@ -132,16 +132,16 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
 
             String sentRaw = plugin.getConfig().getString(
                     "score.messages.request-sent",
-                    "<glyph:warning_blue> <#a6e3a1>Sent score reset request to <#89dceb><b>%target%</b><#a6e3a1>."
+                    "%prefix_info%%c_text%Sent 1v1 score reset request to %c_primary%<b>%target%</b>%c_text%."
             );
-            player.sendMessage(miniMessage.deserialize(sentRaw.replace("%target%", target.getName())));
+            player.sendMessage(plugin.parseMessage(sentRaw.replace("%target%", target.getName())));
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.2f);
 
             String recvRaw = plugin.getConfig().getString(
                     "score.messages.request-received",
-                    "<glyph:warning_blue> <#89dceb><b>%sender%</b> <#a6adc8>wants to reset 1v1 score: <click:run_command:'/score accept %sender%'><hover:show_text:'<#a6e3a1>Click to accept'><#a6e3a1><b>[ACCEPT]</b></hover></click> <click:run_command:'/score decline %sender%'><hover:show_text:'<#f38ba8>Click to decline'><#f38ba8><b>[DECLINE]</b></hover></click>"
+                    "%prefix_info%%c_primary%<b>%sender%</b> %c_text%wants to reset 1v1 score %c_muted%» <click:run_command:'/score accept %sender%'><hover:show_text:'<#a6e3a1>Click to accept reset'>%c_success%<b>[✔ ᴀᴄᴄᴇᴘᴛ]</b></hover></click> <click:run_command:'/score decline %sender%'><hover:show_text:'<#f38ba8>Click to decline reset'>%c_error%<b>[✖ ᴅᴇᴄʟɪɴᴇ]</b></hover></click>"
             );
-            target.sendMessage(miniMessage.deserialize(recvRaw.replace("%sender%", player.getName())));
+            target.sendMessage(plugin.parseMessage(recvRaw.replace("%sender%", player.getName())));
             target.playSound(target.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.2f);
             return;
         }
@@ -157,9 +157,9 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
             if (requester == null || !manager.hasValidRequest(requester.getUniqueId(), player.getUniqueId())) {
                 String raw = plugin.getConfig().getString(
                         "score.messages.no-pending-request",
-                        "<glyph:warning_blue> <#f38ba8>No pending request from <#89dceb>%sender%<#f38ba8>."
+                        "%prefix_error%%c_error%<b>ᴇxᴘɪʀᴇᴅ</b> %c_muted%» %c_text%No pending request from %c_primary%%sender%%c_text%."
                 );
-                player.sendMessage(miniMessage.deserialize(raw.replace("%sender%", args[1])));
+                player.sendMessage(plugin.parseMessage(raw.replace("%sender%", args[1])));
                 return;
             }
 
@@ -168,9 +168,9 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
 
             String successRaw = plugin.getConfig().getString(
                     "score.messages.score-reset-success",
-                    "<glyph:warning_blue> <#a6e3a1>1v1 score reset between <#89dceb><b>%player1%</b> <#a6e3a1>and <#89dceb><b>%player2%</b><#a6e3a1>."
+                    "<white><sprite:items:item/netherite_sword></white> %c_success%<b>sᴄᴏʀᴇ ʀᴇsᴇᴛ</b> %c_muted%» %c_primary%<b>%player1%</b> %c_muted%⚔ %c_primary%<b>%player2%</b>"
             );
-            Component successMsg = miniMessage.deserialize(
+            Component successMsg = plugin.parseMessage(
                     successRaw.replace("%player1%", player.getName()).replace("%player2%", requester.getName())
             );
 
@@ -191,17 +191,17 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
 
             String declineRaw = plugin.getConfig().getString(
                     "score.messages.request-declined",
-                    "<glyph:warning_blue> <#f38ba8>Reset request with <#89dceb>%player% <#f38ba8>was declined."
+                    "%prefix_error%%c_error%<b>ᴅᴇᴄʟɪɴᴇᴅ</b> %c_muted%» %c_text%Reset request with %c_primary%%player% %c_text%was declined."
             );
 
             Player requester = findPlayerCaseInsensitive(args[1]);
             if (requester != null && manager.hasValidRequest(requester.getUniqueId(), player.getUniqueId())) {
                 manager.removeRequest(requester.getUniqueId(), player.getUniqueId());
-                requester.sendMessage(miniMessage.deserialize(declineRaw.replace("%player%", player.getName())));
+                requester.sendMessage(plugin.parseMessage(declineRaw.replace("%player%", player.getName())));
                 requester.playSound(requester.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             }
 
-            player.sendMessage(miniMessage.deserialize(declineRaw.replace("%player%", args[1])));
+            player.sendMessage(plugin.parseMessage(declineRaw.replace("%player%", args[1])));
             return;
         }
 
@@ -222,17 +222,17 @@ public class ScoreCommand implements CommandExecutor, TabCompleter, Listener {
     private void sendNoPerm(CommandSender sender) {
         String raw = plugin.getConfig().getString(
                 "score.messages.no-permission",
-                "<glyph:warning_blue> <#f38ba8>You do not have permission."
+                "%prefix_error%%c_error%<b>ɴᴏ ᴘᴇʀᴍɪssɪᴏɴ</b> %c_muted%» %c_text%You do not have permission."
         );
-        sender.sendMessage(miniMessage.deserialize(raw));
+        sender.sendMessage(plugin.parseMessage(raw));
     }
 
     private void sendUsage(CommandSender sender) {
         String raw = plugin.getConfig().getString(
                 "score.messages.usage",
-                "<glyph:warning_blue> <#a6adc8>Usage: <#89dceb>/score reset <player> <#6c7086>| <#89dceb>accept <player> <#6c7086>| <#89dceb>resetall"
+                "%prefix_info%%c_text%ᴜsᴀɢᴇ %c_muted%» %c_primary%/score reset <player> %c_muted%│ %c_primary%accept <player> %c_muted%│ %c_primary%resetall"
         );
-        sender.sendMessage(miniMessage.deserialize(raw));
+        sender.sendMessage(plugin.parseMessage(raw));
     }
 
     @Override

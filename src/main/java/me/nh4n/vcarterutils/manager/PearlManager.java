@@ -111,7 +111,7 @@ public class PearlManager {
             rawOptions = List.of(1, 3, 5, 6, 8, 10, 15);
         }
 
-        // Chi cho phep cac moc >= default-seconds (khong bao gio cho chinh duoi muc mac dinh)
+        // Only allow options >= default-seconds (never allow setting below server default)
         for (int val : rawOptions) {
             if (val >= def && !availableOptions.contains(val)) {
                 availableOptions.add(val);
@@ -268,6 +268,10 @@ public class PearlManager {
     }
 
     public int cycleWorldForceSeconds(String worldName) {
+        return cycleWorldForceSeconds(worldName, true);
+    }
+
+    public int cycleWorldForceSeconds(String worldName, boolean forward) {
         int current = getForcedWorldSeconds(worldName);
         if (availableOptions.isEmpty()) {
             int next = (current < 0) ? getDefaultSeconds() : -1;
@@ -275,21 +279,39 @@ public class PearlManager {
             return next;
         }
 
-        if (current < 0) {
-            int first = availableOptions.get(0);
-            setWorldForceSeconds(worldName, first);
-            return first;
-        }
+        if (forward) {
+            if (current < 0) {
+                int first = availableOptions.get(0);
+                setWorldForceSeconds(worldName, first);
+                return first;
+            }
 
-        int idx = availableOptions.indexOf(current);
-        if (idx == -1 || idx + 1 >= availableOptions.size()) {
-            setWorldForceSeconds(worldName, -1);
-            return -1;
-        }
+            int idx = availableOptions.indexOf(current);
+            if (idx == -1 || idx + 1 >= availableOptions.size()) {
+                setWorldForceSeconds(worldName, -1);
+                return -1;
+            }
 
-        int next = availableOptions.get(idx + 1);
-        setWorldForceSeconds(worldName, next);
-        return next;
+            int next = availableOptions.get(idx + 1);
+            setWorldForceSeconds(worldName, next);
+            return next;
+        } else {
+            if (current < 0) {
+                int last = availableOptions.get(availableOptions.size() - 1);
+                setWorldForceSeconds(worldName, last);
+                return last;
+            }
+
+            int idx = availableOptions.indexOf(current);
+            if (idx <= 0) {
+                setWorldForceSeconds(worldName, -1);
+                return -1;
+            }
+
+            int prev = availableOptions.get(idx - 1);
+            setWorldForceSeconds(worldName, prev);
+            return prev;
+        }
     }
 
     public int getPlayerPersonalSeconds(UUID uuid) {

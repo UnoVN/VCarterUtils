@@ -31,8 +31,8 @@ public class LobbyHotbarListener implements Listener {
     }
 
     /**
-     * Khi nguoi choi tu tran: Danh dau dang respawn va xoa savedHotbar cu
-     * de tranh PlayerChangedWorldEvent o Tick 0 luu nham hotbar rong truoc khi PerPlayerKit nap kit!
+     * When a player dies: Mark them as respawning and clear old saved hotbars
+     * so that immediate world change events do not mistakenly save empty hotbars.
      */
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerDeath(PlayerDeathEvent event) {
@@ -45,8 +45,10 @@ public class LobbyHotbarListener implements Listener {
         LobbyHotbarManager manager = plugin.getLobbyHotbarManager();
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!player.isOnline()) return;
-            if (manager.isLobbyWorld(player.getWorld()) && manager.isEnabled() && manager.isPlayerEnabled(player.getUniqueId())) {
+            if (!player.isOnline())
+                return;
+            if (manager.isLobbyWorld(player.getWorld()) && manager.isEnabled()
+                    && manager.isPlayerEnabled(player.getUniqueId())) {
                 manager.applyLobbyHotbar(player);
             } else if (manager.hasSavedHotbar(player.getUniqueId()) || manager.hasAnyLobbyItem(player)) {
                 manager.restorePlayerHotbar(player);
@@ -62,8 +64,8 @@ public class LobbyHotbarListener implements Listener {
         World currentWorld = player.getWorld();
 
         if (manager.isLobbyWorld(currentWorld)) {
-            // Neu nguoi choi chuyen world do vua chet & hoi sinh ve Lobby:
-            // AutoPotListener se xu ly o Tick 6 (sau khi PerPlayerKit nap xong kit).
+            // If the world change was caused by death & respawn into the lobby:
+            // AutoPotListener handles it after PerPlayerKit finishes loading.
             if (manager.isRespawning(uuid)) {
                 return;
             }
@@ -74,6 +76,38 @@ public class LobbyHotbarListener implements Listener {
             manager.unmarkRespawning(uuid);
             manager.restorePlayerHotbar(player);
         }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPlayerTeleport(PlayerTeleportEvent event) {
+        org.bukkit.Location to = event.getTo();
+        org.bukkit.Location from = event.getFrom();
+        if (to == null || to.getWorld() == null) return;
+
+        // Neu da doi world, onWorldChange se xu ly
+        if (from != null && from.getWorld() != null && !from.getWorld().equals(to.getWorld())) {
+            return;
+        }
+
+        Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+        LobbyHotbarManager manager = plugin.getLobbyHotbarManager();
+
+        // Teleport trong cung mot world (vi du /spawn trong world spawn/lobby)
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline()) return;
+            if (manager.isLobbyWorld(player.getWorld())) {
+                if (manager.isRespawning(uuid)) {
+                    return;
+                }
+                if (manager.isEnabled() && manager.isPlayerEnabled(uuid)) {
+                    manager.applyLobbyHotbar(player);
+                }
+            } else if (manager.hasSavedHotbar(uuid) || manager.hasAnyLobbyItem(player)) {
+                manager.unmarkRespawning(uuid);
+                manager.restorePlayerHotbar(player);
+            }
+        });
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
@@ -103,6 +137,13 @@ public class LobbyHotbarListener implements Listener {
         if (cmd != null && !cmd.trim().isEmpty()) {
             String cleanCmd = cmd.trim().startsWith("/") ? cmd.trim().substring(1) : cmd.trim();
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.2f);
+            if (cleanCmd.equalsIgnoreCase("back") || cleanCmd.equalsIgnoreCase("deathback")
+                    || cleanCmd.equalsIgnoreCase("return")) {
+                if (plugin.getBackCommand() != null) {
+                    plugin.getBackCommand().executeBack(player);
+                    return;
+                }
+            }
             player.performCommand(cleanCmd.replace("%player%", player.getName()));
         }
     }

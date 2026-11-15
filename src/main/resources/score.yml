@@ -1,0 +1,28 @@
+# ==============================================================
+#                        1V1 SCORE SYSTEM
+# ==============================================================
+# Tracks 1v1 kill/death scores between players and renders
+# score HUDs on the action bar with flicker prevention.
+# ==============================================================
+
+score:
+  auto-reset:
+    enabled: true
+    interval-minutes: 60
+    broadcast: true
+  action-bar:
+    duration-seconds: 15
+    anti-flicker: true # Cancels foreign action bars while 1v1 score is active to prevent flickering
+  request-timeout-seconds: 60
+  messages:
+    no-permission: "%prefix_error%%c_error%<b>ɴᴏ ᴘᴇʀᴍɪssɪᴏɴ</b> %c_muted%» %c_text%You do not have permission."
+    player-not-found: "%prefix_error%%c_error%<b>ɴᴏᴛ ꜰᴏᴜɴᴅ</b> %c_muted%» %c_text%Player %c_primary%<b>%target%</b> %c_text%is not online."
+    cannot-target-self: "%prefix_error%%c_error%<b>ɪɴᴠᴀʟɪᴅ ᴛᴀʀɢᴇᴛ</b> %c_muted%» %c_text%You cannot target yourself."
+    request-sent: "%prefix_success%%c_primary%<b>sᴄᴏʀᴇ</b> %c_muted%» %c_text%Sent reset request to %c_primary%<b>%target%</b>%c_text%."
+    request-received: "%prefix_info%%c_primary%<b>%sender%</b> %c_text%wants to reset 1v1 score %c_muted%» <click:run_command:'/score accept %sender%'><hover:show_text:'%c_success%✔ Click to accept'>%c_success%<b>[✔ ᴀᴄᴄᴇᴘᴛ]</b></hover></click> <click:run_command:'/score decline %sender%'><hover:show_text:'%c_error%✖ Click to decline'>%c_error%<b>[✖ ᴅᴇᴄʟɪɴᴇ]</b></hover></click>"
+    no-pending-request: "%prefix_error%%c_error%<b>ɴᴏ ʀᴇǫᴜᴇsᴛ</b> %c_muted%» %c_text%No pending request from %c_primary%<b>%sender%</b>%c_text%."
+    request-declined: "%prefix_warning%%c_purple%<b>ᴅᴇᴄʟɪɴᴇᴅ</b> %c_muted%» %c_text%Score reset request with %c_primary%<b>%player%</b> %c_text%was declined."
+    score-reset-success: "<white><sprite:items:item/netherite_sword></white> %c_success%<b>sᴄᴏʀᴇ ʀᴇsᴇᴛ</b> %c_muted%» %c_primary%<b>%player1%</b> %c_muted%⚔ %c_primary%<b>%player2%</b>"
+    global-reset-admin: "%prefix_admin%%c_purple%<b>sᴄᴏʀᴇ</b> %c_muted%» %c_success%All 1v1 scores have been reset by an admin."
+    global-reset-auto: "%prefix_info%%c_primary%<b>sᴄᴏʀᴇ</b> %c_muted%» %c_text%All 1v1 scores have been automatically reset."
+    usage: "%prefix_info%%c_text%ᴜsᴀɢᴇ %c_muted%» %c_primary%/score reset <player> %c_muted%│ %c_primary%accept <player> %c_muted%│ %c_primary%resetall"

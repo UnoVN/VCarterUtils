@@ -8,7 +8,9 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.entity.minecart.ExplosiveMinecart;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -17,12 +19,15 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.vehicle.VehicleCreateEvent;
 import org.bukkit.event.vehicle.VehicleDamageEvent;
 import org.bukkit.event.vehicle.VehicleDestroyEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Vector;
 
 import java.util.Map;
 import java.util.UUID;
@@ -32,21 +37,25 @@ public class XbowListener implements Listener {
 
     private final VCarterUtils plugin;
 
-    // Luu tick nguoi choi click dat TNT Minecart len Rail
+    // Stores tick & location when player places a Rail to start an Xbow setup
+    private final Map<UUID, RailPlacement> lastRailPlacements = new ConcurrentHashMap<>();
+    // Stores tick when player right-clicks TNT Minecart onto a Rail
     private final Map<UUID, Integer> lastCartClickTicks = new ConcurrentHashMap<>();
-    // Luu setup cart hien tai cua nguoi choi (de neu dat nhieu cart cung 1 cho thi tinh tu cart dau tien)
+    // Stores current active cart setup of the player (retains startTick of Rail / first Cart)
     private final Map<UUID, CartSetup> activePlayerCartSetup = new ConcurrentHashMap<>();
-    // Luu thong tin cua tung TNT Minecart: Map<CartUUID, CartSetup>
+    // Tracks individual TNT Minecarts: Map<CartUUID, CartSetup>
     private final Map<UUID, CartSetup> trackedCarts = new ConcurrentHashMap<>();
-    // Luu tick nguoi choi dat Lua (Flint & Steel / Fire Charge)
+    // Stores tick when player used Flint & Steel / Fire Charge / placed Fire
     private final Map<UUID, Integer> lastFirePlacedTicks = new ConcurrentHashMap<>();
-    // Luu mui ten ban ra tu Crossbow: Map<ArrowUUID, ArrowShot>
+    // Tracks arrows/projectiles fired from Crossbows: Map<ProjectileUUID, ArrowShot>
     private final Map<UUID, ArrowShot> crossbowArrows = new ConcurrentHashMap<>();
-    // Luu tick ban Crossbow gan nhat cua nguoi choi
+    // Stores tick of the player's most recent Crossbow shot
     private final Map<UUID, Integer> lastCrossbowShotTicks = new ConcurrentHashMap<>();
+    private BukkitTask cleanupTask;
 
     public XbowListener(VCarterUtils plugin) {
         this.plugin = plugin;
+        startCleanupTask();
     }
 
     private boolean isRail(Material mat) {
@@ -56,9 +65,13 @@ public class XbowListener implements Listener {
                 || mat == Material.ACTIVATOR_RAIL;
     }
 
+    private boolean isFireIgniter(Material mat) {
+        return mat == Material.FLINT_AND_STEEL || mat == Material.FIRE_CHARGE;
+    }
+
     /**
-     * Khi nguoi choi dat Rail moi -> Reset setup cu de lan dat Cart tiep theo tinh tick moi.
-     * Khi nguoi choi dat Lua -> Ghi nhan tick dat lua.
+     * 1. When player places a Rail: Record rail placement tick & location as the start of Rail -> Cart -> Flint -> Crossbow.
+     * 2. When player places Fire: Record the ignition tick.
      */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
@@ -66,16 +79,34 @@ public class XbowListener implements Listener {
         if (!manager.isEnabled()) return;
 
         Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
         Material type = event.getBlockPlaced().getType();
         int currentTick = Bukkit.getCurrentTick();
 
         if (isRail(type)) {
-            activePlayerCartSetup.remove(player.getUniqueId());
+            Location railLoc = event.getBlockPlaced().getLocation();
+            RailPlacement existingRail = lastRailPlacements.get(uuid);
+            CartSetup existingSetup = activePlayerCartSetup.get(uuid);
+
+            // If player already placed a cart on an older rail, placing a new rail resets for a new setup
+            if (existingSetup != null && (currentTick - existingSetup.lastCartTick()) > 2) {
+                activePlayerCartSetup.remove(uuid);
+            }
+
+            // Keep first rail tick only if double-placing rails rapidly (<= 5 ticks) right next to each other before cart
+            if (existingRail == null
+                    || existingSetup != null
+                    || (currentTick - existingRail.railTick()) > 5
+                    || existingRail.railLoc().getWorld() == null
+                    || !existingRail.railLoc().getWorld().equals(railLoc.getWorld())
+                    || existingRail.railLoc().distanceSquared(railLoc) > 4.0) {
+                lastRailPlacements.put(uuid, new RailPlacement(currentTick, railLoc.clone()));
+            }
             return;
         }
 
         if (type == Material.FIRE || type == Material.SOUL_FIRE) {
-            lastFirePlacedTicks.put(player.getUniqueId(), currentTick);
+            lastFirePlacedTicks.put(uuid, currentTick);
         }
     }
 
@@ -88,17 +119,53 @@ public class XbowListener implements Listener {
     }
 
     /**
-     * BAT DAU DEM TICK: Tu luc nguoi choi dat TNT Minecart xuong Rail
+     * Tracks right-click interactions with TNT Minecart on Rail and Flint & Steel / Fire Charge.
      */
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onPlayerInteractRailWithCart(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-        ItemStack item = event.getItem();
-        Block clicked = event.getClickedBlock();
-        if (item == null || item.getType() != Material.TNT_MINECART || clicked == null || !isRail(clicked.getType())) {
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerInteract(PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK && event.getAction() != Action.RIGHT_CLICK_AIR) {
             return;
         }
-        lastCartClickTicks.put(event.getPlayer().getUniqueId(), Bukkit.getCurrentTick());
+        if (!plugin.getXbowManager().isEnabled()) return;
+
+        Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+        int nowTick = Bukkit.getCurrentTick();
+
+        ItemStack item = event.getItem();
+        Material mainMat = player.getInventory().getItemInMainHand().getType();
+        Material offMat = player.getInventory().getItemInOffHand().getType();
+
+        if ((item != null && isFireIgniter(item.getType())) || isFireIgniter(mainMat) || isFireIgniter(offMat)) {
+            lastFirePlacedTicks.put(uuid, nowTick);
+        }
+
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            Block clicked = event.getClickedBlock();
+            if (item != null && item.getType() == Material.TNT_MINECART && clicked != null && isRail(clicked.getType())) {
+                lastCartClickTicks.put(uuid, nowTick);
+            }
+        }
+    }
+
+    /**
+     * Catches Flint & Steel or stacked TNT Minecart clicks when the player's crosshair hits the Minecart entity hitbox.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+        if (!plugin.getXbowManager().isEnabled()) return;
+        Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+        int nowTick = Bukkit.getCurrentTick();
+
+        Material mainMat = player.getInventory().getItemInMainHand().getType();
+        Material offMat = player.getInventory().getItemInOffHand().getType();
+
+        if (isFireIgniter(mainMat) || isFireIgniter(offMat)) {
+            lastFirePlacedTicks.put(uuid, nowTick);
+        } else if (mainMat == Material.TNT_MINECART || offMat == Material.TNT_MINECART) {
+            lastCartClickTicks.put(uuid, nowTick);
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -132,69 +199,122 @@ public class XbowListener implements Listener {
     private void registerCartForPlayer(Player player, ExplosiveMinecart cart) {
         XbowManager manager = plugin.getXbowManager();
         if (!manager.isEnabled()) return;
+        if (trackedCarts.containsKey(cart.getUniqueId())) return;
 
         UUID uuid = player.getUniqueId();
         int nowTick = Bukkit.getCurrentTick();
+        Integer clickTick = lastCartClickTicks.get(uuid);
+        int cartTick = (clickTick != null && nowTick - clickTick <= 2) ? clickTick : nowTick;
+        Location cartLoc = cart.getLocation();
 
-        // Neu nguoi choi dat nhieu cart lien tiep (< 10 ticks) tren cung 1 vi tri rail, giu tick cua cart dau tien
+        // Check if player is stacking multiple carts in the same active setup (retain original startTick)
+        int maxTicks = manager.getMaxSetupTicks();
         CartSetup existing = activePlayerCartSetup.get(uuid);
+        Integer lastShot = lastCrossbowShotTicks.get(uuid);
+        boolean shotAlreadyFired = (lastShot != null && existing != null && lastShot >= existing.firstCartTick());
+
         CartSetup setupToUse;
         if (existing != null
-                && (nowTick - existing.cartTick()) <= 10
+                && !shotAlreadyFired
+                && (nowTick - existing.lastCartTick()) <= 30
+                && (nowTick - existing.startTick()) <= maxTicks
                 && existing.cartLoc().getWorld() != null
                 && existing.cartLoc().getWorld().equals(cart.getWorld())
-                && existing.cartLoc().distanceSquared(cart.getLocation()) <= 2.25) {
-            setupToUse = existing;
+                && existing.cartLoc().distanceSquared(cartLoc) <= 16.0) {
+            setupToUse = new CartSetup(existing.ownerUuid(), existing.setupId(), existing.startTick(), existing.firstCartTick(), nowTick, existing.cartLoc());
+            activePlayerCartSetup.put(uuid, setupToUse);
         } else {
-            setupToUse = new CartSetup(uuid, nowTick, nowTick, cart.getLocation().clone());
+            // Determine startTick: if player placed the Rail just before placing this Cart, count from Rail placement tick!
+            int startTick = cartTick;
+            RailPlacement rail = lastRailPlacements.get(uuid);
+            if (rail != null
+                    && cartTick >= rail.railTick()
+                    && (cartTick - rail.railTick()) <= maxTicks
+                    && rail.railLoc().getWorld() != null
+                    && rail.railLoc().getWorld().equals(cart.getWorld())
+                    && rail.railLoc().distanceSquared(cartLoc) <= 25.0) {
+                startTick = rail.railTick();
+            }
+
+            setupToUse = new CartSetup(uuid, nowTick, startTick, cartTick, nowTick, cartLoc.clone());
             activePlayerCartSetup.put(uuid, setupToUse);
         }
 
         trackedCarts.put(cart.getUniqueId(), setupToUse);
+        if (trackedCarts.size() > 128) {
+            trackedCarts.entrySet().removeIf(e -> (nowTick - e.getValue().startTick()) > maxTicks);
+        }
+        if (crossbowArrows.size() > 128) {
+            crossbowArrows.entrySet().removeIf(e -> (nowTick - e.getValue().shotTick()) > maxTicks);
+        }
     }
 
     /**
-     * Ghi nhan mui ten ban ra tu Crossbow
+     * Records projectiles fired from a Crossbow.
      */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onCrossbowShoot(EntityShootBowEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
         ItemStack bow = event.getBow();
         if (bow == null || bow.getType() != Material.CROSSBOW) return;
-        if (!(event.getProjectile() instanceof AbstractArrow arrow)) return;
+        if (!(event.getProjectile() instanceof Projectile proj)) return;
 
         int nowTick = Bukkit.getCurrentTick();
-        crossbowArrows.put(arrow.getUniqueId(), new ArrowShot(player.getUniqueId(), nowTick));
+        crossbowArrows.put(proj.getUniqueId(), new ArrowShot(player.getUniqueId(), nowTick, player.getEyeLocation().clone()));
         lastCrossbowShotTicks.put(player.getUniqueId(), nowTick);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onProjectileLaunch(ProjectileLaunchEvent event) {
-        if (!(event.getEntity() instanceof AbstractArrow arrow)) return;
-        if (!(arrow.getShooter() instanceof Player player)) return;
+        if (!(event.getEntity() instanceof Projectile proj)) return;
+        if (!(proj.getShooter() instanceof Player player)) return;
 
         ItemStack main = player.getInventory().getItemInMainHand();
         ItemStack off = player.getInventory().getItemInOffHand();
         if (main.getType() == Material.CROSSBOW || off.getType() == Material.CROSSBOW) {
             int nowTick = Bukkit.getCurrentTick();
-            crossbowArrows.put(arrow.getUniqueId(), new ArrowShot(player.getUniqueId(), nowTick));
+            crossbowArrows.put(proj.getUniqueId(), new ArrowShot(player.getUniqueId(), nowTick, player.getEyeLocation().clone()));
             lastCrossbowShotTicks.put(player.getUniqueId(), nowTick);
         }
     }
 
     /**
-     * KET THUC DEM TICK: Khi mui ten tu Crossbow di qua lua va ban trung / kich no TNT Minecart
+     * END TICK COUNTER: When the projectile from the Crossbow hits / ignites the TNT Minecart.
      */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onProjectileHitCart(ProjectileHitEvent event) {
-        if (!(event.getEntity() instanceof AbstractArrow arrow)) return;
-        if (!(event.getHitEntity() instanceof ExplosiveMinecart cart)) return;
+        Projectile proj = event.getEntity();
+        ExplosiveMinecart cart = null;
+        if (event.getHitEntity() instanceof ExplosiveMinecart em) {
+            cart = em;
+        } else if (event.getHitBlock() != null) {
+            // Check if projectile hit the rail or block right under/beside an ExplosiveMinecart
+            Location hitLoc = event.getHitBlock().getLocation().add(0.5, 0.5, 0.5);
+            if (hitLoc.getWorld() != null) {
+                for (Entity nearby : hitLoc.getWorld().getNearbyEntities(hitLoc, 1.8, 1.8, 1.8)) {
+                    if (nearby instanceof ExplosiveMinecart em && trackedCarts.containsKey(em.getUniqueId())) {
+                        cart = em;
+                        break;
+                    }
+                }
+            }
+        }
 
-        ArrowShot shot = crossbowArrows.get(arrow.getUniqueId());
+        if (cart == null) {
+            crossbowArrows.remove(proj.getUniqueId());
+            return;
+        }
+
+        ArrowShot shot = resolveArrowShot(proj);
         if (shot == null) return;
 
-        boolean arrowLit = arrow.getFireTicks() > 0 || hasFireBlockNearby(arrow.getLocation(), cart.getLocation());
-        completeSetupIfValid(cart, shot.shooterUuid(), arrowLit);
+        boolean lit = proj.getFireTicks() > 0
+                || cart.getFireTicks() > 0
+                || (proj instanceof Firework)
+                || hasFireBlockNearby(proj.getLocation(), cart.getLocation())
+                || hasFireAlongRay(shot.originLoc(), cart.getLocation());
+        completeSetupIfValid(cart, shot.shooterUuid(), lit);
+        crossbowArrows.remove(proj.getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -207,6 +327,7 @@ public class XbowListener implements Listener {
     public void onVehicleDestroy(VehicleDestroyEvent event) {
         if (!(event.getVehicle() instanceof ExplosiveMinecart cart)) return;
         handleCartHitOrDestroy(cart, event.getAttacker());
+        trackedCarts.remove(cart.getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -217,7 +338,7 @@ public class XbowListener implements Listener {
 
         Integer shotTick = lastCrossbowShotTicks.get(setup.ownerUuid());
         int nowTick = Bukkit.getCurrentTick();
-        if (shotTick != null && shotTick >= setup.cartTick() && (nowTick - shotTick) <= 20) {
+        if (shotTick != null && shotTick >= (setup.firstCartTick() - 2) && (nowTick - shotTick) <= 30) {
             completeSetupIfValid(cart, setup.ownerUuid(), true);
         }
     }
@@ -230,23 +351,48 @@ public class XbowListener implements Listener {
 
         Integer shotTick = lastCrossbowShotTicks.get(setup.ownerUuid());
         int nowTick = Bukkit.getCurrentTick();
-        if (shotTick != null && shotTick >= setup.cartTick() && (nowTick - shotTick) <= 20) {
+        if (shotTick != null && shotTick >= (setup.firstCartTick() - 2) && (nowTick - shotTick) <= 30) {
             completeSetupIfValid(cart, setup.ownerUuid(), true);
         }
+        trackedCarts.remove(cart.getUniqueId());
+    }
+
+    private ArrowShot resolveArrowShot(Projectile proj) {
+        ArrowShot shot = crossbowArrows.get(proj.getUniqueId());
+        if (shot != null) {
+            return shot;
+        }
+        if (proj.getShooter() instanceof Player player) {
+            UUID uuid = player.getUniqueId();
+            Integer lastShot = lastCrossbowShotTicks.get(uuid);
+            int nowTick = Bukkit.getCurrentTick();
+            if (lastShot != null && (nowTick - lastShot) <= 40) {
+                return new ArrowShot(uuid, lastShot, player.getEyeLocation().clone());
+            }
+        }
+        return null;
     }
 
     private void handleCartHitOrDestroy(ExplosiveMinecart cart, Entity attacker) {
-        if (attacker instanceof AbstractArrow arrow) {
-            ArrowShot shot = crossbowArrows.get(arrow.getUniqueId());
+        if (attacker instanceof Projectile proj) {
+            ArrowShot shot = resolveArrowShot(proj);
             if (shot != null) {
-                boolean lit = arrow.getFireTicks() > 0 || hasFireBlockNearby(arrow.getLocation(), cart.getLocation());
+                boolean lit = proj.getFireTicks() > 0
+                        || cart.getFireTicks() > 0
+                        || (proj instanceof Firework)
+                        || hasFireBlockNearby(proj.getLocation(), cart.getLocation())
+                        || hasFireAlongRay(shot.originLoc(), cart.getLocation());
                 completeSetupIfValid(cart, shot.shooterUuid(), lit);
             }
         } else if (attacker instanceof Player player) {
+            CartSetup setup = trackedCarts.get(cart.getUniqueId());
+            if (setup == null) return;
             Integer shotTick = lastCrossbowShotTicks.get(player.getUniqueId());
             int nowTick = Bukkit.getCurrentTick();
-            if (shotTick != null && (nowTick - shotTick) <= 15) {
-                boolean lit = cart.getFireTicks() > 0 || isFireNear(cart.getLocation());
+            if (shotTick != null && shotTick >= (setup.firstCartTick() - 2) && (nowTick - shotTick) <= 15) {
+                boolean lit = cart.getFireTicks() > 0
+                        || isFireNear(cart.getLocation())
+                        || hasFireAlongRay(player.getEyeLocation(), cart.getLocation());
                 completeSetupIfValid(cart, player.getUniqueId(), lit);
             }
         }
@@ -256,35 +402,64 @@ public class XbowListener implements Listener {
         XbowManager manager = plugin.getXbowManager();
         if (!manager.isEnabled()) return;
 
-        CartSetup setup = trackedCarts.remove(cart.getUniqueId());
+        CartSetup setup = trackedCarts.get(cart.getUniqueId());
         if (setup == null || !setup.ownerUuid().equals(shooterUuid)) {
             return;
         }
 
         int nowTick = Bukkit.getCurrentTick();
         int maxTicks = manager.getMaxSetupTicks();
-        int totalTicks = nowTick - setup.cartTick();
+        int totalTicks = nowTick - setup.startTick();
 
         if (totalTicks < 0 || totalTicks > maxTicks) {
+            trackedCarts.remove(cart.getUniqueId());
+            return;
+        }
+
+        Integer shotTick = lastCrossbowShotTicks.get(shooterUuid);
+        if (shotTick == null || shotTick < (setup.firstCartTick() - 2)) {
             return;
         }
 
         Integer fireTick = lastFirePlacedTicks.get(shooterUuid);
-        boolean placedFireRecently = (fireTick != null && fireTick >= setup.cartTick() - 40 && (nowTick - fireTick) <= maxTicks);
+        boolean placedFireRecently = (fireTick != null && fireTick >= setup.startTick() - 20 && (nowTick - fireTick) <= maxTicks);
 
-        if (!fireDetectedOnImpact && !placedFireRecently && !isFireNear(cart.getLocation())) {
+        if (!fireDetectedOnImpact && !placedFireRecently && cart.getFireTicks() <= 0 && !isFireNear(cart.getLocation())) {
             return;
         }
 
-        // Xoa tat ca cart cung setupId de khong bao trung khi dat nhieu cart
+        // Validated! Remove all carts sharing the same setupId to prevent duplicate triggers
+        trackedCarts.remove(cart.getUniqueId());
         trackedCarts.entrySet().removeIf(e -> e.getValue().ownerUuid().equals(setup.ownerUuid())
                 && e.getValue().setupId() == setup.setupId());
         activePlayerCartSetup.remove(setup.ownerUuid());
+        lastRailPlacements.remove(setup.ownerUuid());
 
         Player player = Bukkit.getPlayer(setup.ownerUuid());
         if (player != null && player.isOnline()) {
             manager.recordAndDisplayXbow(player, Math.max(1, totalTicks));
         }
+    }
+
+    private boolean hasFireAlongRay(Location start, Location end) {
+        if (start == null || end == null || start.getWorld() == null || !start.getWorld().equals(end.getWorld())) {
+            return false;
+        }
+        double dist = start.distance(end);
+        if (dist <= 0.01 || dist > 12.0) {
+            return isFireNear(start) || isFireNear(end);
+        }
+        Vector dir = end.toVector().subtract(start.toVector()).normalize();
+        Location cursor = start.clone();
+        int steps = (int) Math.ceil(dist * 2.0);
+        for (int i = 0; i <= steps; i++) {
+            Material m = cursor.getBlock().getType();
+            if (m == Material.FIRE || m == Material.SOUL_FIRE) {
+                return true;
+            }
+            cursor.add(dir.clone().multiply(0.5));
+        }
+        return false;
     }
 
     private boolean hasFireBlockNearby(Location loc1, Location loc2) {
@@ -307,19 +482,56 @@ public class XbowListener implements Listener {
         return false;
     }
 
+    public void startCleanupTask() {
+        if (cleanupTask != null) {
+            cleanupTask.cancel();
+        }
+        cleanupTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            int now = Bukkit.getCurrentTick();
+            int maxTicks = plugin.getXbowManager().getMaxSetupTicks();
+            trackedCarts.entrySet().removeIf(e -> (now - e.getValue().startTick()) > maxTicks);
+            crossbowArrows.entrySet().removeIf(e -> (now - e.getValue().shotTick()) > maxTicks);
+            lastRailPlacements.entrySet().removeIf(e -> (now - e.getValue().railTick()) > maxTicks);
+            activePlayerCartSetup.entrySet().removeIf(e -> (now - e.getValue().lastCartTick()) > maxTicks);
+            lastCartClickTicks.entrySet().removeIf(e -> (now - e.getValue()) > 40);
+            lastFirePlacedTicks.entrySet().removeIf(e -> (now - e.getValue()) > maxTicks);
+            lastCrossbowShotTicks.entrySet().removeIf(e -> (now - e.getValue()) > maxTicks);
+        }, 100L, 100L);
+    }
+
+    public void clearAll() {
+        if (cleanupTask != null) {
+            cleanupTask.cancel();
+            cleanupTask = null;
+        }
+        lastRailPlacements.clear();
+        lastCartClickTicks.clear();
+        activePlayerCartSetup.clear();
+        trackedCarts.clear();
+        lastFirePlacedTicks.clear();
+        crossbowArrows.clear();
+        lastCrossbowShotTicks.clear();
+    }
+
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
+        lastRailPlacements.remove(uuid);
         activePlayerCartSetup.remove(uuid);
         lastCartClickTicks.remove(uuid);
         lastFirePlacedTicks.remove(uuid);
         lastCrossbowShotTicks.remove(uuid);
+        trackedCarts.entrySet().removeIf(e -> e.getValue().ownerUuid().equals(uuid));
+        crossbowArrows.entrySet().removeIf(e -> e.getValue().shooterUuid().equals(uuid));
         plugin.getXbowManager().stopActionBarTask(uuid);
     }
 
-    private record CartSetup(UUID ownerUuid, int setupId, int cartTick, Location cartLoc) {
+    private record RailPlacement(int railTick, Location railLoc) {
     }
 
-    private record ArrowShot(UUID shooterUuid, int shotTick) {
+    private record CartSetup(UUID ownerUuid, int setupId, int startTick, int firstCartTick, int lastCartTick, Location cartLoc) {
+    }
+
+    private record ArrowShot(UUID shooterUuid, int shotTick, Location originLoc) {
     }
 }

@@ -36,15 +36,121 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // 1. /setting admin
+        // 1. /setting admin [subcommands]
         if (args.length >= 1 && args[0].equalsIgnoreCase("admin")) {
             if (!player.hasPermission("vcarterutils.admin")) {
                 String noPerm = plugin.getConfig().getString(
                         "score.messages.no-permission",
-                        "<glyph:warning_blue> <#f38ba8>You do not have permission."
+                        "%prefix_error%%c_error%<b>ɴᴏ ᴘᴇʀᴍɪssɪᴏɴ</b> %c_muted%» %c_text%You do not have permission."
                 );
-                player.sendMessage(miniMessage.deserialize(noPerm));
+                player.sendMessage(plugin.parseMessage(noPerm));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                return true;
+            }
+
+            // /setting admin global
+            if (args.length >= 2 && args[1].equalsIgnoreCase("global")) {
+                plugin.getSettingMenuManager().openGlobalDetailMenu(player);
+                player.playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 1.0f, 1.2f);
+                return true;
+            }
+
+            // /setting admin world <world>
+            if (args.length >= 3 && args[1].equalsIgnoreCase("world")) {
+                String targetWorld = args[2];
+                plugin.getSettingMenuManager().openWorldDetailMenu(player, targetWorld);
+                player.playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 1.0f, 1.2f);
+                return true;
+            }
+
+            // /setting admin combat <world> <seconds|off|disable>
+            if (args.length >= 4 && args[1].equalsIgnoreCase("combat")) {
+                String targetWorld = args[2];
+                String valStr = args[3].toLowerCase();
+                var combatManager = plugin.getCombatTagManager();
+                if (valStr.equals("off")) {
+                    combatManager.setWorldForceSeconds(targetWorld, -1);
+                    player.sendMessage(plugin.parseMessage("%prefix_admin%%c_primary%<b>" + targetWorld + "</b> %c_muted%» %c_text%Combat Tag: <#f38ba8><b>✖ ᴏꜰꜰ (ᴅᴇꜰᴀᴜʟᴛ)</b>"));
+                } else if (valStr.equals("disable") || valStr.equals("disabled") || valStr.equals("0")) {
+                    combatManager.setWorldForceSeconds(targetWorld, 0);
+                    player.sendMessage(plugin.parseMessage("%prefix_admin%%c_primary%<b>" + targetWorld + "</b> %c_muted%» %c_text%Combat Tag: <#f38ba8><b>✖ ᴅɪsᴀʙʟᴇᴅ (0s)</b>"));
+                } else {
+                    try {
+                        int sec = Integer.parseInt(valStr);
+                        combatManager.setWorldForceSeconds(targetWorld, sec);
+                        player.sendMessage(plugin.parseMessage("%prefix_admin%%c_primary%<b>" + targetWorld + "</b> %c_muted%» %c_text%Combat Tag set to %c_primary%<b>" + sec + "s</b>%c_text%."));
+                    } catch (NumberFormatException e) {
+                        player.sendMessage(plugin.parseMessage("%prefix_error%%c_error%<b>ɪɴᴠᴀʟɪᴅ</b> %c_muted%» %c_text%Use a number, %c_primary%disable%c_text%, or %c_primary%off%c_text%."));
+                        return true;
+                    }
+                }
+                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.2f);
+                return true;
+            }
+
+            // /setting admin pearl <world> <seconds|off>
+            if (args.length >= 4 && args[1].equalsIgnoreCase("pearl")) {
+                String targetWorld = args[2];
+                String valStr = args[3].toLowerCase();
+                var pearlManager = plugin.getPearlManager();
+                if (valStr.equals("off")) {
+                    pearlManager.setWorldForceSeconds(targetWorld, -1);
+                    player.sendMessage(plugin.parseMessage("%prefix_admin%%c_primary%<b>" + targetWorld + "</b> %c_muted%» %c_text%Pearl Force: <#f38ba8><b>✖ ᴏꜰꜰ</b>"));
+                } else {
+                    try {
+                        int sec = Integer.parseInt(valStr);
+                        pearlManager.setWorldForceSeconds(targetWorld, sec);
+                        player.sendMessage(plugin.parseMessage("%prefix_admin%%c_primary%<b>" + targetWorld + "</b> %c_muted%» %c_text%Pearl cooldown forced to %c_primary%<b>" + sec + "s</b>%c_text%."));
+                    } catch (NumberFormatException e) {
+                        player.sendMessage(plugin.parseMessage("%prefix_error%%c_error%<b>ɪɴᴠᴀʟɪᴅ</b> %c_muted%» %c_text%Use a number or %c_primary%off%c_text%."));
+                        return true;
+                    }
+                }
+                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.2f);
+                return true;
+            }
+
+            // /setting admin mace <world> <seconds|off>
+            if (args.length >= 4 && args[1].equalsIgnoreCase("mace")) {
+                String targetWorld = args[2];
+                String valStr = args[3].toLowerCase();
+                var maceManager = plugin.getMaceManager();
+                if (valStr.equals("off")) {
+                    maceManager.setWorldForceSeconds(targetWorld, -1);
+                    player.sendMessage(plugin.parseMessage("%prefix_admin%%c_primary%<b>" + targetWorld + "</b> %c_muted%» %c_text%Mace Force: <#f38ba8><b>✖ ᴏꜰꜰ</b>"));
+                } else {
+                    try {
+                        int sec = Integer.parseInt(valStr);
+                        maceManager.setWorldForceSeconds(targetWorld, sec);
+                        player.sendMessage(plugin.parseMessage("%prefix_admin%%c_primary%<b>" + targetWorld + "</b> %c_muted%» %c_text%Mace cooldown forced to %c_primary%<b>" + sec + "s</b>%c_text%."));
+                    } catch (NumberFormatException e) {
+                        player.sendMessage(plugin.parseMessage("%prefix_error%%c_error%<b>ɪɴᴠᴀʟɪᴅ</b> %c_muted%» %c_text%Use a number or %c_primary%off%c_text%."));
+                        return true;
+                    }
+                }
+                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.2f);
+                return true;
+            }
+
+            // /setting admin interrupt <world> <on|off|default>
+            if (args.length >= 4 && args[1].equalsIgnoreCase("interrupt")) {
+                String targetWorld = args[2];
+                String valStr = args[3].toLowerCase();
+                var combatManager = plugin.getCombatTagManager();
+                if (valStr.equals("default") || valStr.equals("reset")) {
+                    combatManager.setWorldAntiInterrupt(targetWorld, null);
+                    player.sendMessage(plugin.parseMessage("%prefix_admin%%c_primary%<b>" + targetWorld + "</b> %c_muted%» %c_text%Anti-Interrupt: <#6c7086><b>ᴅᴇꜰᴀᴜʟᴛ</b>"));
+                } else if (valStr.equals("on") || valStr.equals("enable") || valStr.equals("true")) {
+                    combatManager.setWorldAntiInterrupt(targetWorld, true);
+                    player.sendMessage(plugin.parseMessage("%prefix_admin%%c_primary%<b>" + targetWorld + "</b> %c_muted%» %c_text%Anti-Interrupt: <#a6e3a1><b>✔ ᴇɴᴀʙʟᴇᴅ</b>"));
+                } else if (valStr.equals("off") || valStr.equals("disable") || valStr.equals("false")) {
+                    combatManager.setWorldAntiInterrupt(targetWorld, false);
+                    player.sendMessage(plugin.parseMessage("%prefix_admin%%c_primary%<b>" + targetWorld + "</b> %c_muted%» %c_text%Anti-Interrupt: <#f38ba8><b>✖ ᴅɪsᴀʙʟᴇᴅ</b>"));
+                } else {
+                    player.sendMessage(plugin.parseMessage("%prefix_error%%c_error%<b>ɪɴᴠᴀʟɪᴅ</b> %c_muted%» %c_text%Use %c_primary%on%c_text%, %c_primary%off%c_text%, or %c_primary%default%c_text%."));
+                    return true;
+                }
+                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.2f);
                 return true;
             }
 
@@ -71,10 +177,10 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
                 if (seconds < pearlManager.getDefaultSeconds() || !pearlManager.getAvailableOptions().contains(seconds)) {
                     String invalidMsg = plugin.getConfig().getString(
                             "pearl-cooldown.messages.invalid-option",
-                            "<glyph:warning_blue> <#f38ba8>Invalid cooldown! Available: <#89dceb>%options%"
+                            "%prefix_error%%c_error%Invalid option! %c_text%Available %c_muted%» %c_primary%%options%"
                     );
                     String joined = String.join("s, ", pearlManager.getAvailableOptions().stream().map(String::valueOf).toList()) + "s";
-                    player.sendMessage(miniMessage.deserialize(invalidMsg.replace("%options%", joined)));
+                    player.sendMessage(plugin.parseMessage(invalidMsg.replace("%options%", joined)));
                     player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                     return true;
                 }
@@ -82,17 +188,17 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
                 pearlManager.setPlayerPersonalSeconds(player.getUniqueId(), seconds);
                 String raw = plugin.getConfig().getString(
                         "pearl-cooldown.messages.cooldown-changed",
-                        "<glyph:warning_blue> <#a6adc8>Pearl cooldown set to <#89dceb><b>%seconds%s</b><#a6adc8>."
+                        "<white><sprite:items:item/ender_pearl></white> %c_text%Pearl cooldown set to %c_primary%<b>%seconds%s</b>%c_text%."
                 );
-                player.sendMessage(miniMessage.deserialize(raw.replace("%seconds%", String.valueOf(seconds))));
+                player.sendMessage(plugin.parseMessage(raw.replace("%seconds%", String.valueOf(seconds))));
                 player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.2f);
             } catch (NumberFormatException e) {
                 String invalidMsg = plugin.getConfig().getString(
                         "pearl-cooldown.messages.invalid-option",
-                        "<glyph:warning_blue> <#f38ba8>Invalid cooldown! Available: <#89dceb>%options%"
-                );
+                        "%prefix_error%%c_error%Invalid option! %c_text%Available %c_muted%» %c_primary%%options%"
+                    );
                 String joined = String.join("s, ", pearlManager.getAvailableOptions().stream().map(String::valueOf).toList()) + "s";
-                player.sendMessage(miniMessage.deserialize(invalidMsg.replace("%options%", joined)));
+                player.sendMessage(plugin.parseMessage(invalidMsg.replace("%options%", joined)));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             }
             return true;
@@ -116,10 +222,10 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
                 if (seconds < maceManager.getDefaultSeconds() || !maceManager.getAvailableOptions().contains(seconds)) {
                     String invalidMsg = plugin.getConfig().getString(
                             "mace-cooldown.messages.invalid-option",
-                            "<glyph:warning_blue> <#f38ba8>Invalid cooldown! Available: <#89dceb>%options%"
+                            "%prefix_error%%c_error%Invalid option! %c_text%Available %c_muted%» %c_primary%%options%"
                     );
                     String joined = String.join("s, ", maceManager.getAvailableOptions().stream().map(String::valueOf).toList()) + "s";
-                    player.sendMessage(miniMessage.deserialize(invalidMsg.replace("%options%", joined)));
+                    player.sendMessage(plugin.parseMessage(invalidMsg.replace("%options%", joined)));
                     player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                     return true;
                 }
@@ -127,17 +233,17 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
                 maceManager.setPlayerPersonalSeconds(player.getUniqueId(), seconds);
                 String raw = plugin.getConfig().getString(
                         "mace-cooldown.messages.cooldown-changed",
-                        "<glyph:warning_blue> <#a6adc8>Mace cooldown set to <#89dceb><b>%seconds%s</b><#a6adc8>."
+                        "<white><sprite:items:item/mace></white> %c_text%Mace cooldown set to %c_primary%<b>%seconds%s</b>%c_text%."
                 );
-                player.sendMessage(miniMessage.deserialize(raw.replace("%seconds%", String.valueOf(seconds))));
+                player.sendMessage(plugin.parseMessage(raw.replace("%seconds%", String.valueOf(seconds))));
                 player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.2f);
             } catch (NumberFormatException e) {
                 String invalidMsg = plugin.getConfig().getString(
                         "mace-cooldown.messages.invalid-option",
-                        "<glyph:warning_blue> <#f38ba8>Invalid cooldown! Available: <#89dceb>%options%"
-                );
+                        "%prefix_error%%c_error%Invalid option! %c_text%Available %c_muted%» %c_primary%%options%"
+                    );
                 String joined = String.join("s, ", maceManager.getAvailableOptions().stream().map(String::valueOf).toList()) + "s";
-                player.sendMessage(miniMessage.deserialize(invalidMsg.replace("%options%", joined)));
+                player.sendMessage(plugin.parseMessage(invalidMsg.replace("%options%", joined)));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             }
             return true;
@@ -154,20 +260,20 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
 
         String titleRaw = plugin.getConfig().getString(
                 configPrefix + ".messages.locked-title",
-                "<#f38ba8><b>COOLDOWN LOCKED!</b>"
+                "%c_error%<b>ᴄᴏᴏʟᴅᴏᴡɴ ʟᴏᴄᴋᴇᴅ</b>"
         );
         String subtitleRaw = isWorldForce
                 ? plugin.getConfig().getString(
                         configPrefix + ".messages.locked-subtitle-world",
-                        "<#f9e2af>Forced in this world: <#89dceb><b>%forced%s</b>"
+                        "%c_text%Forced in %c_primary%%world% %c_muted%» %c_warning%<b>%forced%s</b>"
                   )
                 : plugin.getConfig().getString(
                         configPrefix + ".messages.locked-subtitle-global",
-                        "<#f9e2af>Forced globally by Admin: <#89dceb><b>%forced%s</b>"
+                        "%c_text%Forced Globally %c_muted%» %c_warning%<b>%forced%s</b>"
                   );
 
-        Component titleComp = miniMessage.deserialize(titleRaw.replace("%forced%", String.valueOf(forcedSec)));
-        Component subtitleComp = miniMessage.deserialize(
+        Component titleComp = plugin.parseMessage(titleRaw.replace("%forced%", String.valueOf(forcedSec)));
+        Component subtitleComp = plugin.parseMessage(
                 subtitleRaw.replace("%forced%", String.valueOf(forcedSec))
                            .replace("%world%", player.getWorld().getName())
         );
@@ -178,14 +284,14 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
         String chatRaw = isWorldForce
                 ? plugin.getConfig().getString(
                         configPrefix + ".messages.locked-chat-world",
-                        "<glyph:warning_blue> <#f38ba8><b>CANNOT CHANGE!</b> <#a6adc8>Cooldown is forced to <#89dceb><b>%forced%s</b> <#a6adc8>in this world."
+                        "%prefix_error%%c_error%<b>ʟᴏᴄᴋᴇᴅ</b> %c_muted%» %c_text%Cooldown is forced to %c_primary%<b>%forced%s</b> %c_text%in this world."
                   )
                 : plugin.getConfig().getString(
                         configPrefix + ".messages.locked-chat-global",
-                        "<glyph:warning_blue> <#f38ba8><b>CANNOT CHANGE!</b> <#a6adc8>Cooldown is forced globally to <#89dceb><b>%forced%s</b><#a6adc8>."
+                        "%prefix_error%%c_error%<b>ʟᴏᴄᴋᴇᴅ</b> %c_muted%» %c_text%Cooldown is forced globally to %c_primary%<b>%forced%s</b>%c_text%."
                   );
 
-        player.sendMessage(miniMessage.deserialize(
+        player.sendMessage(plugin.parseMessage(
                 chatRaw.replace("%forced%", String.valueOf(forcedSec))
                        .replace("%world%", player.getWorld().getName())
         ));
@@ -196,30 +302,56 @@ public class SettingCommand implements CommandExecutor, TabCompleter {
         List<String> completions = new ArrayList<>();
         if (args.length == 1) {
             String input = args[0].toLowerCase();
-            if ("pearl".startsWith(input)) {
-                completions.add("pearl");
-            }
-            if ("mace".startsWith(input)) {
-                completions.add("mace");
-            }
-            if (sender.hasPermission("vcarterutils.admin") && "admin".startsWith(input)) {
-                completions.add("admin");
-            }
+            if ("pearl".startsWith(input)) completions.add("pearl");
+            if ("mace".startsWith(input)) completions.add("mace");
+            if (sender.hasPermission("vcarterutils.admin") && "admin".startsWith(input)) completions.add("admin");
         } else if (args.length == 2) {
             String input = args[1].toLowerCase();
             if (args[0].equalsIgnoreCase("pearl")) {
                 for (int opt : plugin.getPearlManager().getAvailableOptions()) {
                     String s = String.valueOf(opt);
-                    if (s.startsWith(input)) {
-                        completions.add(s);
-                    }
+                    if (s.startsWith(input)) completions.add(s);
                 }
             } else if (args[0].equalsIgnoreCase("mace")) {
                 for (int opt : plugin.getMaceManager().getAvailableOptions()) {
                     String s = String.valueOf(opt);
-                    if (s.startsWith(input)) {
-                        completions.add(s);
-                    }
+                    if (s.startsWith(input)) completions.add(s);
+                }
+            } else if (args[0].equalsIgnoreCase("admin") && sender.hasPermission("vcarterutils.admin")) {
+                for (String sub : List.of("combat", "pearl", "mace", "interrupt", "world", "global")) {
+                    if (sub.startsWith(input)) completions.add(sub);
+                }
+            }
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("admin") && sender.hasPermission("vcarterutils.admin")) {
+            String input = args[2].toLowerCase();
+            for (org.bukkit.World w : org.bukkit.Bukkit.getWorlds()) {
+                if (w.getName().toLowerCase().startsWith(input)) completions.add(w.getName());
+            }
+        } else if (args.length == 4 && args[0].equalsIgnoreCase("admin") && sender.hasPermission("vcarterutils.admin")) {
+            String sub = args[1].toLowerCase();
+            String input = args[3].toLowerCase();
+            if (sub.equals("combat")) {
+                for (int opt : plugin.getCombatTagManager().getAvailableOptions()) {
+                    String s = String.valueOf(opt);
+                    if (s.startsWith(input)) completions.add(s);
+                }
+                if ("disable".startsWith(input)) completions.add("disable");
+                if ("off".startsWith(input)) completions.add("off");
+            } else if (sub.equals("pearl")) {
+                for (int opt : plugin.getPearlManager().getAvailableOptions()) {
+                    String s = String.valueOf(opt);
+                    if (s.startsWith(input)) completions.add(s);
+                }
+                if ("off".startsWith(input)) completions.add("off");
+            } else if (sub.equals("mace")) {
+                for (int opt : plugin.getMaceManager().getAvailableOptions()) {
+                    String s = String.valueOf(opt);
+                    if (s.startsWith(input)) completions.add(s);
+                }
+                if ("off".startsWith(input)) completions.add("off");
+            } else if (sub.equals("interrupt")) {
+                for (String s : List.of("on", "off", "default")) {
+                    if (s.startsWith(input)) completions.add(s);
                 }
             }
         }

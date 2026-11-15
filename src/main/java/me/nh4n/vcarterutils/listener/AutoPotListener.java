@@ -1,6 +1,7 @@
 package me.nh4n.vcarterutils.listener;
 
 import me.nh4n.vcarterutils.VCarterUtils;
+import me.nh4n.vcarterutils.hook.FoCombatTagHook;
 import me.nh4n.vcarterutils.manager.LobbyHotbarManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -44,20 +45,21 @@ public class AutoPotListener implements Listener {
         if (isKitLoadCommand(msg)) {
             Player player = event.getPlayer();
             plugin.getLobbyHotbarManager().onPlayerLoadKit(player);
-            scheduleKitProcess(player, false);
+            boolean inCombat = FoCombatTagHook.isTagged(player);
+            scheduleKitProcess(player, false, inCombat);
         }
     }
 
     /**
-     * Khi nguoi choi hoi sinh:
-     * Doi 5 ticks cho PerPlayerKit nap day du kit vao kho do,
-     * sau do chup Snapshot kit, luu 9 o Hotbar cua kit do vao savedHotbars roi moi dat Lobby Hotbar!
+     * When a player respawns:
+     * Wait 5 ticks for PerPlayerKit to load kit contents into the inventory,
+     * then capture a snapshot of the kit and apply Lobby Hotbar if in a lobby world.
      */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
         plugin.getTotemManager().resetActivations(player.getUniqueId());
-        scheduleKitProcess(player, true);
+        scheduleKitProcess(player, true, false);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -151,7 +153,11 @@ public class AutoPotListener implements Listener {
         return false;
     }
 
-    private void scheduleKitProcess(Player player, boolean fromRespawn) {
+    public void scheduleKitProcess(Player player, boolean fromRespawn) {
+        scheduleKitProcess(player, fromRespawn, !fromRespawn && FoCombatTagHook.isTagged(player));
+    }
+
+    public void scheduleKitProcess(Player player, boolean fromRespawn, boolean inCombatOnTrigger) {
         UUID uuid = player.getUniqueId();
 
         BukkitTask oldTask = activeScanners.remove(uuid);
@@ -159,14 +165,16 @@ public class AutoPotListener implements Listener {
             oldTask.cancel();
         }
 
-        plugin.getTotemManager().resetActivations(uuid);
+        if (!inCombatOnTrigger) {
+            plugin.getTotemManager().resetActivations(uuid);
 
-        if (plugin.getPearlManager().isEnabled() && plugin.getPearlManager().isClearOnKitLoad()) {
-            plugin.getPearlManager().clearCooldown(player);
-        }
+            if (plugin.getPearlManager().isEnabled() && plugin.getPearlManager().isClearOnKitLoad()) {
+                plugin.getPearlManager().clearCooldown(player);
+            }
 
-        if (plugin.getMaceManager().isEnabled() && plugin.getMaceManager().isClearOnKitLoad()) {
-            plugin.getMaceManager().clearCooldown(player);
+            if (plugin.getMaceManager().isEnabled() && plugin.getMaceManager().isClearOnKitLoad()) {
+                plugin.getMaceManager().clearCooldown(player);
+            }
         }
 
         BukkitTask task = new BukkitRunnable() {
@@ -179,20 +187,24 @@ public class AutoPotListener implements Listener {
                     return;
                 }
 
-                // 1. Kiem tra gioi han Totem cua bo kit PerPlayerKit vua nap
+                // 1. Enforce totem limits for the loaded kit
                 plugin.getTotemManager().enforceInventoryLimit(player);
 
-                // 2. Dong bo hieu ung thuoc AutoPot
-                if (isAutoPotEnabledFor(player)) {
+                // 2. Synchronize potion effects for AutoPot
+                boolean inCombatNow = FoCombatTagHook.isTagged(player);
+                boolean combatBlocked = !fromRespawn && (inCombatOnTrigger || inCombatNow)
+                        && plugin.getConfig().getBoolean("autopot.disable-in-combat", true);
+
+                if (isAutoPotEnabledFor(player) && !combatBlocked) {
                     syncKitEffects(player);
                 }
 
-                // 3. Chup Snapshot day du 41 slots cua bo kit truoc khi thay Lobby Hotbar
+                // 3. Take inventory snapshot for Regear
                 if (!lobbyManager.hasAnyLobbyItem(player)) {
                     plugin.getRegearManager().saveKitSnapshot(player);
                 }
 
-                // 4. Neu day la lan hoi sinh ve Lobby World -> Luu 9 o Hotbar cua kit vua nap va thay bang Lobby Hotbar
+                // 4. If respawning into a lobby world, apply Lobby Hotbar
                 if (fromRespawn) {
                     lobbyManager.unmarkRespawning(uuid);
                     if (lobbyManager.isLobbyWorld(player.getWorld()) && lobbyManager.isEnabled() && lobbyManager.isPlayerEnabled(uuid)) {

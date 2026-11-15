@@ -1,0 +1,24 @@
+# ==============================================================
+#                     TRAINING MODE SYSTEM
+# ==============================================================
+# Practice features: infinite totem, infinite blocks/rails,
+# auto refill hotbar, invulnerability, and crossbow reload.
+# Automatically auto-disables upon entering PvP combat.
+# ==============================================================
+
+training:
+  enabled: true
+  disable-in-combat: true
+  blacklisted-worlds:
+    - "ffa_diamond"
+  messages:
+    toggled: "%prefix_info%%c_text%ᴍᴀsᴛᴇʀ ᴛʀᴀɪɴɪɴɢ %c_muted%» %status%"
+    status-enabled: "%c_success%<b>✔ ᴇɴᴀʙʟᴇᴅ</b>"
+    status-disabled: "%c_error%<b>✖ ᴅɪsᴀʙʟᴇᴅ</b>"
+    cannot-in-combat: "%prefix_combat%%c_error%<b>ɪɴ ᴄᴏᴍʙᴀᴛ</b> %c_muted%» %c_text%Training Mode cannot be used during combat."
+    auto-disabled-combat: "%prefix_combat%%c_error%<b>ᴛʀᴀɪɴɪɴɢ ᴅɪsᴀʙʟᴇᴅ</b> %c_muted%» %c_text%Automatically turned off due to PvP combat."
+    blacklisted-world: "%prefix_warning%%c_purple%<b>ʀᴇsᴛʀɪᴄᴛᴇᴅ</b> %c_muted%» %c_text%Training Mode is disabled in this world."
+    option-toggled: "%prefix_info%%c_primary%<b>%option%</b> %c_muted%» %status%"
+
+training-menu:
+  title: "<#6c7086>✦ %c_primary%<b>ᴛʀᴀɪɴɪɴɢ sᴇᴛᴛɪɴɢs</b> <#6c7086>✦"

@@ -27,7 +27,7 @@ public class TotemListener implements Listener {
     }
 
     /**
-     * Chặn kích hoạt Totem nếu đã hết lượt trong lượt kit này
+     * Blocks Totem activation if the player has exceeded the allowed activation limit for this kit.
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityResurrect(EntityResurrectEvent event) {
@@ -40,23 +40,28 @@ public class TotemListener implements Listener {
             return;
         }
 
+        // Training mode hook: If training mode is active, bypass anti-totem activation limits
+        if (plugin.getTrainingManager() != null && plugin.getTrainingManager().isPlayerEnabled(player.getUniqueId())) {
+            return;
+        }
+
         UUID uuid = player.getUniqueId();
         int used = manager.getActivations(uuid);
         int max = manager.getMaxActivations();
 
-        // Neu da kich hoat du so lan cho phep -> Huy hoi sinh, nguoi choi chet binh thuong
+        // If activation limit reached, cancel resurrection so the player dies normally
         if (used >= max) {
             event.setCancelled(true);
             manager.sendActivationLimitMessage(player);
             return;
         }
 
-        // Kich hoat lan dau thanh cong -> ghi nhan 1 lan su dung
+        // Successfully activated: record 1 activation
         manager.recordActivation(uuid);
     }
 
     /**
-     * Chặn nhặt thêm Totem nếu trong người đã có đủ số lượng cho phép
+     * Blocks picking up extra Totems if the player already carries the maximum allowed.
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPickup(EntityPickupItemEvent event) {
@@ -66,6 +71,11 @@ public class TotemListener implements Listener {
 
         TotemManager manager = plugin.getTotemManager();
         if (!manager.isEnabled() || manager.isWorldBlacklisted(player.getWorld())) {
+            return;
+        }
+
+        // Training mode hook: If training mode is active, do not restrict totem pickup
+        if (plugin.getTrainingManager() != null && plugin.getTrainingManager().isPlayerEnabled(player.getUniqueId())) {
             return;
         }
 
@@ -110,6 +120,9 @@ public class TotemListener implements Listener {
     }
 
     private void scheduleTotemLimitCheck(Player player) {
+        if (plugin.getTrainingManager() != null && plugin.getTrainingManager().isPlayerEnabled(player.getUniqueId())) {
+            return;
+        }
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (player.isOnline()) {
                 plugin.getTotemManager().enforceInventoryLimit(player);

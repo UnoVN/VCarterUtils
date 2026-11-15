@@ -23,9 +23,9 @@ public class MaceListener implements Listener {
     }
 
     /**
-     * Xu ly khi nguoi choi tan cong bang Mace:
-     * 1. Neu Mace dang trong thoi gian cooldown -> Huy don danh (neu bat cancel-attack-on-cooldown).
-     * 2. Neu Mace chua cooldown -> Cho phep danh trung va dat goi tin Cooldown Vanilla (lop phu trang).
+     * Handles player attacks using a Mace:
+     * 1. If Mace is currently on cooldown -> Cancels the attack (if cancel-attack-on-cooldown is enabled).
+     * 2. If Mace is not on cooldown -> Allows hit and applies native Vanilla cooldown overlay.
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onMaceAttack(EntityDamageByEntityEvent event) {
@@ -50,7 +50,7 @@ public class MaceListener implements Listener {
             return;
         }
 
-        // 1. Kiem tra xem Mace cua nguoi choi co dang trong thoi gian hoi chieu hay khong
+        // 1. Check if attacker's Mace is on cooldown
         int remainingTicks = attacker.getCooldown(Material.MACE);
         if (remainingTicks > 0) {
             if (manager.isCancelAttackOnCooldown()) {
@@ -61,12 +61,12 @@ public class MaceListener implements Listener {
             return;
         }
 
-        // 2. Neu bat che do chi tinh cooldown khi Smash Attack (roi > 1.5 block)
+        // 2. If smash-attack-only is enabled, verify fall distance (> 1.5 blocks)
         if (manager.isOnlySmashAttack() && !isSmashAttack(attacker)) {
             return;
         }
 
-        // 3. Tinh toan va ap dung Cooldown cho Mace
+        // 3. Calculate and apply Mace cooldown
         int cooldownSeconds = manager.getEffectiveCooldownSeconds(attacker);
         int cooldownTicks = Math.max(0, cooldownSeconds * 20);
 

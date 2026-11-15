@@ -115,7 +115,7 @@ public class MaceManager {
             rawOptions = List.of(1, 3, 5, 6, 8, 10, 15);
         }
 
-        // Chi cho phep cac moc >= default-seconds (khong bao gio cho chinh duoi muc mac dinh)
+        // Only allow options >= default-seconds (never allow setting below server default)
         for (int val : rawOptions) {
             if (val >= def && !availableOptions.contains(val)) {
                 availableOptions.add(val);
@@ -284,6 +284,10 @@ public class MaceManager {
     }
 
     public int cycleWorldForceSeconds(String worldName) {
+        return cycleWorldForceSeconds(worldName, true);
+    }
+
+    public int cycleWorldForceSeconds(String worldName, boolean forward) {
         int current = getForcedWorldSeconds(worldName);
         if (availableOptions.isEmpty()) {
             int next = (current < 0) ? getDefaultSeconds() : -1;
@@ -291,21 +295,39 @@ public class MaceManager {
             return next;
         }
 
-        if (current < 0) {
-            int first = availableOptions.get(0);
-            setWorldForceSeconds(worldName, first);
-            return first;
-        }
+        if (forward) {
+            if (current < 0) {
+                int first = availableOptions.get(0);
+                setWorldForceSeconds(worldName, first);
+                return first;
+            }
 
-        int idx = availableOptions.indexOf(current);
-        if (idx == -1 || idx + 1 >= availableOptions.size()) {
-            setWorldForceSeconds(worldName, -1);
-            return -1;
-        }
+            int idx = availableOptions.indexOf(current);
+            if (idx == -1 || idx + 1 >= availableOptions.size()) {
+                setWorldForceSeconds(worldName, -1);
+                return -1;
+            }
 
-        int next = availableOptions.get(idx + 1);
-        setWorldForceSeconds(worldName, next);
-        return next;
+            int next = availableOptions.get(idx + 1);
+            setWorldForceSeconds(worldName, next);
+            return next;
+        } else {
+            if (current < 0) {
+                int last = availableOptions.get(availableOptions.size() - 1);
+                setWorldForceSeconds(worldName, last);
+                return last;
+            }
+
+            int idx = availableOptions.indexOf(current);
+            if (idx <= 0) {
+                setWorldForceSeconds(worldName, -1);
+                return -1;
+            }
+
+            int prev = availableOptions.get(idx - 1);
+            setWorldForceSeconds(worldName, prev);
+            return prev;
+        }
     }
 
     public int getPlayerPersonalSeconds(UUID uuid) {
@@ -376,11 +398,11 @@ public class MaceManager {
 
         String raw = plugin.getConfig().getString(
                 "mace-cooldown.messages.on-cooldown",
-                "<glyph:warning_blue> <#f38ba8>Mace is on cooldown for <#f9e2af><b>%seconds%s</b><#f38ba8>."
+                "%prefix_warning%%c_error%<b>ᴄᴏᴏʟᴅᴏᴡɴ</b> %c_muted%» %c_text%Mace is on cooldown for %c_warning%<b>%seconds%s</b>%c_text%."
         );
         if (raw != null && !raw.isEmpty()) {
             String secFormatted = String.format(Locale.US, "%.1f", remainingTicks / 20.0);
-            player.sendMessage(miniMessage.deserialize(raw.replace("%seconds%", secFormatted)));
+            player.sendMessage(plugin.parseMessage(raw.replace("%seconds%", secFormatted)));
         }
     }
 

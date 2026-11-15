@@ -6,7 +6,7 @@
 
     <groupId>me.nh4n</groupId>
     <artifactId>VCarterUtils</artifactId>
-    <version>1.0.0</version>
+    <version>1.2.7</version>
     <packaging>jar</packaging>
 
     <name>VCarterUtils</name>
@@ -51,6 +51,14 @@
             <groupId>me.clip</groupId>
             <artifactId>placeholderapi</artifactId>
             <version>2.11.6</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Netty (Provided by Paper server runtime) -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>4.1.100.Final</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

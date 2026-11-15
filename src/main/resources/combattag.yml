@@ -1,0 +1,67 @@
+# ==============================================================
+#                 COMBAT TAG MANAGER SYSTEM
+# ==============================================================
+# Controls combat tag durations, world rules, anti-interrupt protection,
+# and blocked commands during active combat.
+# ==============================================================
+
+combat-tag:
+  enabled: true
+  default-seconds: 15
+  available-options:
+    - 5
+    - 10
+    - 15
+    - 20
+    - 25
+    - 30
+    - 45
+    - 60
+
+  global-force:
+    enabled: false
+    seconds: 15
+
+  force-worlds:
+    enabled: true
+    # Per-world custom combat tag timer in seconds
+    # Set to 0 to completely disable combat tag in that world
+    # Set to -1 to use FoCombatTag default
+    worlds:
+      ffa_diamond: 20
+
+  blocked-commands:
+    global:
+      - "spawn"
+      - "tpa"
+      - "tpaccept"
+      - "tpahere"
+      - "tpdeny"
+      - "home"
+      - "sethome"
+      - "warp"
+      - "warps"
+      - "kit"
+      - "kits"
+      - "regear"
+      - "lobby"
+      - "hub"
+      - "suicide"
+    worlds:
+      world:
+        - "fly"
+
+  anti-interrupt:
+    # Master switch for 1v1 combat interruption protection
+    enabled: true
+    # Per-world override: true (ON), false (OFF). If not listed, uses global default.
+    worlds:
+      world: true
+    messages:
+      interrupt-blocked: "%prefix_error%%c_error%<b>ᴄᴏᴍʙᴀᴛ ᴘʀᴏᴛᴇᴄᴛᴇᴅ</b> %c_muted%» %c_text%This player is in an active 1v1 duel."
+      combat-restricted: "%prefix_error%%c_error%<b>ᴅᴜᴇʟ ʟᴏᴄᴋᴇᴅ</b> %c_muted%» %c_text%You are in combat with another opponent."
+
+  messages:
+    command-blocked: "%prefix_combat%%c_error%<b>ɪɴ ᴄᴏᴍʙᴀᴛ</b> %c_muted%» %c_text%Wait %c_warning%<b>%seconds%s</b> %c_text%before using commands."
+    cooldown-changed: "%prefix_info%%c_text%ᴄᴏᴍʙᴀᴛ ᴛɪᴍᴇʀ %c_muted%» %c_primary%<b>%seconds%s</b>"
+    invalid-option: "%prefix_error%%c_error%<b>ɪɴᴠᴀʟɪᴅ ᴛɪᴍᴇʀ</b> %c_muted%» %c_text%Available: %c_primary%%options%"

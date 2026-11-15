@@ -21,10 +21,10 @@ public class PearlListener implements Listener {
     }
 
     /**
-     * Khi nguoi choi nem Ender Pearl:
-     * Vanilla se tu dong set 20 ticks (1s) ngay sau su kien ProjectileLaunchEvent.
-     * Chung ta chay task o tick ke tiep (1L) de ghi de chinh xac so tick cooldown
-     * bang goi tin Vanilla (hien thi lop phu trang giong het luc khien bi disable).
+     * When a player launches an Ender Pearl:
+     * Vanilla automatically applies 20 ticks (1s) right after ProjectileLaunchEvent.
+     * We run a task on the next tick to override the cooldown with the exact configured duration
+     * using the native Vanilla cooldown overlay.
      */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPearlLaunch(ProjectileLaunchEvent event) {

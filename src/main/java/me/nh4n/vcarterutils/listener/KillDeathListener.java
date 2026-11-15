@@ -27,6 +27,7 @@ public class KillDeathListener implements Listener {
     private final Map<UUID, BukkitTask> activeActionBarTasks = new ConcurrentHashMap<>();
     private final Map<UUID, Component> pendingRespawnMessages = new ConcurrentHashMap<>();
 
+
     // Bang mau: Killer (#e64553), Ti so (Trang #ffffff), Victim (#04a5e5)
     private static final TextColor COLOR_KILLER = TextColor.fromHexString("#e64553");
     private static final TextColor COLOR_SCORE  = NamedTextColor.WHITE;
@@ -34,6 +35,11 @@ public class KillDeathListener implements Listener {
 
     public KillDeathListener(VCarterUtils plugin) {
         this.plugin = plugin;
+    }
+
+    public boolean isScoreActive(UUID uuid) {
+        if (uuid == null) return false;
+        return activeActionBarTasks.containsKey(uuid);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -51,7 +57,7 @@ public class KillDeathListener implements Listener {
         int killerScore = manager.getKillsAgainst(killer.getUniqueId(), victim.getUniqueId());
         int victimScore = manager.getKillsAgainst(victim.getUniqueId(), killer.getUniqueId());
 
-        // Format: &#e64553<Killer> &f<Score> - <Score> &#04a5e5<Victim> (khong bold)
+        // Format: &#e64553<Killer> &f<Score> - <Score> &#04a5e5<Victim>
         Component actionBarComponent = Component.text()
                 .append(Component.text(killer.getName(), COLOR_KILLER))
                 .append(Component.text(" "))
@@ -60,10 +66,12 @@ public class KillDeathListener implements Listener {
                 .append(Component.text(victim.getName(), COLOR_VICTIM))
                 .build();
 
-        // Nguoi ha guc: Hien thi 15 giay
-        startPersistentActionBar(killer, actionBarComponent, 15);
+        int duration = plugin.getConfig().getInt("score.action-bar.duration-seconds", 15);
 
-        // Nguoi bi ha guc: Luu lai cho den khi bam Respawn
+        // Killer: Display for duration seconds
+        startPersistentActionBar(killer, actionBarComponent, duration);
+
+        // Victim: Store until player respawns
         pendingRespawnMessages.put(victim.getUniqueId(), actionBarComponent);
     }
 
@@ -73,9 +81,10 @@ public class KillDeathListener implements Listener {
         Component msg = pendingRespawnMessages.remove(player.getUniqueId());
 
         if (msg != null) {
+            int duration = plugin.getConfig().getInt("score.action-bar.duration-seconds", 15);
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (player.isOnline()) {
-                    startPersistentActionBar(player, msg, 15);
+                    startPersistentActionBar(player, msg, duration);
                 }
             }, 7L);
         }
@@ -93,20 +102,25 @@ public class KillDeathListener implements Listener {
         stopActionBarTask(uuid);
 
         BukkitTask task = new BukkitRunnable() {
-            int secondsPassed = 0;
+            int ticksPassed = 0;
+            final int maxTicks = durationSeconds * 20;
 
             @Override
             public void run() {
-                if (!player.isOnline() || secondsPassed >= durationSeconds) {
+                if (!player.isOnline() || ticksPassed >= maxTicks) {
                     activeActionBarTasks.remove(uuid);
                     cancel();
                     return;
                 }
 
+                if (plugin.getActionBarFilter() != null) {
+                    plugin.getActionBarFilter().markScoreActionBar(uuid);
+                }
                 player.sendActionBar(component);
-                secondsPassed++;
+
+                ticksPassed += 10;
             }
-        }.runTaskTimer(plugin, 0L, 20L);
+        }.runTaskTimer(plugin, 0L, 10L); // Send every 10 ticks (0.5s) for smooth display without fade
 
         activeActionBarTasks.put(uuid, task);
     }

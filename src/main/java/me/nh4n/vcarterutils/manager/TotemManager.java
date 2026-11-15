@@ -70,7 +70,7 @@ public class TotemManager {
     }
 
     /**
-     * Dem tong so totem nguoi choi dang giu (bao gom inventory + offhand)
+     * Counts the total number of totems the player is carrying (including inventory and offhand).
      */
     public int countTotems(Player player) {
         int count = 0;
@@ -84,10 +84,15 @@ public class TotemManager {
     }
 
     /**
-     * Xu ly neu nguoi choi co nhieu hon so totem cho phep trong tui do
+     * Enforces the maximum totem inventory limit for a player.
      */
     public void enforceInventoryLimit(Player player) {
         if (!isEnabled() || isWorldBlacklisted(player.getWorld())) {
+            return;
+        }
+
+        // Training mode hook: If training mode is active, completely disable anti-totem enforcement
+        if (plugin.getTrainingManager() != null && plugin.getTrainingManager().isPlayerEnabled(player.getUniqueId())) {
             return;
         }
 
@@ -102,7 +107,7 @@ public class TotemManager {
         String action = plugin.getConfig().getString("totem.excess-action", "REMOVE").toUpperCase();
         boolean removedAny = false;
 
-        // Uu tien giu lai Totem o Offhand (40) va Hotbar (0-8), xoa/roi cac totem du o Storage (9-35) truoc
+        // Priority: keep Offhand (40) and Hotbar (0-8), remove excess from main inventory storage (9-35) first
         int[] removalOrder = getRemovalSlotOrder();
 
         for (int slot : removalOrder) {
@@ -141,21 +146,21 @@ public class TotemManager {
         if ("DROP".equals(action)) {
             player.getWorld().dropItemNaturally(player.getLocation(), item);
         }
-        // Neu la REMOVE thi khong can lam gi, item da bi xoa khoi inventory
+        // If action is REMOVE, nothing further needed as item is already removed
     }
 
     private int[] getRemovalSlotOrder() {
         int[] order = new int[37];
         int idx = 0;
-        // Xoa o kho do truoc: 35 giam ve 9
+        // Clear storage slots first: 35 down to 9
         for (int i = 35; i >= 9; i--) {
             order[idx++] = i;
         }
-        // Sau do xoa o hotbar: 8 giam ve 0
+        // Then clear hotbar slots: 8 down to 0
         for (int i = 8; i >= 0; i--) {
             order[idx++] = i;
         }
-        // Cuoi cung moi den offhand
+        // Offhand slot (40) is lowest removal priority
         order[idx] = 40;
         return order;
     }
@@ -171,17 +176,17 @@ public class TotemManager {
 
         String raw = plugin.getConfig().getString(
                 "totem.messages.inventory-limit-reached",
-                "<glyph:warning_blue> <#f38ba8>You can only carry <#89dceb>%max%<#f38ba8> Totem of Undying in your inventory!"
+                "%prefix_error%%c_error%<b>ᴛᴏᴛᴇᴍ ʟɪᴍɪᴛ</b> %c_muted%» %c_text%You can only carry %c_primary%<b>%max%</b> %c_text%Totem of Undying."
         );
-        player.sendMessage(miniMessage.deserialize(raw.replace("%max%", String.valueOf(getMaxInInventory()))));
+        player.sendMessage(plugin.parseMessage(raw.replace("%max%", String.valueOf(getMaxInInventory()))));
     }
 
     public void sendActivationLimitMessage(Player player) {
         String raw = plugin.getConfig().getString(
                 "totem.messages.activation-limit-reached",
-                "<glyph:warning_blue> <#f38ba8>You have already used your Totem for this kit! Totem activation denied."
+                "%prefix_error%%c_error%<b>ᴛᴏᴛᴇᴍ ᴅᴇɴɪᴇᴅ</b> %c_muted%» %c_text%You have already used your Totem for this kit."
         );
-        player.sendMessage(miniMessage.deserialize(raw));
+        player.sendMessage(plugin.parseMessage(raw));
         player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
     }
 

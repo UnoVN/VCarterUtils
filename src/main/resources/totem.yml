@@ -1,0 +1,23 @@
+# ==============================================================
+#                 TOTEM & AUTO-POTION SYSTEM
+# ==============================================================
+# Restricts totem inventory carrying capacity and activation count per kit.
+# Controls auto-pot functionality during combat.
+# ==============================================================
+
+totem:
+  enabled: true
+  max-in-inventory: 1
+  max-activations-per-kit: 1
+  excess-action: "REMOVE"
+  blacklisted-worlds:
+    - "ffa_diamond"
+  messages:
+    inventory-limit-reached: "%prefix_error%%c_error%<b>ᴛᴏᴛᴇᴍ ʟɪᴍɪᴛ</b> %c_muted%» %c_text%You can only carry %c_primary%<b>%max%</b> %c_text%Totem in your inventory."
+    activation-limit-reached: "%prefix_error%%c_error%<b>ᴛᴏᴛᴇᴍ ʟɪᴍɪᴛ</b> %c_muted%» %c_text%You already used your Totem for this kit."
+
+autopot:
+  enabled: true
+  disable-in-combat: true
+  blacklisted-worlds:
+    - "ffa_diamond"

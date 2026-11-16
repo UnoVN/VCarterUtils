@@ -136,7 +136,7 @@ public class CombatTagManager {
     public void setGlobalForceEnabled(boolean enabled) {
         this.globalForceEnabled = enabled;
         plugin.getConfig().set("combat-tag.global-force.enabled", enabled);
-        plugin.saveConfig();
+        plugin.saveFeatureConfig("combattag");
     }
 
     public int getGlobalForceSeconds() {
@@ -146,7 +146,7 @@ public class CombatTagManager {
     public void setGlobalForceSeconds(int seconds) {
         this.globalForceSeconds = Math.max(1, seconds);
         plugin.getConfig().set("combat-tag.global-force.seconds", this.globalForceSeconds);
-        plugin.saveConfig();
+        plugin.saveFeatureConfig("combattag");
     }
 
     public int cycleGlobalForceSeconds(boolean forward) {
@@ -171,7 +171,7 @@ public class CombatTagManager {
     public void setDefaultSeconds(int seconds) {
         int clean = Math.max(1, seconds);
         plugin.getConfig().set("combat-tag.default-seconds", clean);
-        plugin.saveConfig();
+        plugin.saveFeatureConfig("combattag");
         reload();
     }
 
@@ -216,7 +216,7 @@ public class CombatTagManager {
             forcedWorldCombatTimers.put(lowerKey, seconds);
             plugin.getConfig().set("combat-tag.force-worlds.worlds." + cleanKey, seconds);
         }
-        plugin.saveConfig();
+        plugin.saveFeatureConfig("combattag");
     }
 
     private Set<String> getConfiguredWorldKeys() {
@@ -384,7 +384,7 @@ public class CombatTagManager {
             if (!globalBlockedCommands.contains(clean)) {
                 globalBlockedCommands.add(clean);
                 plugin.getConfig().set("combat-tag.blocked-commands.global", globalBlockedCommands);
-                plugin.saveConfig();
+                plugin.saveFeatureConfig("combattag");
             }
         } else {
             String lower = worldOrGlobal.trim().toLowerCase();
@@ -392,7 +392,7 @@ public class CombatTagManager {
             if (!list.contains(clean)) {
                 list.add(clean);
                 plugin.getConfig().set("combat-tag.blocked-commands.worlds." + worldOrGlobal.trim(), list);
-                plugin.saveConfig();
+                plugin.saveFeatureConfig("combattag");
             }
         }
     }
@@ -405,7 +405,7 @@ public class CombatTagManager {
             boolean removed = globalBlockedCommands.remove(clean);
             if (removed) {
                 plugin.getConfig().set("combat-tag.blocked-commands.global", globalBlockedCommands);
-                plugin.saveConfig();
+                plugin.saveFeatureConfig("combattag");
             }
             return removed;
         } else {
@@ -415,7 +415,7 @@ public class CombatTagManager {
                 boolean removed = list.remove(clean);
                 if (removed) {
                     plugin.getConfig().set("combat-tag.blocked-commands.worlds." + worldOrGlobal.trim(), list);
-                    plugin.saveConfig();
+                    plugin.saveFeatureConfig("combattag");
                 }
                 return removed;
             }
@@ -434,7 +434,7 @@ public class CombatTagManager {
     public void setAntiInterruptGlobal(boolean enabled) {
         this.antiInterruptGlobal = enabled;
         plugin.getConfig().set("combat-tag.anti-interrupt.enabled", enabled);
-        plugin.saveConfig();
+        plugin.saveFeatureConfig("combattag");
     }
 
     public void toggleAntiInterruptGlobal() {
@@ -477,7 +477,7 @@ public class CombatTagManager {
             worldAntiInterrupt.put(lowerKey, enabled);
             plugin.getConfig().set("combat-tag.anti-interrupt.worlds." + cleanKey, enabled);
         }
-        plugin.saveConfig();
+        plugin.saveFeatureConfig("combattag");
     }
 
     public Boolean toggleWorldAntiInterrupt(String worldName) {

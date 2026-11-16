@@ -15,11 +15,16 @@ public final class MessageUtil {
      * Formats raw message by replacing theme prefixes and Catppuccin color placeholders.
      */
     public static String format(VCarterUtils plugin, String message) {
+        return format(plugin != null ? plugin.getConfig() : null, message);
+    }
+
+    public static String format(FileConfiguration cfg, String message) {
         if (message == null || message.isEmpty()) {
             return "";
         }
-
-        FileConfiguration cfg = plugin.getConfig();
+        if (message.indexOf('%') == -1 || cfg == null) {
+            return message;
+        }
 
         // 1. Prefixes (warning_blue, warning_red, warning_purple)
         String pfxBlue = cfg.getString("theme.prefixes.blue", "<glyph:warning_blue> ");

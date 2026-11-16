@@ -1,17 +1,15 @@
 package me.nh4n.vcarterutils.manager;
 
 import me.nh4n.vcarterutils.VCarterUtils;
+import me.nh4n.vcarterutils.config.PlayerDataManager;
 import me.nh4n.vcarterutils.hook.NexoHook;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -19,15 +17,13 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class LobbyHotbarManager {
 
     private final VCarterUtils plugin;
-    private final MiniMessage miniMessage;
+    private final PlayerDataManager playerData;
     private final NamespacedKey lobbyCmdKey;
 
     private final Set<String> lobbyWorlds = Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -35,36 +31,20 @@ public class LobbyHotbarManager {
     private final Map<UUID, ItemStack[]> savedHotbars = new ConcurrentHashMap<>();
     private final Set<UUID> respawningPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    private File dataFile;
-
     public LobbyHotbarManager(VCarterUtils plugin) {
         this.plugin = plugin;
-        this.miniMessage = MiniMessage.miniMessage();
+        this.playerData = plugin.getPlayerDataManager() != null
+                ? plugin.getPlayerDataManager()
+                : new PlayerDataManager(plugin);
         this.lobbyCmdKey = new NamespacedKey(plugin, "vcarter_lobby_cmd");
-        initDataFile();
-        reload();
-    }
-
-    private void initDataFile() {
-        dataFile = new File(plugin.getDataFolder(), "playerdata.yml");
-        if (!dataFile.exists()) {
-            try {
-                if (plugin.getDataFolder().exists() || plugin.getDataFolder().mkdirs()) {
-                    dataFile.createNewFile();
-                }
-            } catch (IOException e) {
-                plugin.getLogger().warning("Could not create playerdata.yml: " + e.getMessage());
-            }
-        }
         loadFromDataFile();
+        reload();
     }
 
     private void loadFromDataFile() {
         playerToggleSettings.clear();
         savedHotbars.clear();
-        synchronized (VCarterUtils.class) {
-            FileConfiguration cfg = YamlConfiguration.loadConfiguration(dataFile);
-
+        playerData.read(cfg -> {
             ConfigurationSection toggleSec = cfg.getConfigurationSection("lobby-hotbar-enabled");
             if (toggleSec != null) {
                 for (String key : toggleSec.getKeys(false)) {
@@ -99,13 +79,11 @@ public class LobbyHotbarManager {
                     }
                 }
             }
-        }
+        });
     }
 
     public void saveAllDataSync() {
-        if (dataFile == null) return;
-        synchronized (VCarterUtils.class) {
-            FileConfiguration cfg = YamlConfiguration.loadConfiguration(dataFile);
+        playerData.updateSync(cfg -> {
             for (Map.Entry<UUID, Boolean> entry : playerToggleSettings.entrySet()) {
                 cfg.set("lobby-hotbar-enabled." + entry.getKey().toString(), entry.getValue());
             }
@@ -117,50 +95,28 @@ public class LobbyHotbarManager {
                     cfg.set(base + ".slot_" + i, bar[i]);
                 }
             }
-            try {
-                cfg.save(dataFile);
-            } catch (IOException e) {
-                plugin.getLogger().warning("Could not save playerdata.yml: " + e.getMessage());
-            }
-        }
+        });
+        playerData.saveSyncIfDirty();
     }
 
     private void savePlayerHotbarAsync(UUID uuid, ItemStack[] hotbar) {
-        if (dataFile == null) return;
-        final File fileToSave = this.dataFile;
         final ItemStack[] copy = (hotbar != null) ? cloneHotbar(hotbar) : null;
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            synchronized (VCarterUtils.class) {
-                FileConfiguration cfg = YamlConfiguration.loadConfiguration(fileToSave);
-                String base = "saved-hotbars." + uuid.toString();
-                if (copy == null) {
-                    cfg.set(base, null);
-                } else {
-                    for (int i = 0; i < 9; i++) {
-                        cfg.set(base + ".slot_" + i, copy[i]);
-                    }
-                }
-                try {
-                    cfg.save(fileToSave);
-                } catch (IOException ignored) {
+        playerData.updateAndSaveAsync(cfg -> {
+            String base = "saved-hotbars." + uuid.toString();
+            if (copy == null) {
+                cfg.set(base, null);
+            } else {
+                for (int i = 0; i < 9; i++) {
+                    cfg.set(base + ".slot_" + i, copy[i]);
                 }
             }
         });
     }
 
     private void savePlayerToggleAsync(UUID uuid, boolean enabled) {
-        if (dataFile == null) return;
-        final File fileToSave = this.dataFile;
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            synchronized (VCarterUtils.class) {
-                FileConfiguration cfg = YamlConfiguration.loadConfiguration(fileToSave);
-                cfg.set("lobby-hotbar-enabled." + uuid.toString(), enabled);
-                try {
-                    cfg.save(fileToSave);
-                } catch (IOException ignored) {
-                }
-            }
-        });
+        playerData.updateAndSaveAsync(cfg ->
+                cfg.set("lobby-hotbar-enabled." + uuid.toString(), enabled)
+        );
     }
 
     public void reload() {
@@ -223,7 +179,7 @@ public class LobbyHotbarManager {
         }
 
         plugin.getConfig().set("lobby-hotbar.worlds", currentList);
-        plugin.saveConfig();
+        plugin.saveFeatureConfig("lobby");
         reload();
         return added;
     }
@@ -339,7 +295,7 @@ public class LobbyHotbarManager {
 
             inv.setItem(slot, stack);
 
-            if (isBackItem && canUseBack) {
+            if (isBackItem && canUseBack && itemSec.getBoolean("auto-select-on-respawn", true)) {
                 backItemSlot = slot;
             }
         }
@@ -425,7 +381,7 @@ public class LobbyHotbarManager {
     }
 
     public void clearAll() {
-        saveAllDataSync();
+        playerData.saveSyncIfDirty();
         lobbyWorlds.clear();
         respawningPlayers.clear();
     }

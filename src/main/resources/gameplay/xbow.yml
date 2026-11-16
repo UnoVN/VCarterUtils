@@ -1,8 +1,8 @@
 # ==============================================================
-#                   XBOW TICK SPEED COUNTER
+#           XBOW TICK SPEED COUNTER (gameplay/xbow.yml)
 # ==============================================================
-# Measures and displays setup ticks and seconds on the action bar
-# when loading and preparing a crossbow cart setup.
+# Measures and displays setup ticks & seconds on the action bar
+# when placing rails, TNT minecarts, fire, and shooting crossbow.
 # ==============================================================
 
 xbow-counter:

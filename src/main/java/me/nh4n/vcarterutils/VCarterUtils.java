@@ -6,6 +6,7 @@ import me.nh4n.vcarterutils.command.ScoreCommand;
 import me.nh4n.vcarterutils.command.SettingCommand;
 import me.nh4n.vcarterutils.command.TrainingCommand;
 import me.nh4n.vcarterutils.config.ConfigManager;
+import me.nh4n.vcarterutils.config.PlayerDataManager;
 import me.nh4n.vcarterutils.hook.ActionBarFilter;
 import me.nh4n.vcarterutils.hook.NexoHook;
 import me.nh4n.vcarterutils.hook.VCarterExpansion;
@@ -33,7 +34,6 @@ import me.nh4n.vcarterutils.manager.SettingMenuManager;
 import me.nh4n.vcarterutils.manager.TotemManager;
 import me.nh4n.vcarterutils.manager.TrainingManager;
 import me.nh4n.vcarterutils.manager.XbowManager;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -41,12 +41,11 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.List;
-
 public final class VCarterUtils extends JavaPlugin {
 
     private static VCarterUtils instance;
     private ConfigManager configManager;
+    private PlayerDataManager playerDataManager;
     private ScoreManager scoreManager;
     private RegearManager regearManager;
     private TotemManager totemManager;
@@ -89,9 +88,9 @@ public final class VCarterUtils extends JavaPlugin {
         getConfig().setDefaults(new YamlConfiguration());
         this.configManager = new ConfigManager(this);
         this.configManager.loadAll();
+        this.playerDataManager = new PlayerDataManager(this);
 
         NexoHook.init(this);
-        checkAndMigrateTrainingConfig();
 
         this.scoreManager = new ScoreManager();
         this.regearManager = new RegearManager(this);
@@ -197,6 +196,14 @@ public final class VCarterUtils extends JavaPlugin {
         }
     }
 
+    public void saveFeatureConfig(String featureName) {
+        if (configManager != null) {
+            configManager.saveFeature(featureName);
+        } else {
+            saveConfig();
+        }
+    }
+
     @Override
     public void reloadConfig() {
         super.reloadConfig();
@@ -271,61 +278,6 @@ public final class VCarterUtils extends JavaPlugin {
         }, ticks, ticks);
     }
 
-    private void checkAndMigrateTrainingConfig() {
-        boolean changed = false;
-        if (!getConfig().contains("training")) {
-            getConfig().set("training.enabled", true);
-            getConfig().set("training.disable-in-combat", true);
-            getConfig().set("training.blacklisted-worlds", List.of("ffa_diamond"));
-            getConfig().set("training.messages.toggled", "%prefix_info%%c_text%ᴍᴀsᴛᴇʀ ᴛʀᴀɪɴɪɴɢ %c_muted%» %status%");
-            getConfig().set("training.messages.status-enabled", "%c_success%<b>✔ ᴇɴᴀʙʟᴇᴅ</b>");
-            getConfig().set("training.messages.status-disabled", "%c_error%<b>✖ ᴅɪsᴀʙʟᴇᴅ</b>");
-            getConfig().set("training.messages.cannot-in-combat", "%prefix_combat%%c_error%<b>ɪɴ ᴄᴏᴍʙᴀᴛ</b> %c_muted%» %c_text%Training Mode cannot be used during combat.");
-            getConfig().set("training.messages.auto-disabled-combat", "%prefix_combat%%c_error%<b>ᴛʀᴀɪɴɪɴɢ ᴅɪsᴀʙʟᴇᴅ</b> %c_muted%» %c_text%Automatically turned off due to PvP combat.");
-            getConfig().set("training.messages.blacklisted-world", "%prefix_warning%%c_purple%<b>ʀᴇsᴛʀɪᴄᴛᴇᴅ</b> %c_muted%» %c_text%Training Mode is disabled in this world.");
-            getConfig().set("training.messages.option-toggled", "%prefix_info%%c_primary%<b>%option%</b> %c_muted%» %status%");
-            changed = true;
-        }
-
-        if (getConfig().getInt("setting-menu.items.xbow-counter-toggle.slot", -1) == 13) {
-            getConfig().set("setting-menu.items.xbow-counter-toggle.slot", 14);
-            changed = true;
-        }
-        if (getConfig().getInt("setting-menu.items.lobby-hotbar-toggle.slot", -1) == 14) {
-            getConfig().set("setting-menu.items.lobby-hotbar-toggle.slot", 15);
-            changed = true;
-        }
-
-        if (!getConfig().contains("setting-menu.items.training-mode")) {
-            getConfig().set("setting-menu.items.training-mode.enabled", true);
-            getConfig().set("setting-menu.items.training-mode.type", "TRAINING_MODE_TOGGLE");
-            getConfig().set("setting-menu.items.training-mode.slot", 13);
-            getConfig().set("setting-menu.items.training-mode.material", "TARGET");
-            getConfig().set("setting-menu.items.training-mode.name", "<!italic><white><sprite:items:item/totem_of_undying></white> <#89dceb><b>Training Mode</b>");
-            getConfig().set("setting-menu.items.training-mode.lore", List.of(
-                    "<!italic><#6c7086>ᴘʀᴀᴄᴛɪᴄᴇ & sᴀɴᴅʙᴏx",
-                    "",
-                    "<!italic><#6c7086>▪ <#a6adc8>sᴛᴀᴛᴜs: %training_status%",
-                    "",
-                    "<!italic><#a6adc8>Infinite totem, blocks, auto-refill,",
-                    "<!italic><#a6adc8>consumables, and crossbow auto-reload.",
-                    "",
-                    "<!italic><white><glyph:left_click></white> <#89dceb>ᴏᴘᴛɪᴏɴs <#6c7086>│ <white><glyph:right_click></white> <#a6e3a1>ǫᴜɪᴄᴋ ᴛᴏɢɢʟᴇ"
-            ));
-            changed = true;
-        }
-
-        if (!getConfig().contains("training-menu.title")) {
-            getConfig().set("training-menu.title", "<#6c7086>✦ %c_primary%<b>ᴛʀᴀɪɴɪɴɢ sᴇᴛᴛɪɴɢs</b> <#6c7086>✦");
-            changed = true;
-        }
-
-        if (changed) {
-            saveConfig();
-            getLogger().info("Successfully auto-migrated Training Mode sections into configuration.");
-        }
-    }
-
     @Override
     public void onDisable() {
         if (autoResetTask != null) {
@@ -378,6 +330,9 @@ public final class VCarterUtils extends JavaPlugin {
         }
         if (trainingManager != null) {
             trainingManager.clearAll();
+        }
+        if (playerDataManager != null) {
+            playerDataManager.saveSyncIfDirty();
         }
         getLogger().info("VCarterUtils has been disabled.");
     }
@@ -444,6 +399,10 @@ public final class VCarterUtils extends JavaPlugin {
 
     public ConfigManager getConfigManager() {
         return configManager;
+    }
+
+    public PlayerDataManager getPlayerDataManager() {
+        return playerDataManager;
     }
 
     public String formatMessage(String message) {

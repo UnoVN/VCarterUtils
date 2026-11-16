@@ -5,9 +5,9 @@
 * **Keep Index Updated:** Whenever you add, rename, or modify a class, public method signature, command, or PDC key, update `@GEMINI.md` in the same task.
 * **In-Place Edits & Local Build Verification:** Edit files directly in the workspace. After making code changes, run `mvn test-compile` (or `mvn package -DskipTests`) in the terminal to verify zero compilation or missing-import errors against Java 21 and Paper `1.21.1-R0.1-SNAPSHOT`.
 * **Config & Concurrency Invariants:**
-  * In `@src/main/java/me/nh4n/vcarterutils/config/ConfigManager.java`, modular configuration files (`config.yml`, `regear.yml`, `training.yml`, `lobby.yml`, `combattag.yml`, `totem.yml`, `pearl.yml`, `mace.yml`, `xbow.yml`, `back.yml`, `score.yml`, `menu.yml`) are managed independently with bidirectional synchronization into `plugin.getConfig()`.
-  * In `@src/main/java/me/nh4n/vcarterutils/VCarterUtils.java`, always call `getConfig().setDefaults(new YamlConfiguration())` immediately after `saveDefaultConfig()` and `reloadConfig()` so deleted keys in `config.yml` are never restored from jar defaults.
-  * Synchronize all `playerdata.yml` read/write operations across managers using `synchronized (VCarterUtils.class)`.
+  * In `@src/main/java/me/nh4n/vcarterutils/config/ConfigManager.java`, modular configuration files are organized cleanly into feature folders: `config.yml`, `combat/{combattag,mace,pearl,totem}.yml`, `gameplay/{regear,score,training,xbow}.yml`, `utility/{back,lobby}.yml`, and `gui/menu.yml`, with automatic migration from legacy monolithic `config.yml` and pre-v1.3.0 flat files, dirty-only diff saving (preserving YAML comments), and synchronization into `plugin.getConfig()`.
+  * In `@src/main/java/me/nh4n/vcarterutils/VCarterUtils.java` and `ConfigManager`, always call `setDefaults(new YamlConfiguration())` after loading/reloading so deleted keys in `config.yml` or feature configs are never restored from jar defaults.
+  * Synchronize all `data/playerdata.yml` read/write operations centrally through `@src/main/java/me/nh4n/vcarterutils/config/PlayerDataManager.java` using `synchronized (VCarterUtils.class)`.
 * **Soft-Depend Reflection Safety:** Never hard-import `Nexo` or `FoCombatTag` classes without reflection fallbacks; use `EventExecutor` and reflection (`setAccessible(true)`) so the plugin runs cleanly if soft-depends are absent.
 * **Auto-Commit, Version Bump & Push Tag After Every Update:** After completing any code/config update and verifying compilation, update `@GEMINI.md` if signatures changed, always bump the plugin version in `pom.xml`, `src/main/resources/plugin.yml`, and `@GEMINI.md`, prepend a release entry in `@CHANGELOG.md`, review `git status`, stage changes (`git add -A`), commit cleanly, push to `origin main` (`https://github.com/UnoVN/VCarterUtils`) without force-pushing, and create & push the matching annotated git tag (`v<version>`) so GitHub Actions publishes the GitHub Release automatically.
   * **Release Labeling Rule:** If the update fixes a bug, label it as **Hotfix** (`## [v<version>] - YYYY-MM-DD (Hotfix)` in `@CHANGELOG.md`, producing release title `VCarterUtils v<version> (Hotfix)`). If the update is a normal version/feature/refinement update, just bump the version cleanly (`## [v<version>] - YYYY-MM-DD`, release title `VCarterUtils v<version>`).
@@ -39,7 +39,7 @@
 * **GUI & Lore Formatting:** Use `<white><glyph:left_click></white>` and `<white><glyph:right_click></white>` for click prompts. Always use valid 2D vanilla item atlas names inside `<white><sprite:items:item/...></white>` (`ender_pearl`, `mace`, `netherite_sword`, `totem_of_undying`, `golden_apple`, `tnt_minecart`, `rail`, `crossbow_standby`, `diamond_chestplate`, `shulker_shell`, `compass_16`, `recovery_compass_16`).
 
 ## 3. TECH STACK & CRITICAL INTER-SYSTEM PIPELINES
-* **Plugin Info:** `VCarterUtils` v1.2.9 | Author: `Nh4n` | Main: `me.nh4n.vcarterutils.VCarterUtils` | Java 21 | Compile API: Paper `1.21.1-R0.1-SNAPSHOT` (`api-version: '1.21'`) | Runtime: Paper / Leaf `1.21.11`.
+* **Plugin Info:** `VCarterUtils` v1.3.0 | Author: `Nh4n` | Main: `me.nh4n.vcarterutils.VCarterUtils` | Java 21 | Compile API: Paper `1.21.1-R0.1-SNAPSHOT` (`api-version: '1.21'`) | Runtime: Paper / Leaf `1.21.11`.
 * **Soft-Depends:** `PlaceholderAPI` (2.11.6), `PerPlayerKit` (`/k1`..`/k99`, `/kit`, `/pk`, `/rekit`), `Nexo`, `FoCombatTag`, `Multiverse-Core`, `SlimeWorldManager`, `AdvancedSlimeWorldManager`, `SlimeWorldPlugin`.
 * **Respawn, AutoPot, Regear & Lobby Hotbar Pipeline (Tick-Sensitive):**
   * **Tick 0 (`PlayerDeathEvent`):** `LobbyHotbarManager.markRespawning(uuid)` clears stale `savedHotbars` and blocks `PlayerChangedWorldEvent` from saving an empty hotbar before `PerPlayerKit` loads items. `FoCombatTagHook.untag(player)` and `CombatTagManager.endCombat(uuid)` clear combat state so `/back` works immediately.
@@ -67,10 +67,14 @@
 * `@CHANGELOG.md` — Release notes per version used by GitHub Actions release publishing.
 * `@pom.xml` — Maven build config (Java 21, Paper 1.21.1 API, PlaceholderAPI provided).
 * `@src/main/resources/plugin.yml` — Plugin metadata, commands, permissions, and soft-depends.
-* `@src/main/resources/config.yml` — Centralized global theme (`theme.prefixes`, `theme.colors`), admin messages, fallback defaults.
-* `@src/main/resources/*.yml` — Modular feature configurations: `regear.yml`, `training.yml`, `lobby.yml`, `combattag.yml`, `totem.yml`, `pearl.yml`, `mace.yml`, `xbow.yml`, `back.yml`, `score.yml`, `menu.yml`.
-* `@src/main/java/me/nh4n/vcarterutils/VCarterUtils.java` — Main plugin lifecycle, `reloadPluginConfig()`, `playerdata.yml` sync lock, `formatMessage(String)`, `parseMessage(String)`, and manager/hook getters.
-* `@src/main/java/me/nh4n/vcarterutils/config/ConfigManager.java` — Modular configuration manager handling loading, bidirectional section synchronization with main config, and auto-migration of legacy lobby items and typography (`migrateTypographyAndTheme()`).
+* `@src/main/resources/config.yml` — Centralized global theme (`theme.prefixes`, `theme.colors`), admin messages, folder index.
+* `@src/main/resources/combat/*.yml` — Combat & cooldown configs: `combat/combattag.yml`, `combat/mace.yml`, `combat/pearl.yml`, `combat/totem.yml`.
+* `@src/main/resources/gameplay/*.yml` — Gameplay & practice configs: `gameplay/regear.yml`, `gameplay/score.yml`, `gameplay/training.yml`, `gameplay/xbow.yml`.
+* `@src/main/resources/utility/*.yml` — Navigation & lobby configs: `utility/back.yml`, `utility/lobby.yml`.
+* `@src/main/resources/gui/menu.yml` — `/setting` personal menu & `/setting admin` World Manager GUI config.
+* `@src/main/java/me/nh4n/vcarterutils/VCarterUtils.java` — Main plugin lifecycle, `reloadPluginConfig()`, `saveFeatureConfig(String)`, `getPlayerDataManager()`, `formatMessage(String)`, `parseMessage(String)`, and manager/hook getters.
+* `@src/main/java/me/nh4n/vcarterutils/config/ConfigManager.java` — Folder-organized modular configuration manager handling migration (monolithic + flat files -> folders), deleted-key isolation, dirty-only diff saving (preserving comments), and synchronization with main config.
+* `@src/main/java/me/nh4n/vcarterutils/config/PlayerDataManager.java` — Centralized thread-safe persistence for `data/playerdata.yml` (with legacy root `playerdata.yml` migration, coalesced async writes, and single dirty-checked shutdown flush).
 * `@src/main/java/me/nh4n/vcarterutils/util/MessageUtil.java` — Centralized message formatter and parser replacing `%prefix_...%` (`info`, `blue`, `error`, `red`, `warning`, `purple`, `success`, `admin`, `combat`) and `%c_...%` (`primary`, `success`, `error`, `warning`, `purple`, `text`, `muted`) placeholders dynamically from `config.yml`.
 
 ### Hooks & Packet Filters (`hook/`)

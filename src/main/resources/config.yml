@@ -2,24 +2,30 @@
 #                 VCarterUtils Main Configuration
 #       Catppuccin Pastel Palette & Glyph Integration
 # ==============================================================
-# All feature settings are modularized into dedicated files:
-# - regear.yml       : Shulker Regear inventory restock system
-# - training.yml     : Training Mode & practice settings
-# - lobby.yml        : Lobby hotbar shortcuts & queue items
-# - combattag.yml    : Combat Tag manager & anti-interrupt
-# - totem.yml        : Totem limits & Auto-Potion
-# - pearl.yml        : Ender Pearl cooldowns & world rules
-# - mace.yml         : Mace cooldowns & smash attack rules
-# - xbow.yml         : Crossbow tick speed counter
-# - back.yml         : Death location teleportation
-# - score.yml        : 1v1 score tracking system
-# - menu.yml         : /setting and World Manager menus
+# Plugin Directory Layout:
+#   config.yml                 Global theme, prefixes & admin messages
+#   combat/
+#     combattag.yml            Combat tag durations, blocked cmds, anti-interrupt
+#     mace.yml                 Mace attack cooldowns & world overrides
+#     pearl.yml                Ender Pearl cooldowns & world overrides
+#     totem.yml                Totem inventory/pop limits & Auto-Potion
+#   gameplay/
+#     regear.yml               Shulker Regear inventory restock rules
+#     score.yml                1v1 score tracking & action bar HUD
+#     training.yml             Practice Training Mode & menu settings
+#     xbow.yml                 Crossbow cart tick speed counter
+#   utility/
+#     back.yml                 Death location /back teleportation
+#     lobby.yml                Lobby Hotbar shortcuts & queue items
+#   gui/
+#     menu.yml                 /setting personal menu & World Manager GUIs
+#   data/
+#     playerdata.yml           Persistent player settings & hotbars
 # ==============================================================
 
 # ==============================================================
 #               GLOBAL THEME & MESSAGE FORMATTING
 # ==============================================================
-# Quickly edit prefixes, error prefixes, and colors for all messages!
 # Typography Rule:
 #   - Messages with a <glyph:warning_*> prefix MUST NOT contain
 #     an item sprite (<sprite:items:item/...>) after the prefix.
@@ -27,24 +33,22 @@
 #     without a glyph prefix for clean baseline alignment.
 #
 # Prefix Placeholders:
-#   %prefix% or %prefix_info%    - Blue info notification prefix
-#   %prefix_success%             - Blue success notification prefix
-#   %prefix_error%               - Red error notification prefix
-#   %prefix_combat%              - Red combat alert prefix
-#   %prefix_warning%             - Purple warning notification prefix
-#   %prefix_admin%               - Purple admin & staff prefix
-#   %prefix_blue%                - Explicit <glyph:warning_blue> prefix
-#   %prefix_red%                 - Explicit <glyph:warning_red> prefix
-#   %prefix_purple%              - Explicit <glyph:warning_purple> prefix
+#   %prefix% / %prefix_info%     Blue info notification prefix
+#   %prefix_success%             Blue success notification prefix
+#   %prefix_error%               Red error notification prefix
+#   %prefix_combat%              Red combat alert prefix
+#   %prefix_warning%             Purple warning notification prefix
+#   %prefix_admin%               Purple admin & staff prefix
+#   %prefix_blue% / _red / _purple Explicit glyph prefixes
 #
 # Catppuccin Color Placeholders:
-#   %c_primary%                  - Sky (#89dceb - names, commands, highlights)
-#   %c_success%                  - Green (#a6e3a1 - enabled, success, accept)
-#   %c_error%                    - Red (#f38ba8 - disabled, errors, decline)
-#   %c_warning%                  - Yellow (#f9e2af - timers, cooldowns, presets)
-#   %c_purple%                   - Mauve (#cba6f7 - admin, world rules, accents)
-#   %c_text%                     - Subtext0 (#a6adc8 - main message text)
-#   %c_muted%                    - Overlay0 (#6c7086 - separators, brackets)
+#   %c_primary%                  Sky (#89dceb - names, commands, highlights)
+#   %c_success%                  Green (#a6e3a1 - enabled, success, accept)
+#   %c_error%                    Red (#f38ba8 - disabled, errors, decline)
+#   %c_warning%                  Yellow (#f9e2af - timers, cooldowns, presets)
+#   %c_purple%                   Mauve (#cba6f7 - admin, world rules, accents)
+#   %c_text%                     Subtext0 (#a6adc8 - main message text)
+#   %c_muted%                    Overlay0 (#6c7086 - separators, brackets)
 # ==============================================================
 theme:
   prefixes:

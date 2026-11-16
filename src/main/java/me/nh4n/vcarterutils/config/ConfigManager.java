@@ -1,6 +1,7 @@
 package me.nh4n.vcarterutils.config;
 
 import me.nh4n.vcarterutils.VCarterUtils;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -9,16 +10,30 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.function.Function;
+import java.util.logging.Logger;
 
 /**
- * Manages modular configuration files for VCarterUtils.
- * Splits features into dedicated .yml files while transparently syncing
- * with the Bukkit FileConfiguration for seamless backward compatibility.
+ * Manages modular folder-organized configuration files for VCarterUtils:
+ *   config.yml                  - Global theme & admin messages
+ *   combat/                     - combattag.yml, mace.yml, pearl.yml, totem.yml
+ *   gameplay/                   - regear.yml, score.yml, training.yml, xbow.yml
+ *   utility/                    - back.yml, lobby.yml
+ *   gui/                        - menu.yml
+ *
+ * Syncs all sections cleanly with plugin.getConfig() while keeping deleted keys
+ * suppressed from JAR defaults and preserving untouched files/comments on save.
  */
 public class ConfigManager {
 
     private final VCarterUtils plugin;
+    private final File dataFolder;
+    private final FileConfiguration mainConfig;
+    private final Logger logger;
+    private final Function<String, InputStream> resourceOpener;
     private final Map<String, FeatureConfig> featureConfigs = new LinkedHashMap<>();
 
     public record FeatureConfig(
@@ -29,84 +44,158 @@ public class ConfigManager {
             FileConfiguration configuration
     ) {}
 
+    private record FeatureSpec(String name, String relativePath, List<String> sectionKeys) {
+        String legacyFlatFileName() {
+            int slash = relativePath.lastIndexOf('/');
+            return slash >= 0 ? relativePath.substring(slash + 1) : relativePath;
+        }
+    }
+
+    private static final List<FeatureSpec> FEATURE_SPECS = List.of(
+            new FeatureSpec("config", "config.yml", List.of("admin", "theme")),
+            new FeatureSpec("combattag", "combat/combattag.yml", List.of("combat-tag")),
+            new FeatureSpec("mace", "combat/mace.yml", List.of("mace-cooldown")),
+            new FeatureSpec("pearl", "combat/pearl.yml", List.of("pearl-cooldown")),
+            new FeatureSpec("totem", "combat/totem.yml", List.of("totem", "autopot")),
+            new FeatureSpec("regear", "gameplay/regear.yml", List.of("regear")),
+            new FeatureSpec("score", "gameplay/score.yml", List.of("score")),
+            new FeatureSpec("training", "gameplay/training.yml", List.of("training", "training-menu")),
+            new FeatureSpec("xbow", "gameplay/xbow.yml", List.of("xbow-counter")),
+            new FeatureSpec("back", "utility/back.yml", List.of("back")),
+            new FeatureSpec("lobby", "utility/lobby.yml", List.of("lobby-hotbar")),
+            new FeatureSpec("menu", "gui/menu.yml", List.of("setting-menu", "admin-menu"))
+    );
+
     public ConfigManager(VCarterUtils plugin) {
-        this.plugin = plugin;
+        this(plugin, plugin.getDataFolder(), plugin.getConfig(), plugin.getLogger(), plugin::getResource);
     }
 
     /**
-     * Registers and loads all modular feature configuration files.
+     * Test-friendly constructor allowing standalone verification without CraftBukkit.
+     */
+    public ConfigManager(
+            VCarterUtils plugin,
+            File dataFolder,
+            FileConfiguration mainConfig,
+            Logger logger,
+            Function<String, InputStream> resourceOpener
+    ) {
+        this.plugin = plugin;
+        this.dataFolder = dataFolder;
+        this.mainConfig = mainConfig;
+        this.logger = logger != null ? logger : Logger.getLogger("VCarterUtils");
+        this.resourceOpener = resourceOpener != null ? resourceOpener : (path -> null);
+    }
+
+    /**
+     * Registers, migrates, and loads all modular feature configuration files.
      */
     public void loadAll() {
         featureConfigs.clear();
 
-        // 1. Proactive migration: If server has a legacy monolithic config.yml, split it cleanly
+        // 1. Move any root legacy backup into data/backups/ so root folder stays clean
+        migrateLegacyBackups();
+
+        // 2. If server has a legacy monolithic config.yml, split directly into subfolders
         migrateLegacyMonolithicConfig();
 
-        // 2. Register all feature configuration files and their corresponding section keys
-        registerFeature("config", "config.yml", List.of("admin", "theme"));
-        registerFeature("regear", "regear.yml", List.of("regear"));
-        registerFeature("training", "training.yml", List.of("training", "training-menu"));
-        registerFeature("lobby", "lobby.yml", List.of("lobby-hotbar"));
-        registerFeature("combattag", "combattag.yml", List.of("combat-tag"));
-        registerFeature("totem", "totem.yml", List.of("totem", "autopot"));
-        registerFeature("pearl", "pearl.yml", List.of("pearl-cooldown"));
-        registerFeature("mace", "mace.yml", List.of("mace-cooldown"));
-        registerFeature("xbow", "xbow.yml", List.of("xbow-counter"));
-        registerFeature("back", "back.yml", List.of("back"));
-        registerFeature("score", "score.yml", List.of("score"));
-        registerFeature("menu", "menu.yml", List.of("setting-menu", "admin-menu"));
+        // 3. Migrate pre-v1.3.0 flat root .yml files into their new feature folders
+        migrateFlatFeatureFilesToFolders();
 
-        // 3. Proactive migration: Ensure queue item in lobby.yml is IRON_SWORD and upgrade legacy typography/theme
+        // 4. Register & load all feature configuration files
+        for (FeatureSpec spec : FEATURE_SPECS) {
+            registerFeature(spec.name(), spec.relativePath(), spec.sectionKeys());
+        }
+
+        // 5. Proactive config upgrades
+        migrateMissingTrainingMenuEntries();
         migrateLobbyQueueItem();
         migrateTypographyAndTheme();
 
-        // 4. Merge all feature configurations into plugin.getConfig()
+        // 6. Sync loaded sections into mainConfig without leaking JAR defaults
         syncToMainConfig();
     }
 
-    private void registerFeature(String name, String fileName, List<String> sectionKeys) {
-        File file = new File(plugin.getDataFolder(), fileName);
+    private void registerFeature(String name, String relativePath, List<String> sectionKeys) {
+        File file = new File(dataFolder, relativePath);
         if (!file.exists()) {
-            try {
-                plugin.saveResource(fileName, false);
-            } catch (IllegalArgumentException e) {
-                // If embedded resource does not exist, create empty file
-                try {
-                    if (plugin.getDataFolder().exists() || plugin.getDataFolder().mkdirs()) {
-                        file.createNewFile();
-                    }
-                } catch (IOException ignored) {}
-            }
+            extractOrCreateFile(relativePath, file);
         }
 
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        // Never attach JAR defaults onto live configs so deleted keys (e.g. ffa_diamond) stay deleted
+        config.setDefaults(new YamlConfiguration());
 
-        // Apply defaults from JAR resource if available
-        InputStream defStream = plugin.getResource(fileName);
-        if (defStream != null) {
-            config.setDefaults(YamlConfiguration.loadConfiguration(new InputStreamReader(defStream, StandardCharsets.UTF_8)));
+        featureConfigs.put(name, new FeatureConfig(name, relativePath, sectionKeys, file, config));
+    }
+
+    private void extractOrCreateFile(String relativePath, File targetFile) {
+        File parent = targetFile.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
         }
 
-        featureConfigs.put(name, new FeatureConfig(name, fileName, sectionKeys, file, config));
+        if (plugin != null) {
+            try {
+                plugin.saveResource(relativePath, false);
+                if (targetFile.exists()) {
+                    return;
+                }
+            } catch (IllegalArgumentException ignored) {
+                // Fall back to stream copy or empty file
+            }
+        }
+
+        try (InputStream stream = resourceOpener.apply(relativePath)) {
+            if (stream != null) {
+                Files.copy(stream, targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                return;
+            }
+        } catch (IOException e) {
+            logger.warning("Could not extract default resource " + relativePath + ": " + e.getMessage());
+        }
+
+        try {
+            targetFile.createNewFile();
+        } catch (IOException ignored) {
+        }
+    }
+
+    private void migrateLegacyBackups() {
+        File oldBackup = new File(dataFolder, "config.yml.legacy-backup");
+        if (oldBackup.exists() && oldBackup.isFile()) {
+            File targetBackup = new File(dataFolder, "data/backups/config.yml.legacy-backup");
+            if (!targetBackup.exists()) {
+                File parent = targetBackup.getParentFile();
+                if (parent != null && !parent.exists()) {
+                    parent.mkdirs();
+                }
+                try {
+                    Files.move(oldBackup.toPath(), targetBackup.toPath());
+                    logger.info("Moved config.yml.legacy-backup -> data/backups/config.yml.legacy-backup");
+                } catch (IOException ignored) {
+                }
+            }
+        }
     }
 
     /**
-     * Checks if a legacy monolithic config.yml exists and splits its sections into individual files,
-     * then cleans up config.yml so that only admin settings remain.
+     * Checks if a legacy monolithic config.yml exists and splits its sections into individual
+     * subfolder feature files, then cleans up config.yml so only theme & admin remain.
      */
     private void migrateLegacyMonolithicConfig() {
-        File configFile = new File(plugin.getDataFolder(), "config.yml");
+        File configFile = new File(dataFolder, "config.yml");
         if (!configFile.exists()) {
             return;
         }
 
         YamlConfiguration mainYaml = YamlConfiguration.loadConfiguration(configFile);
-        List<String> legacyKeys = List.of(
-                "regear", "training", "training-menu", "lobby-hotbar",
-                "combat-tag", "totem", "autopot", "pearl-cooldown",
-                "mace-cooldown", "xbow-counter", "back", "score",
-                "setting-menu", "admin-menu"
-        );
+        List<String> legacyKeys = new ArrayList<>();
+        for (FeatureSpec spec : FEATURE_SPECS) {
+            if (!"config".equals(spec.name())) {
+                legacyKeys.addAll(spec.sectionKeys());
+            }
+        }
 
         boolean hasLegacyKeys = false;
         for (String key : legacyKeys) {
@@ -120,70 +209,183 @@ public class ConfigManager {
             return;
         }
 
-        plugin.getLogger().info("Detected legacy monolithic config.yml. Backing up and modularizing into dedicated .yml files...");
+        logger.info("Detected legacy monolithic config.yml. Backing up and modularizing into feature folders...");
 
-        // Backup legacy config.yml
-        File backupFile = new File(plugin.getDataFolder(), "config.yml.legacy-backup");
+        File backupFile = new File(dataFolder, "data/backups/config.yml.legacy-backup");
         if (!backupFile.exists()) {
+            File backupParent = backupFile.getParentFile();
+            if (backupParent != null && !backupParent.exists()) {
+                backupParent.mkdirs();
+            }
             try {
                 mainYaml.save(backupFile);
-                plugin.getLogger().info("Backed up legacy config.yml to config.yml.legacy-backup");
-            } catch (IOException ignored) {}
+                logger.info("Backed up legacy config.yml to data/backups/config.yml.legacy-backup");
+            } catch (IOException ignored) {
+            }
         }
 
-        // Migrate sections to respective feature files if the feature file doesn't exist yet
-        migrateSectionToFeatureFile(mainYaml, "regear.yml", List.of("regear"));
-        migrateSectionToFeatureFile(mainYaml, "training.yml", List.of("training", "training-menu"));
-        migrateSectionToFeatureFile(mainYaml, "lobby.yml", List.of("lobby-hotbar"));
-        migrateSectionToFeatureFile(mainYaml, "combattag.yml", List.of("combat-tag"));
-        migrateSectionToFeatureFile(mainYaml, "totem.yml", List.of("totem", "autopot"));
-        migrateSectionToFeatureFile(mainYaml, "pearl.yml", List.of("pearl-cooldown"));
-        migrateSectionToFeatureFile(mainYaml, "mace.yml", List.of("mace-cooldown"));
-        migrateSectionToFeatureFile(mainYaml, "xbow.yml", List.of("xbow-counter"));
-        migrateSectionToFeatureFile(mainYaml, "back.yml", List.of("back"));
-        migrateSectionToFeatureFile(mainYaml, "score.yml", List.of("score"));
-        migrateSectionToFeatureFile(mainYaml, "menu.yml", List.of("setting-menu", "admin-menu"));
+        for (FeatureSpec spec : FEATURE_SPECS) {
+            if (!"config".equals(spec.name())) {
+                migrateSectionToFeatureFile(mainYaml, spec.relativePath(), spec.sectionKeys());
+            }
+        }
 
-        // Clean legacy sections from main config.yml so it remains minimal
         for (String key : legacyKeys) {
             mainYaml.set(key, null);
         }
 
         try {
             mainYaml.save(configFile);
-            plugin.getLogger().info("Cleaned legacy sections from config.yml. Configurations are now fully modular.");
+            logger.info("Cleaned legacy sections from config.yml. Configurations are now organized in feature folders.");
         } catch (IOException e) {
-            plugin.getLogger().warning("Could not save cleaned config.yml: " + e.getMessage());
+            logger.warning("Could not save cleaned config.yml: " + e.getMessage());
         }
     }
 
-    private void migrateSectionToFeatureFile(YamlConfiguration legacyYaml, String fileName, List<String> keys) {
-        File file = new File(plugin.getDataFolder(), fileName);
-        if (!file.exists()) {
-            try {
-                plugin.saveResource(fileName, false);
-            } catch (Exception ignored) {}
+    /**
+     * Moves pre-v1.3.0 flat feature files at dataFolder root (e.g. pearl.yml) into their new
+     * feature folders (e.g. combat/pearl.yml) without overwriting existing folder files.
+     */
+    private void migrateFlatFeatureFilesToFolders() {
+        for (FeatureSpec spec : FEATURE_SPECS) {
+            if (!spec.relativePath().contains("/")) {
+                continue;
+            }
+            File legacyFlat = new File(dataFolder, spec.legacyFlatFileName());
+            if (!legacyFlat.exists() || !legacyFlat.isFile()) {
+                continue;
+            }
+            File target = new File(dataFolder, spec.relativePath());
+            if (!target.exists()) {
+                File parent = target.getParentFile();
+                if (parent != null && !parent.exists()) {
+                    parent.mkdirs();
+                }
+                try {
+                    Files.move(legacyFlat.toPath(), target.toPath());
+                    logger.info("Moved " + spec.legacyFlatFileName() + " -> " + spec.relativePath());
+                } catch (IOException e) {
+                    logger.warning("Could not move " + spec.legacyFlatFileName() + " to " + spec.relativePath() + ": " + e.getMessage());
+                }
+            } else {
+                logger.warning("Found both legacy " + spec.legacyFlatFileName() + " and " + spec.relativePath()
+                        + "; keeping " + spec.relativePath() + ".");
+            }
+        }
+    }
+
+    private void migrateSectionToFeatureFile(YamlConfiguration legacyYaml, String relativePath, List<String> keys) {
+        File file = new File(dataFolder, relativePath);
+        boolean newlyExtracted = !file.exists();
+        if (newlyExtracted) {
+            extractOrCreateFile(relativePath, file);
         }
 
         if (file.exists()) {
             YamlConfiguration featConfig = YamlConfiguration.loadConfiguration(file);
             boolean modified = false;
             for (String key : keys) {
-                if (legacyYaml.contains(key) && !featConfig.contains(key)) {
-                    featConfig.set(key, legacyYaml.get(key));
-                    modified = true;
+                if (legacyYaml.isSet(key)) {
+                    if (newlyExtracted) {
+                        if (mergeConfigPath(legacyYaml, featConfig, key)) {
+                            modified = true;
+                        }
+                    } else if (!featConfig.isSet(key)) {
+                        copyConfigPath(legacyYaml, featConfig, key);
+                        modified = true;
+                    }
                 }
             }
             if (modified) {
                 try {
                     featConfig.save(file);
-                } catch (IOException ignored) {}
+                } catch (IOException ignored) {
+                }
+            }
+        }
+    }
+
+    private boolean mergeConfigPath(ConfigurationSection source, ConfigurationSection target, String path) {
+        if (source.isConfigurationSection(path)) {
+            ConfigurationSection srcSec = source.getConfigurationSection(path);
+            ConfigurationSection dstSec = target.getConfigurationSection(path);
+            boolean modified = false;
+            if (dstSec == null) {
+                dstSec = target.createSection(path);
+                modified = true;
+            }
+            if (srcSec != null) {
+                for (String child : srcSec.getKeys(false)) {
+                    if (mergeConfigPath(srcSec, dstSec, child)) {
+                        modified = true;
+                    }
+                }
+            }
+            return modified;
+        }
+        Object srcVal = source.get(path);
+        if (!Objects.equals(srcVal, target.get(path))) {
+            target.set(path, srcVal);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * One-time upgrade for older gui/menu.yml files missing the Training Mode button
+     * or colliding at slot 13 after monolithic migration.
+     * Never overrides an explicitly disabled or custom non-colliding training-mode entry.
+     */
+    private void migrateMissingTrainingMenuEntries() {
+        FeatureConfig menuFc = featureConfigs.get("menu");
+        if (menuFc == null) {
+            return;
+        }
+        FileConfiguration cfg = menuFc.configuration();
+        if (!cfg.isConfigurationSection("setting-menu.items")) {
+            return;
+        }
+
+        boolean hasTraining = cfg.isSet("setting-menu.items.training-mode");
+        int trainingSlot = cfg.getInt("setting-menu.items.training-mode.slot", 13);
+        int xbowSlot = cfg.getInt("setting-menu.items.xbow-counter-toggle.slot", -1);
+        int lobbySlot = cfg.getInt("setting-menu.items.lobby-hotbar-toggle.slot", -1);
+
+        boolean changed = false;
+        if (!hasTraining || (trainingSlot == 13 && xbowSlot == 13)) {
+            if (xbowSlot == 13) {
+                cfg.set("setting-menu.items.xbow-counter-toggle.slot", 14);
+                changed = true;
+                if (lobbySlot == 14) {
+                    cfg.set("setting-menu.items.lobby-hotbar-toggle.slot", 15);
+                }
+            }
+        }
+
+        if (!hasTraining) {
+            try (InputStream defStream = resourceOpener.apply(menuFc.fileName())) {
+                if (defStream != null) {
+                    YamlConfiguration jarCfg = YamlConfiguration.loadConfiguration(new InputStreamReader(defStream, StandardCharsets.UTF_8));
+                    if (jarCfg.isSet("setting-menu.items.training-mode")) {
+                        copyConfigPath(jarCfg, cfg, "setting-menu.items.training-mode");
+                        changed = true;
+                    }
+                }
+            } catch (IOException ignored) {
+            }
+        }
+
+        if (changed) {
+            try {
+                cfg.save(menuFc.file());
+                logger.info("Migrated Training Mode button into " + menuFc.fileName());
+            } catch (IOException ignored) {
             }
         }
     }
 
     /**
-     * Fixes any outdated rtpq queue items in lobby.yml (e.g. nexo:join) to use IRON_SWORD.
+     * Fixes any outdated rtpq queue items in utility/lobby.yml (e.g. nexo:join) to use IRON_SWORD.
      */
     private void migrateLobbyQueueItem() {
         FeatureConfig lobbyFc = featureConfigs.get("lobby");
@@ -210,7 +412,6 @@ public class ConfigManager {
             changed = true;
         }
 
-        // Synchronize cosmetics/cosmetic item (nexo:cosmetic -> Cosmetic)
         for (String key : List.of("decor", "cosmetics", "cosmetic")) {
             String cName = cfg.getString("lobby-hotbar.items." + key + ".name", "");
             if (cName != null && (cName.contains("<glyph:social>") || cName.contains("Decorations") || cName.contains("Cosmetics"))) {
@@ -227,7 +428,6 @@ public class ConfigManager {
             }
         }
 
-        // Synchronize settings item (nexo:settings -> Settings)
         String settingsName = cfg.getString("lobby-hotbar.items.settings.name", "");
         if (settingsName != null && settingsName.contains("<glyph:admin_setting>")) {
             cfg.set("lobby-hotbar.items.settings.name", "<!italic><#89dceb><b>Settings</b> <#6c7086>▪ <#a6adc8>/settings");
@@ -237,15 +437,15 @@ public class ConfigManager {
         if (changed) {
             try {
                 cfg.save(lobbyFc.file());
-                plugin.getLogger().info("Successfully synchronized lobby hotbar items in lobby.yml.");
-            } catch (IOException ignored) {}
+                logger.info("Successfully synchronized lobby hotbar items in " + lobbyFc.fileName());
+            } catch (IOException ignored) {
+            }
         }
     }
 
     /**
-     * Automatically migrates legacy prefixes (<glyph:info_blue>, <glyph:warning_orange>, <glyph:staff_warning>,
-     * <glyph:locked_red>, etc.) and outdated message/GUI formats to the clean warning_blue/red/purple typography,
-     * while preserving all world lists, cooldown settings, and item whitelists.
+     * Migrates genuinely obsolete legacy glyphs/markers to the clean warning_blue/red/purple
+     * typography without clobbering customized modern configs.
      */
     private void migrateTypographyAndTheme() {
         List<String> legacyMarkers = List.of(
@@ -262,8 +462,7 @@ public class ConfigManager {
                 "<glyph:join>",
                 "<glyph:cancel>",
                 "<b>ENABLED</b>",
-                "<b>DISABLED</b>",
-                "<#6c7086>• "
+                "<b>DISABLED</b>"
         );
 
         Map<String, List<String>> uiPathsByFeature = Map.ofEntries(
@@ -284,36 +483,55 @@ public class ConfigManager {
             FeatureConfig fc = featureConfigs.get(entry.getKey());
             if (fc == null) continue;
 
-            InputStream defStream = plugin.getResource(fc.fileName());
-            if (defStream == null) continue;
-            YamlConfiguration jarCfg = YamlConfiguration.loadConfiguration(new InputStreamReader(defStream, StandardCharsets.UTF_8));
-            FileConfiguration diskCfg = fc.configuration();
+            try (InputStream defStream = resourceOpener.apply(fc.fileName())) {
+                if (defStream == null) continue;
+                YamlConfiguration jarCfg = YamlConfiguration.loadConfiguration(new InputStreamReader(defStream, StandardCharsets.UTF_8));
+                FileConfiguration diskCfg = fc.configuration();
 
-            String dump = diskCfg.saveToString();
-            boolean needsUpdate = false;
-            for (String marker : legacyMarkers) {
-                if (dump.contains(marker)) {
-                    needsUpdate = true;
-                    break;
-                }
-            }
-            if ("config".equals(entry.getKey()) && !diskCfg.contains("theme.prefixes.purple")) {
-                needsUpdate = true;
-            }
-
-            if (needsUpdate) {
-                for (String path : entry.getValue()) {
-                    if (jarCfg.contains(path)) {
-                        diskCfg.set(path, jarCfg.get(path));
+                String dump = diskCfg.saveToString();
+                boolean hasLegacyMarker = false;
+                for (String marker : legacyMarkers) {
+                    if (dump.contains(marker)) {
+                        hasLegacyMarker = true;
+                        break;
                     }
                 }
-                try {
-                    diskCfg.save(fc.file());
-                } catch (IOException ignored) {}
+
+                boolean changed = false;
+                if (hasLegacyMarker) {
+                    for (String path : entry.getValue()) {
+                        if (jarCfg.isSet(path)) {
+                            copyConfigPath(jarCfg, diskCfg, path);
+                            changed = true;
+                        }
+                    }
+                } else if ("config".equals(entry.getKey())) {
+                    // Fill only missing theme keys individually so admin theme overrides stay intact
+                    for (String themeSection : List.of("theme.prefixes", "theme.colors", "admin.messages")) {
+                        ConfigurationSection sec = jarCfg.getConfigurationSection(themeSection);
+                        if (sec != null) {
+                            for (String key : sec.getKeys(false)) {
+                                String fullPath = themeSection + "." + key;
+                                if (!diskCfg.isSet(fullPath)) {
+                                    diskCfg.set(fullPath, sec.get(key));
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (changed) {
+                    try {
+                        diskCfg.save(fc.file());
+                    } catch (IOException ignored) {
+                    }
+                }
+            } catch (IOException ignored) {
             }
         }
 
-        // Ensure regear.yml uses its original <glyph:warning_blue> messages if modified
+        // Ensure gameplay/regear.yml keeps its original <glyph:warning_blue> formatting
         FeatureConfig regearFc = featureConfigs.get("regear");
         if (regearFc != null) {
             FileConfiguration regearDisk = regearFc.configuration();
@@ -322,34 +540,35 @@ public class ConfigManager {
                     || regearDump.contains("%prefix_")
                     || regearDump.contains("ʀᴇsᴛᴏᴄᴋᴇᴅ ɪɴᴠᴇɴᴛᴏʀʏ")
                     || regearDump.contains("<glyph:info_blue>")) {
-                InputStream regearStream = plugin.getResource("regear.yml");
-                if (regearStream != null) {
-                    YamlConfiguration regearJar = YamlConfiguration.loadConfiguration(new InputStreamReader(regearStream, StandardCharsets.UTF_8));
-                    for (String path : List.of("regear.announcement.message", "regear.item.name", "regear.item.lore", "regear.messages")) {
-                        if (regearJar.contains(path)) {
-                            regearDisk.set(path, regearJar.get(path));
+                try (InputStream regearStream = resourceOpener.apply(regearFc.fileName())) {
+                    if (regearStream != null) {
+                        YamlConfiguration regearJar = YamlConfiguration.loadConfiguration(new InputStreamReader(regearStream, StandardCharsets.UTF_8));
+                        for (String path : List.of("regear.announcement.message", "regear.item.name", "regear.item.lore", "regear.messages")) {
+                            if (regearJar.isSet(path)) {
+                                copyConfigPath(regearJar, regearDisk, path);
+                            }
+                        }
+                        try {
+                            regearDisk.save(regearFc.file());
+                        } catch (IOException ignored) {
                         }
                     }
-                    try {
-                        regearDisk.save(regearFc.file());
-                    } catch (IOException ignored) {}
+                } catch (IOException ignored) {
                 }
             }
         }
     }
 
     /**
-     * Synchronizes all sections from individual feature files into plugin.getConfig().
+     * Synchronizes all sections from individual feature files into mainConfig cleanly.
      */
     public void syncToMainConfig() {
-        FileConfiguration mainConfig = plugin.getConfig();
-
         for (FeatureConfig fc : featureConfigs.values()) {
             FileConfiguration cfg = fc.configuration();
             for (String key : fc.sectionKeys()) {
-                if (cfg.contains(key)) {
-                    mainConfig.set(key, null);
-                    mainConfig.set(key, cfg.get(key));
+                mainConfig.set(key, null);
+                if (cfg.isSet(key)) {
+                    copyConfigPath(cfg, mainConfig, key);
                 }
             }
         }
@@ -359,72 +578,129 @@ public class ConfigManager {
      * Reloads all feature configuration files from disk and updates the main config.
      */
     public void reloadAll() {
-        for (Map.Entry<String, FeatureConfig> entry : featureConfigs.entrySet()) {
-            FeatureConfig fc = entry.getValue();
+        migrateLegacyBackups();
+        migrateLegacyMonolithicConfig();
+        migrateFlatFeatureFilesToFolders();
+
+        for (FeatureConfig fc : featureConfigs.values()) {
             try {
-                ((YamlConfiguration) fc.configuration()).load(fc.file());
-                InputStream defStream = plugin.getResource(fc.fileName());
-                if (defStream != null) {
-                    fc.configuration().setDefaults(YamlConfiguration.loadConfiguration(new InputStreamReader(defStream, StandardCharsets.UTF_8)));
+                if (!fc.file().exists()) {
+                    extractOrCreateFile(fc.fileName(), fc.file());
                 }
+                YamlConfiguration yamlCfg = (YamlConfiguration) fc.configuration();
+                yamlCfg.load(fc.file());
+                yamlCfg.setDefaults(new YamlConfiguration());
             } catch (Exception e) {
-                plugin.getLogger().warning("Failed to reload " + fc.fileName() + ": " + e.getMessage());
+                logger.warning("Failed to reload " + fc.fileName() + ": " + e.getMessage());
             }
         }
 
+        migrateMissingTrainingMenuEntries();
         migrateLobbyQueueItem();
         migrateTypographyAndTheme();
         syncToMainConfig();
     }
 
     /**
-     * Saves changes from plugin.getConfig() back to their respective feature files.
+     * Saves only modified feature configuration files back to disk.
      */
     public void saveAll() {
-        FileConfiguration mainConfig = plugin.getConfig();
-
         for (FeatureConfig fc : featureConfigs.values()) {
-            boolean changed = false;
-            FileConfiguration cfg = fc.configuration();
-
-            for (String key : fc.sectionKeys()) {
-                if (mainConfig.contains(key)) {
-                    cfg.set(key, mainConfig.get(key));
-                    changed = true;
-                }
-            }
-
-            if (changed || !fc.file().exists()) {
-                try {
-                    cfg.save(fc.file());
-                } catch (IOException e) {
-                    plugin.getLogger().warning("Could not save " + fc.fileName() + ": " + e.getMessage());
-                }
-            }
+            saveFeatureInternal(fc);
         }
     }
 
     /**
-     * Saves a specific feature configuration file.
+     * Saves a specific feature configuration file if its keys changed or file is missing.
      */
     public void saveFeature(String featureName) {
         FeatureConfig fc = featureConfigs.get(featureName);
         if (fc == null) return;
+        saveFeatureInternal(fc);
+    }
 
-        FileConfiguration mainConfig = plugin.getConfig();
+    private void saveFeatureInternal(FeatureConfig fc) {
         FileConfiguration cfg = fc.configuration();
+        boolean changed = false;
 
         for (String key : fc.sectionKeys()) {
-            if (mainConfig.contains(key)) {
-                cfg.set(key, mainConfig.get(key));
+            if (syncDiffToTarget(mainConfig, cfg, key)) {
+                changed = true;
             }
         }
 
-        try {
-            cfg.save(fc.file());
-        } catch (IOException e) {
-            plugin.getLogger().warning("Could not save " + fc.fileName() + ": " + e.getMessage());
+        if (changed || !fc.file().exists()) {
+            try {
+                File parent = fc.file().getParentFile();
+                if (parent != null && !parent.exists()) {
+                    parent.mkdirs();
+                }
+                cfg.save(fc.file());
+            } catch (IOException e) {
+                logger.warning("Could not save " + fc.fileName() + ": " + e.getMessage());
+            }
         }
+    }
+
+    private void copyConfigPath(ConfigurationSection source, ConfigurationSection target, String path) {
+        if (source.isConfigurationSection(path)) {
+            ConfigurationSection srcSec = source.getConfigurationSection(path);
+            ConfigurationSection dstSec = target.createSection(path);
+            if (srcSec != null) {
+                for (String child : srcSec.getKeys(false)) {
+                    copyConfigPath(srcSec, dstSec, child);
+                }
+            }
+        } else {
+            target.set(path, source.get(path));
+        }
+    }
+
+    /**
+     * Recursively diffs source against target at path and mutates only changed leaves/keys,
+     * preserving YAML comments on untouched sibling keys in target.
+     */
+    private boolean syncDiffToTarget(ConfigurationSection source, ConfigurationSection target, String path) {
+        if (!source.isSet(path)) {
+            if (target.isSet(path)) {
+                target.set(path, null);
+                return true;
+            }
+            return false;
+        }
+
+        if (source.isConfigurationSection(path)) {
+            ConfigurationSection srcSec = source.getConfigurationSection(path);
+            boolean changed = false;
+            ConfigurationSection dstSec = target.getConfigurationSection(path);
+            if (dstSec == null) {
+                dstSec = target.createSection(path);
+                changed = true;
+            }
+
+            if (srcSec != null) {
+                Set<String> srcKeys = srcSec.getKeys(false);
+                for (String existing : new HashSet<>(dstSec.getKeys(false))) {
+                    if (!srcKeys.contains(existing)) {
+                        dstSec.set(existing, null);
+                        changed = true;
+                    }
+                }
+                for (String key : srcKeys) {
+                    if (syncDiffToTarget(srcSec, dstSec, key)) {
+                        changed = true;
+                    }
+                }
+            }
+            return changed;
+        }
+
+        Object srcVal = source.get(path);
+        if (target.isConfigurationSection(path) || !Objects.equals(srcVal, target.get(path))) {
+            target.set(path, srcVal);
+            return true;
+        }
+        return false;
     }
 
     public FileConfiguration getFeatureConfig(String featureName) {

@@ -3,7 +3,6 @@ package me.nh4n.vcarterutils.manager;
 import me.nh4n.vcarterutils.VCarterUtils;
 import me.nh4n.vcarterutils.hook.FoCombatTagHook;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -21,7 +20,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RegearManager {
 
     private final VCarterUtils plugin;
-    private final MiniMessage miniMessage;
     private final NamespacedKey regearKey;
 
     private final Set<Material> cachedWhitelist = EnumSet.noneOf(Material.class);
@@ -36,7 +34,6 @@ public class RegearManager {
 
     public RegearManager(VCarterUtils plugin) {
         this.plugin = plugin;
-        this.miniMessage = MiniMessage.miniMessage();
         this.regearKey = new NamespacedKey(plugin, "vcarter_regear_shulker");
         reload();
     }
@@ -88,9 +85,7 @@ public class RegearManager {
         cachedWhitelist.clear();
         cachedPreservedItems.clear();
 
-        FileConfiguration cfg = plugin.getConfigManager() != null && plugin.getConfigManager().getFeatureConfig("regear") != null
-                ? plugin.getConfigManager().getFeatureConfig("regear")
-                : plugin.getConfig();
+        FileConfiguration cfg = plugin.getConfig();
 
         this.damageCooldownSec = cfg.getLong("regear.damage-cooldown-seconds", 5L);
         this.regearCooldownSec = cfg.getLong("regear.cooldown-seconds", 3L);

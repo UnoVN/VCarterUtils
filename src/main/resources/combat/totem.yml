@@ -1,8 +1,8 @@
 # ==============================================================
-#                 TOTEM & AUTO-POTION SYSTEM
+#           TOTEM & AUTO-POTION SYSTEM (combat/totem.yml)
 # ==============================================================
-# Restricts totem inventory carrying capacity and activation count per kit.
-# Controls auto-pot functionality during combat.
+# Restricts totem carrying capacity & pops per kit, and controls
+# automatic potion effect sync when loading kits.
 # ==============================================================
 
 totem:

@@ -1,16 +1,14 @@
 package me.nh4n.vcarterutils.manager;
 
 import me.nh4n.vcarterutils.VCarterUtils;
+import me.nh4n.vcarterutils.config.PlayerDataManager;
 import me.nh4n.vcarterutils.hook.FoCombatTagHook;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -19,51 +17,34 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class TrainingManager {
 
     private final VCarterUtils plugin;
-    private final MiniMessage miniMessage;
+    private final PlayerDataManager playerData;
 
     private final Map<UUID, Boolean> masterSettings = new ConcurrentHashMap<>();
     private final Map<UUID, Map<TrainingOption, Boolean>> optionSettings = new ConcurrentHashMap<>();
     private final Set<String> cachedBlacklistedWorlds = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private volatile boolean cachedEnabled = true;
     private volatile boolean cachedDisableInCombat = true;
-    private File dataFile;
 
     public TrainingManager(VCarterUtils plugin) {
         this.plugin = plugin;
-        this.miniMessage = MiniMessage.miniMessage();
-        initDataFile();
-        reload();
-    }
-
-    private void initDataFile() {
-        dataFile = new File(plugin.getDataFolder(), "playerdata.yml");
-        if (!dataFile.exists()) {
-            try {
-                if (plugin.getDataFolder().exists() || plugin.getDataFolder().mkdirs()) {
-                    dataFile.createNewFile();
-                }
-            } catch (IOException e) {
-                plugin.getLogger().warning("Could not create playerdata.yml: " + e.getMessage());
-            }
-        }
+        this.playerData = plugin.getPlayerDataManager() != null
+                ? plugin.getPlayerDataManager()
+                : new PlayerDataManager(plugin);
         loadPlayerSettings();
+        reload();
     }
 
     private void loadPlayerSettings() {
         masterSettings.clear();
         optionSettings.clear();
 
-        synchronized (VCarterUtils.class) {
-            FileConfiguration cfg = YamlConfiguration.loadConfiguration(dataFile);
-
+        playerData.read(cfg -> {
             // 1. Backward compatibility: read legacy training-mode-enabled.<UUID>
             ConfigurationSection legacySec = cfg.getConfigurationSection("training-mode-enabled");
             if (legacySec != null) {
@@ -82,7 +63,9 @@ public class TrainingManager {
                 for (String key : sec.getKeys(false)) {
                     try {
                         UUID uuid = UUID.fromString(key);
-                        masterSettings.put(uuid, sec.getBoolean(key + ".master", false));
+                        if (sec.isSet(key + ".master")) {
+                            masterSettings.put(uuid, sec.getBoolean(key + ".master", false));
+                        }
                         ConfigurationSection optSec = sec.getConfigurationSection(key + ".options");
                         if (optSec != null) {
                             Map<TrainingOption, Boolean> map = new ConcurrentHashMap<>();
@@ -95,17 +78,14 @@ public class TrainingManager {
                     }
                 }
             }
-        }
+        });
     }
 
     public void savePlayerSettingsSync() {
-        if (dataFile == null) return;
-        synchronized (VCarterUtils.class) {
-            FileConfiguration cfg = YamlConfiguration.loadConfiguration(dataFile);
+        playerData.updateSync(cfg -> {
+            cfg.set("training-mode-enabled", null);
             for (Map.Entry<UUID, Boolean> entry : masterSettings.entrySet()) {
-                String uuidStr = entry.getKey().toString();
-                cfg.set("training-mode." + uuidStr + ".master", entry.getValue());
-                cfg.set("training-mode-enabled." + uuidStr, entry.getValue());
+                cfg.set("training-mode." + entry.getKey().toString() + ".master", entry.getValue());
             }
             for (Map.Entry<UUID, Map<TrainingOption, Boolean>> entry : optionSettings.entrySet()) {
                 String uuidStr = entry.getKey().toString();
@@ -113,43 +93,21 @@ public class TrainingManager {
                     cfg.set("training-mode." + uuidStr + ".options." + optEntry.getKey().getKey(), optEntry.getValue());
                 }
             }
-            try {
-                cfg.save(dataFile);
-            } catch (IOException e) {
-                plugin.getLogger().warning("Could not save playerdata.yml: " + e.getMessage());
-            }
-        }
+        });
+        playerData.saveSyncIfDirty();
     }
 
     private void saveMasterToggleAsync(UUID uuid, boolean enabled) {
-        if (dataFile == null) return;
-        final File fileToSave = this.dataFile;
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            synchronized (VCarterUtils.class) {
-                FileConfiguration cfg = YamlConfiguration.loadConfiguration(fileToSave);
-                cfg.set("training-mode." + uuid + ".master", enabled);
-                cfg.set("training-mode-enabled." + uuid, enabled);
-                try {
-                    cfg.save(fileToSave);
-                } catch (IOException ignored) {
-                }
-            }
+        playerData.updateAndSaveAsync(cfg -> {
+            cfg.set("training-mode." + uuid + ".master", enabled);
+            cfg.set("training-mode-enabled." + uuid, null);
         });
     }
 
     private void saveOptionToggleAsync(UUID uuid, TrainingOption option, boolean enabled) {
-        if (dataFile == null) return;
-        final File fileToSave = this.dataFile;
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            synchronized (VCarterUtils.class) {
-                FileConfiguration cfg = YamlConfiguration.loadConfiguration(fileToSave);
-                cfg.set("training-mode." + uuid + ".options." + option.getKey(), enabled);
-                try {
-                    cfg.save(fileToSave);
-                } catch (IOException ignored) {
-                }
-            }
-        });
+        playerData.updateAndSaveAsync(cfg ->
+                cfg.set("training-mode." + uuid + ".options." + option.getKey(), enabled)
+        );
     }
 
     public void reload() {
@@ -401,7 +359,7 @@ public class TrainingManager {
     }
 
     public void clearAll() {
-        savePlayerSettingsSync();
+        playerData.saveSyncIfDirty();
         masterSettings.clear();
         optionSettings.clear();
     }

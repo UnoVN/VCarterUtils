@@ -1,8 +1,8 @@
 # ==============================================================
-#                 COMBAT TAG MANAGER SYSTEM
+#           COMBAT TAG MANAGER (combat/combattag.yml)
 # ==============================================================
-# Controls combat tag durations, world rules, anti-interrupt protection,
-# and blocked commands during active combat.
+# Controls combat tag durations, world rules, anti-interrupt
+# 1v1 protection, and blocked commands during active combat.
 # ==============================================================
 
 combat-tag:
@@ -24,9 +24,10 @@ combat-tag:
 
   force-worlds:
     enabled: true
-    # Per-world custom combat tag timer in seconds
-    # Set to 0 to completely disable combat tag in that world
-    # Set to -1 to use FoCombatTag default
+    # Per-world custom combat tag timer in seconds:
+    #   0  = completely disable combat tag in this world
+    #   >0 = force custom duration in seconds
+    #   remove entry (or -1) = use FoCombatTag default
     worlds:
       ffa_diamond: 20
 
@@ -54,7 +55,7 @@ combat-tag:
   anti-interrupt:
     # Master switch for 1v1 combat interruption protection
     enabled: true
-    # Per-world override: true (ON), false (OFF). If not listed, uses global default.
+    # Per-world override: true (ON), false (OFF). Unlisted worlds use global default.
     worlds:
       world: true
     messages:

@@ -1,18 +1,13 @@
 package me.nh4n.vcarterutils.manager;
 
 import me.nh4n.vcarterutils.VCarterUtils;
+import me.nh4n.vcarterutils.config.PlayerDataManager;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -21,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class XbowManager {
 
     private final VCarterUtils plugin;
-    private final MiniMessage miniMessage;
+    private final PlayerDataManager playerData;
 
     private final Map<UUID, Boolean> playerToggleSettings = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> lastXbowTicks = new ConcurrentHashMap<>();
@@ -32,34 +27,19 @@ public class XbowManager {
     private volatile int cachedMaxSetupTicks = 200;
     private volatile int cachedDisplayDurationSeconds = 3;
 
-    private File dataFile;
-
     public XbowManager(VCarterUtils plugin) {
         this.plugin = plugin;
-        this.miniMessage = MiniMessage.miniMessage();
-        initDataFile();
-        reload();
-    }
-
-    private void initDataFile() {
-        dataFile = new File(plugin.getDataFolder(), "playerdata.yml");
-        if (!dataFile.exists()) {
-            try {
-                if (plugin.getDataFolder().exists() || plugin.getDataFolder().mkdirs()) {
-                    dataFile.createNewFile();
-                }
-            } catch (IOException e) {
-                plugin.getLogger().warning("Could not create playerdata.yml: " + e.getMessage());
-            }
-        }
+        this.playerData = plugin.getPlayerDataManager() != null
+                ? plugin.getPlayerDataManager()
+                : new PlayerDataManager(plugin);
         loadPlayerSettings();
+        reload();
     }
 
     private void loadPlayerSettings() {
         playerToggleSettings.clear();
         bestXbowTicks.clear();
-        synchronized (VCarterUtils.class) {
-            FileConfiguration cfg = YamlConfiguration.loadConfiguration(dataFile);
+        playerData.read(cfg -> {
             ConfigurationSection sec = cfg.getConfigurationSection("xbow-counter-enabled");
             if (sec != null) {
                 for (String key : sec.getKeys(false)) {
@@ -84,55 +64,31 @@ public class XbowManager {
                     }
                 }
             }
-        }
+        });
     }
 
     public void savePlayerSettingsSync() {
-        if (dataFile == null) return;
-        synchronized (VCarterUtils.class) {
-            FileConfiguration cfg = YamlConfiguration.loadConfiguration(dataFile);
+        playerData.updateSync(cfg -> {
             for (Map.Entry<UUID, Boolean> entry : playerToggleSettings.entrySet()) {
                 cfg.set("xbow-counter-enabled." + entry.getKey().toString(), entry.getValue());
             }
             for (Map.Entry<UUID, Integer> entry : bestXbowTicks.entrySet()) {
                 cfg.set("xbow-counter-best." + entry.getKey().toString(), entry.getValue());
             }
-            try {
-                cfg.save(dataFile);
-            } catch (IOException e) {
-                plugin.getLogger().warning("Could not save playerdata.yml: " + e.getMessage());
-            }
-        }
+        });
+        playerData.saveSyncIfDirty();
     }
 
     private void savePlayerToggleAsync(UUID uuid, boolean enabled) {
-        if (dataFile == null) return;
-        final File fileToSave = this.dataFile;
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            synchronized (VCarterUtils.class) {
-                FileConfiguration cfg = YamlConfiguration.loadConfiguration(fileToSave);
-                cfg.set("xbow-counter-enabled." + uuid.toString(), enabled);
-                try {
-                    cfg.save(fileToSave);
-                } catch (IOException ignored) {
-                }
-            }
-        });
+        playerData.updateAndSaveAsync(cfg ->
+                cfg.set("xbow-counter-enabled." + uuid.toString(), enabled)
+        );
     }
 
     private void savePlayerBestAsync(UUID uuid, int bestTicks) {
-        if (dataFile == null) return;
-        final File fileToSave = this.dataFile;
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            synchronized (VCarterUtils.class) {
-                FileConfiguration cfg = YamlConfiguration.loadConfiguration(fileToSave);
-                cfg.set("xbow-counter-best." + uuid.toString(), bestTicks);
-                try {
-                    cfg.save(fileToSave);
-                } catch (IOException ignored) {
-                }
-            }
-        });
+        playerData.updateAndSaveAsync(cfg ->
+                cfg.set("xbow-counter-best." + uuid.toString(), bestTicks)
+        );
     }
 
     public void reload() {
@@ -239,7 +195,7 @@ public class XbowManager {
     }
 
     public void clearAll() {
-        savePlayerSettingsSync();
+        playerData.saveSyncIfDirty();
         for (BukkitTask task : activeActionBarTasks.values()) {
             task.cancel();
         }

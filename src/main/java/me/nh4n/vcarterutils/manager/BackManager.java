@@ -33,7 +33,7 @@ public class BackManager {
         // Automatically migrate if old config contained the placeholder world "ffa_diamond"
         if (list.size() == 1 && "ffa_diamond".equalsIgnoreCase(list.get(0).trim())) {
             plugin.getConfig().set("back.blacklisted-worlds", Collections.emptyList());
-            plugin.saveConfig();
+            plugin.saveFeatureConfig("back");
             list = Collections.emptyList();
         }
         for (String w : list) {

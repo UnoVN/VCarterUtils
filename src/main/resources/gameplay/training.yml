@@ -1,9 +1,8 @@
 # ==============================================================
-#                     TRAINING MODE SYSTEM
+#            TRAINING MODE SYSTEM (gameplay/training.yml)
 # ==============================================================
-# Practice features: infinite totem, infinite blocks/rails,
-# auto refill hotbar, invulnerability, and crossbow reload.
-# Automatically auto-disables upon entering PvP combat.
+# Practice features: infinite totem, blocks/rails, auto refill,
+# invulnerability, and crossbow auto-reload. Auto-disables in PvP.
 # ==============================================================
 
 training:

@@ -1,8 +1,8 @@
 # ==============================================================
-#                 SETTING & ADMIN GUI MENUS
+#           SETTING & ADMIN GUI MENUS (gui/menu.yml)
 # ==============================================================
-# Configures layout, items, slots, and styling for /setting and /setting admin.
-# Follows the Catppuccin color palette and Nexo glyph integrations.
+# Configures layout, items, slots, and styling for /setting and
+# /setting admin. Uses Catppuccin palette & Nexo glyph/item hooks.
 # ==============================================================
 
 setting-menu:

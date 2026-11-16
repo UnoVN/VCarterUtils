@@ -1,8 +1,8 @@
 # ==============================================================
-#                     LOBBY HOTBAR SYSTEM
+#            LOBBY HOTBAR SYSTEM (utility/lobby.yml)
 # ==============================================================
 # Provides quick lobby shortcuts on hotbar slots 0..8 (1..9 in game).
-# Supports vanilla Bukkit materials or Nexo custom items (nexo-id or material: nexo:<id>).
+# Supports vanilla materials or Nexo custom items (nexo-id / nexo:<id>).
 # ==============================================================
 
 lobby-hotbar:
@@ -18,11 +18,11 @@ lobby-hotbar:
     world-removed: "%prefix_admin%%c_purple%<b>ʟᴏʙʙʏ</b> %c_muted%» %c_error%Removed %c_primary%<b>%world%</b> %c_error%from Lobby Hotbar worlds."
 
   # Slot layout (0..8 corresponds to Hotbar 1..9):
-  # Slot 0 (Hotbar 1): Matchmaking Queue (IRON_SWORD)
-  # Slot 1 (Hotbar 2): Random Teleport (COMPASS)
-  # Slot 4 (Hotbar 5 - Center): Return to Death Location (RECOVERY_COMPASS)
-  # Slot 7 (Hotbar 8): Cosmetic (nexo:cosmetic)
-  # Slot 8 (Hotbar 9): Settings (nexo:settings)
+  #   0: Matchmaking Queue (IRON_SWORD)
+  #   1: Random Teleport (COMPASS)
+  #   4: Return to Death Location (RECOVERY_COMPASS)
+  #   7: Cosmetic (nexo:cosmetic)
+  #   8: Settings (nexo:settings)
   items:
     rtpq:
       enabled: true

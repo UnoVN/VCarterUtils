@@ -1,22 +1,19 @@
 package me.nh4n.vcarterutils.manager;
 
 import me.nh4n.vcarterutils.VCarterUtils;
-import org.bukkit.Bukkit;
+import me.nh4n.vcarterutils.config.PlayerDataManager;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PearlManager {
 
     private final VCarterUtils plugin;
+    private final PlayerDataManager playerData;
 
     private final Map<UUID, Integer> playerCooldownSettings = new ConcurrentHashMap<>();
     private final List<Integer> availableOptions = new ArrayList<>();
@@ -25,33 +22,19 @@ public class PearlManager {
     private boolean globalForceEnabled = false;
     private int globalForceSeconds = 1;
 
-    private File dataFile;
-
     public PearlManager(VCarterUtils plugin) {
         this.plugin = plugin;
-        initDataFile();
-        reload();
-    }
-
-    private void initDataFile() {
-        dataFile = new File(plugin.getDataFolder(), "playerdata.yml");
-        if (!dataFile.exists()) {
-            try {
-                if (plugin.getDataFolder().exists() || plugin.getDataFolder().mkdirs()) {
-                    dataFile.createNewFile();
-                }
-            } catch (IOException e) {
-                plugin.getLogger().warning("Could not create playerdata.yml: " + e.getMessage());
-            }
-        }
+        this.playerData = plugin.getPlayerDataManager() != null
+                ? plugin.getPlayerDataManager()
+                : new PlayerDataManager(plugin);
         loadPlayerSettings();
+        reload();
     }
 
     private void loadPlayerSettings() {
         playerCooldownSettings.clear();
         int minAllowed = getDefaultSeconds();
-        synchronized (VCarterUtils.class) {
-            FileConfiguration dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+        playerData.read(dataConfig -> {
             ConfigurationSection section = dataConfig.getConfigurationSection("pearl-cooldown");
             if (section == null) {
                 return;
@@ -64,42 +47,22 @@ public class PearlManager {
                 } catch (IllegalArgumentException ignored) {
                 }
             }
-        }
+        });
     }
 
     public void savePlayerSettings() {
-        if (dataFile == null) {
-            return;
-        }
-        synchronized (VCarterUtils.class) {
-            FileConfiguration dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+        playerData.updateSync(dataConfig -> {
             for (Map.Entry<UUID, Integer> entry : playerCooldownSettings.entrySet()) {
                 dataConfig.set("pearl-cooldown." + entry.getKey().toString(), entry.getValue());
             }
-            try {
-                dataConfig.save(dataFile);
-            } catch (IOException e) {
-                plugin.getLogger().warning("Could not save playerdata.yml: " + e.getMessage());
-            }
-        }
+        });
+        playerData.saveSyncIfDirty();
     }
 
     public void savePlayerSettingAsync(UUID uuid, int seconds) {
-        if (dataFile == null) {
-            return;
-        }
-        final File fileToSave = this.dataFile;
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            synchronized (VCarterUtils.class) {
-                FileConfiguration dataConfig = YamlConfiguration.loadConfiguration(fileToSave);
-                dataConfig.set("pearl-cooldown." + uuid.toString(), seconds);
-                try {
-                    dataConfig.save(fileToSave);
-                } catch (IOException e) {
-                    plugin.getLogger().warning("Could not save playerdata.yml asynchronously: " + e.getMessage());
-                }
-            }
-        });
+        playerData.updateAndSaveAsync(dataConfig ->
+                dataConfig.set("pearl-cooldown." + uuid.toString(), seconds)
+        );
     }
 
     public void reload() {
@@ -123,11 +86,20 @@ public class PearlManager {
         }
         Collections.sort(availableOptions);
 
+        boolean clamped = false;
         for (Map.Entry<UUID, Integer> entry : playerCooldownSettings.entrySet()) {
             int val = entry.getValue();
             if (val < def || !availableOptions.contains(val)) {
                 entry.setValue(def);
+                clamped = true;
             }
+        }
+        if (clamped) {
+            playerData.updateAndSaveAsync(dataConfig -> {
+                for (Map.Entry<UUID, Integer> entry : playerCooldownSettings.entrySet()) {
+                    dataConfig.set("pearl-cooldown." + entry.getKey().toString(), entry.getValue());
+                }
+            });
         }
 
         this.globalForceEnabled = plugin.getConfig().getBoolean("pearl-cooldown.global-force.enabled", false);
@@ -164,13 +136,13 @@ public class PearlManager {
     public void setGlobalForceEnabled(boolean enabled) {
         this.globalForceEnabled = enabled;
         plugin.getConfig().set("pearl-cooldown.global-force.enabled", enabled);
-        plugin.saveConfig();
+        plugin.saveFeatureConfig("pearl");
     }
 
     public void setGlobalForceSeconds(int seconds) {
         this.globalForceSeconds = Math.max(getDefaultSeconds(), seconds);
         plugin.getConfig().set("pearl-cooldown.global-force.seconds", this.globalForceSeconds);
-        plugin.saveConfig();
+        plugin.saveFeatureConfig("pearl");
     }
 
     public int cycleGlobalForceSeconds(boolean forward) {
@@ -191,7 +163,7 @@ public class PearlManager {
     public void setDefaultSeconds(int seconds) {
         int clean = Math.max(1, seconds);
         plugin.getConfig().set("pearl-cooldown.default-seconds", clean);
-        plugin.saveConfig();
+        plugin.saveFeatureConfig("pearl");
         reload();
     }
 
@@ -264,7 +236,7 @@ public class PearlManager {
             plugin.getConfig().set("pearl-cooldown.force-worlds.enabled", true);
             plugin.getConfig().set("pearl-cooldown.force-worlds.worlds." + cleanKey, seconds);
         }
-        plugin.saveConfig();
+        plugin.saveFeatureConfig("pearl");
     }
 
     public int cycleWorldForceSeconds(String worldName) {
@@ -379,7 +351,7 @@ public class PearlManager {
     }
 
     public void clearAll() {
-        savePlayerSettings();
+        playerData.saveSyncIfDirty();
         forcedWorldCooldowns.clear();
         availableOptions.clear();
     }

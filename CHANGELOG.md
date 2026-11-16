@@ -1,5 +1,18 @@
 # Changelog
 
+## [v1.3.0] - 2026-11-16
+
+### Folder-Organized Configs & Persistence Optimization
+- **Clean Feature Folder Structure:** Reorganized `plugins/VCarterUtils/` from 13 flat files at root into clean domain folders: `combat/` (`combattag.yml`, `mace.yml`, `pearl.yml`, `totem.yml`), `gameplay/` (`regear.yml`, `score.yml`, `training.yml`, `xbow.yml`), `utility/` (`back.yml`, `lobby.yml`), `gui/` (`menu.yml`), and `data/` (`playerdata.yml`, `backups/`), leaving only `config.yml` and organized directories at root.
+- **Seamless Automatic Upgrade Migration:** `ConfigManager` and `PlayerDataManager` automatically migrate both pre-v1.3.0 flat `.yml` files (including `playerdata.yml` and legacy backups) and pre-v1.2.7 monolithic `config.yml` into the new directory hierarchy while preserving all user customizations.
+- **Centralized `PlayerDataManager` (`data/playerdata.yml`):** Replaced duplicate `playerdata.yml` file I/O across `PearlManager`, `MaceManager`, `LobbyHotbarManager`, `XbowManager`, and `TrainingManager` with a single thread-safe, dirty-tracked, coalesced async/shutdown writer.
+- **Config Bug Fixes & Optimizations:**
+  - Fixed `ConfigManager.migrateTypographyAndTheme()` falsely matching `<#6c7086>• ` on every reload and overwriting `gui/menu.yml` customizations.
+  - Prevented JAR defaults (such as `ffa_diamond`) from leaking back into deleted config keys by isolating `FeatureConfig` defaults and cleanly clearing removed sections on reload.
+  - Added dirty-only leaf-diff saving via `saveFeatureConfig(...)` so modifying one setting only writes that single feature file and preserves YAML comments on untouched keys.
+  - Fixed `SettingMenuManager` ignoring `training-mode.enabled: false` and `LobbyHotbarManager` ignoring `quick-back.auto-select-on-respawn: false`.
+  - Added fast-path short-circuit in `MessageUtil.format(...)` for static MiniMessage strings without `%` placeholders.
+
 ## [v1.2.9] - 2026-11-16
 
 ### GUI Synchronization & Release Workflow

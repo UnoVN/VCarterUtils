@@ -1,8 +1,8 @@
 # ==============================================================
-#                      BACK ON DEATH FEATURE
+#           BACK ON DEATH FEATURE (utility/back.yml)
 # ==============================================================
 # Allows players to teleport back to their previous death location
-# using /back or via the death notification clickable message.
+# using /back or via the clickable death notification.
 # ==============================================================
 
 back:

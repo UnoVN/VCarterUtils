@@ -1,8 +1,8 @@
 # ==============================================================
-#                        1V1 SCORE SYSTEM
+#              1V1 SCORE SYSTEM (gameplay/score.yml)
 # ==============================================================
 # Tracks 1v1 kill/death scores between players and renders
-# score HUDs on the action bar with flicker prevention.
+# flicker-free score HUDs on the action bar.
 # ==============================================================
 
 score:
@@ -12,7 +12,7 @@ score:
     broadcast: true
   action-bar:
     duration-seconds: 15
-    anti-flicker: true # Cancels foreign action bars while 1v1 score is active to prevent flickering
+    anti-flicker: true
   request-timeout-seconds: 60
   messages:
     no-permission: "%prefix_error%%c_error%<b>ɴᴏ ᴘᴇʀᴍɪssɪᴏɴ</b> %c_muted%» %c_text%You do not have permission."

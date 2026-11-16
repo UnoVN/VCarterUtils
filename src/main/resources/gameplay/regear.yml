@@ -1,16 +1,16 @@
 # ==============================================================
-#                      SHULKER REGEAR SYSTEM
+#            SHULKER REGEAR SYSTEM (gameplay/regear.yml)
 # ==============================================================
-# Restocks inventory from a snapshot when placing a Shulker Box.
+# Restocks inventory from a kit snapshot when placing a Shulker Box.
 # Supports item whitelisting, durability preservation, and junk clearing.
 # ==============================================================
 
 regear:
-  # Combat/damage cooldown in seconds before allowing regear (set to 0 to completely disable)
+  # Combat/damage cooldown in seconds before allowing regear (0 = disabled)
   damage-cooldown-seconds: 5
-  # Regear usage cooldown in seconds (set to 0 to completely disable)
+  # Regear usage cooldown in seconds (0 = disabled)
   cooldown-seconds: 3
-  # Whether to check FoCombatTag combat state (set to false or set damage-cooldown-seconds to 0 to ignore combat tag)
+  # Check FoCombatTag combat state (false or damage-cooldown-seconds: 0 ignores)
   check-combat-tag: true
   clear-junk-in-empty-slots: true
   announcement:
@@ -18,7 +18,7 @@ regear:
     broadcast: true
     message: "<glyph:warning_blue> <#89dceb><b>%player%</b> <#a6adc8>regeared"
 
-  # Items that can be refilled and restocked from snapshot
+  # Items refilled and restocked from snapshot
   whitelist:
     - ENDER_PEARL
     - TNT_MINECART
@@ -32,9 +32,7 @@ regear:
     - WOOD
     - RAILS
 
-  # Items that preserve their current state and durability:
-  # - Not cloned from snapshot (keeps current damaged state, like armor/elytra)
-  # - Not cleared or replaced when regearing
+  # Items that preserve current state and durability (never overwritten or deleted)
   preserve-items:
     - ELYTRA
     - FLINT_AND_STEEL

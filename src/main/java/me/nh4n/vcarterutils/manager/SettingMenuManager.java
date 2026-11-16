@@ -3,7 +3,6 @@ package me.nh4n.vcarterutils.manager;
 import me.nh4n.vcarterutils.VCarterUtils;
 import me.nh4n.vcarterutils.hook.NexoHook;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -25,12 +24,10 @@ import java.util.*;
 public class SettingMenuManager {
 
     private final VCarterUtils plugin;
-    private final MiniMessage miniMessage;
     private volatile List<DiscoveredWorld> lastScannedWorlds = Collections.emptyList();
 
     public SettingMenuManager(VCarterUtils plugin) {
         this.plugin = plugin;
-        this.miniMessage = MiniMessage.miniMessage();
     }
 
     public void reload() {
@@ -120,7 +117,15 @@ public class SettingMenuManager {
         if (itemsSec != null) {
             for (String key : itemsSec.getKeys(false)) {
                 ConfigurationSection itemSec = itemsSec.getConfigurationSection(key);
-                if (itemSec == null || !itemSec.getBoolean("enabled", true)) {
+                if (itemSec == null) {
+                    continue;
+                }
+
+                String type = itemSec.getString("type", "DECORATION").trim().toUpperCase();
+                if (type.equals("TRAINING_MODE_TOGGLE") || key.equalsIgnoreCase("training-mode")) {
+                    hasTrainingItem = true;
+                }
+                if (!itemSec.getBoolean("enabled", true)) {
                     continue;
                 }
 
@@ -129,10 +134,6 @@ public class SettingMenuManager {
                     continue;
                 }
 
-                String type = itemSec.getString("type", "DECORATION").trim().toUpperCase();
-                if (type.equals("TRAINING_MODE_TOGGLE")) {
-                    hasTrainingItem = true;
-                }
                 if (type.equals("ADMIN_MENU") && !player.hasPermission("vcarterutils.admin")) {
                     continue;
                 }

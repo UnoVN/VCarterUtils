@@ -41,6 +41,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${GITHUB_REF_NAME}"
+          export TAG
           export VERSION="${TAG#v}"
           JAR_FILE=$(find target -maxdepth 1 -type f -name 'VCarterUtils-*.jar' ! -name 'original-*' | head -n 1)
           if [ -z "$JAR_FILE" ]; then
@@ -49,36 +50,63 @@ jobs:
           fi
 
           NOTES_FILE=$(mktemp)
+          TITLE_FILE=$(mktemp)
+          printf 'VCarterUtils %s' "$TAG" > "$TITLE_FILE"
           HAS_NOTES=false
           if [ -f CHANGELOG.md ]; then
-            python3 - <<'PY' > "$NOTES_FILE"
-          import os, re
+            python3 - <<'PY' "$NOTES_FILE" "$TITLE_FILE"
+          import os, re, sys
+          notes_path, title_path = sys.argv[1], sys.argv[2]
+          tag = os.environ["TAG"]
           ver = os.environ["VERSION"]
+          base_ver = ver.split("-", 1)[0]
           with open("CHANGELOG.md", encoding="utf-8") as f:
               text = f.read()
-          pattern = rf"(?ms)^## \[?v?{re.escape(ver)}\]?(?: .*?)?\n(.*?)(?=^## |\Z)"
-          m = re.search(pattern, text)
-          if m and m.group(1).strip():
-              print(m.group(1).strip())
+
+          m = None
+          for candidate in dict.fromkeys([ver, base_ver]):
+              pattern = rf"(?ms)^(## \[?v?{re.escape(candidate)}\]?(?: [^\n]*)?)\n(.*?)(?=^## |\Z)"
+              m = re.search(pattern, text)
+              if m:
+                  break
+
+          is_hotfix = "hotfix" in tag.lower()
+          if m:
+              heading, body = m.group(1), m.group(2).strip()
+              if "hotfix" in heading.lower():
+                  is_hotfix = True
+              if body:
+                  with open(notes_path, "w", encoding="utf-8") as nf:
+                      nf.write(body + "\n")
+
+          title = f"VCarterUtils v{base_ver} (Hotfix)" if is_hotfix else f"VCarterUtils {tag}"
+          with open(title_path, "w", encoding="utf-8") as tf:
+              tf.write(title)
           PY
             if [ -s "$NOTES_FILE" ]; then
               HAS_NOTES=true
             fi
+          elif [[ "${TAG,,}" == *hotfix* ]]; then
+            BASE_VER="${VERSION%%-*}"
+            printf 'VCarterUtils v%s (Hotfix)' "$BASE_VER" > "$TITLE_FILE"
           fi
+          RELEASE_TITLE=$(cat "$TITLE_FILE")
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             if [ "$HAS_NOTES" = true ]; then
-              gh release edit "$TAG" --title "VCarterUtils $TAG" --notes-file "$NOTES_FILE"
+              gh release edit "$TAG" --title "$RELEASE_TITLE" --notes-file "$NOTES_FILE"
+            else
+              gh release edit "$TAG" --title "$RELEASE_TITLE"
             fi
             gh release upload "$TAG" "$JAR_FILE" --clobber
           else
             if [ "$HAS_NOTES" = true ]; then
               gh release create "$TAG" "$JAR_FILE" \
-                --title "VCarterUtils $TAG" \
+                --title "$RELEASE_TITLE" \
                 --notes-file "$NOTES_FILE"
             else
               gh release create "$TAG" "$JAR_FILE" \
-                --title "VCarterUtils $TAG" \
+                --title "$RELEASE_TITLE" \
                 --generate-notes
             fi
           fi

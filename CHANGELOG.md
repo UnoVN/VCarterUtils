@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.2.9] - 2026-11-16
+
+### GUI Synchronization & Release Workflow
+- **Unified GUI Framing & Layout:** Standardized top/bottom `BLACK_STAINED_GLASS_PANE` borders and inner `GRAY_STAINED_GLASS_PANE` filler across `Personal Settings`, `Training Settings`, `World Rules`, and `Global Overrides` (matching `World Manager`).
+- **Balanced 36-Slot `/training` Menu:** Realigned the 8 training options into a clean 2×4 grid (`10, 12, 14, 16` and `19, 21, 23, 25`) with a centered `« Back to Settings` button at slot `31` and wrapped 2-line descriptions.
+- **1:1 Icons, Status Badges & Lore:** Reserved `nexo:cancel` for `✖ Close`, switched all `« Back` buttons to `nexo:previous` (`<#89dceb>`), removed mismatched/duplicate Nexo icons on `Master Training Mode` and `Global Overrides`, and standardized `✔ ᴇɴᴀʙʟᴇᴅ` / `✖ ᴅɪsᴀʙʟᴇᴅ` / `○ ᴅᴇꜰᴀᴜʟᴛ` badges and click prompts.
+- **Hotfix-Aware Release Publishing:** Updated `.github/workflows/build.yml` to tag GitHub Release titles with `(Hotfix)` when releasing a bug-fix (`Hotfix` heading or `-hotfix` tag) while keeping clean `VCarterUtils v<version>` titles for version updates.
+
 ## [v1.2.8] - 2026-11-16
 
 ### Release & Build Automation

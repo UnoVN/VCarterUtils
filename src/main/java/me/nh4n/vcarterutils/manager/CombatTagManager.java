@@ -204,16 +204,18 @@ public class CombatTagManager {
         String cleanKey = worldName.trim();
         String lowerKey = cleanKey.toLowerCase();
 
+        for (String k : new HashSet<>(getConfiguredWorldKeys())) {
+            if (k.equalsIgnoreCase(lowerKey)) {
+                plugin.getConfig().set("combat-tag.force-worlds.worlds." + k, null);
+            }
+        }
+
         if (seconds < 0) {
             forcedWorldCombatTimers.remove(lowerKey);
             plugin.getConfig().set("combat-tag.force-worlds.worlds." + cleanKey, null);
-            for (String k : getConfiguredWorldKeys()) {
-                if (k.equalsIgnoreCase(lowerKey)) {
-                    plugin.getConfig().set("combat-tag.force-worlds.worlds." + k, null);
-                }
-            }
         } else {
             forcedWorldCombatTimers.put(lowerKey, seconds);
+            plugin.getConfig().set("combat-tag.force-worlds.enabled", true);
             plugin.getConfig().set("combat-tag.force-worlds.worlds." + cleanKey, seconds);
         }
         plugin.saveFeatureConfig("combattag");
@@ -383,15 +385,17 @@ public class CombatTagManager {
         if (worldOrGlobal == null || worldOrGlobal.equalsIgnoreCase("global")) {
             if (!globalBlockedCommands.contains(clean)) {
                 globalBlockedCommands.add(clean);
-                plugin.getConfig().set("combat-tag.blocked-commands.global", globalBlockedCommands);
+                plugin.getConfig().set("combat-tag.blocked-commands.global", new ArrayList<>(globalBlockedCommands));
                 plugin.saveFeatureConfig("combattag");
             }
         } else {
-            String lower = worldOrGlobal.trim().toLowerCase();
+            String cleanWorld = worldOrGlobal.trim();
+            String lower = cleanWorld.toLowerCase();
             List<String> list = worldBlockedCommands.computeIfAbsent(lower, k -> new ArrayList<>());
             if (!list.contains(clean)) {
                 list.add(clean);
-                plugin.getConfig().set("combat-tag.blocked-commands.worlds." + worldOrGlobal.trim(), list);
+                clearCaseVariantWorldKey("combat-tag.blocked-commands.worlds", cleanWorld);
+                plugin.getConfig().set("combat-tag.blocked-commands.worlds." + cleanWorld, new ArrayList<>(list));
                 plugin.saveFeatureConfig("combattag");
             }
         }
@@ -404,23 +408,39 @@ public class CombatTagManager {
         if (worldOrGlobal == null || worldOrGlobal.equalsIgnoreCase("global")) {
             boolean removed = globalBlockedCommands.remove(clean);
             if (removed) {
-                plugin.getConfig().set("combat-tag.blocked-commands.global", globalBlockedCommands);
+                plugin.getConfig().set("combat-tag.blocked-commands.global", new ArrayList<>(globalBlockedCommands));
                 plugin.saveFeatureConfig("combattag");
             }
             return removed;
         } else {
-            String lower = worldOrGlobal.trim().toLowerCase();
+            String cleanWorld = worldOrGlobal.trim();
+            String lower = cleanWorld.toLowerCase();
             List<String> list = worldBlockedCommands.get(lower);
             if (list != null) {
                 boolean removed = list.remove(clean);
                 if (removed) {
-                    plugin.getConfig().set("combat-tag.blocked-commands.worlds." + worldOrGlobal.trim(), list);
+                    clearCaseVariantWorldKey("combat-tag.blocked-commands.worlds", cleanWorld);
+                    if (list.isEmpty()) {
+                        worldBlockedCommands.remove(lower);
+                    } else {
+                        plugin.getConfig().set("combat-tag.blocked-commands.worlds." + cleanWorld, new ArrayList<>(list));
+                    }
                     plugin.saveFeatureConfig("combattag");
                 }
                 return removed;
             }
         }
         return false;
+    }
+
+    private void clearCaseVariantWorldKey(String sectionPath, String worldName) {
+        ConfigurationSection sec = plugin.getConfig().getConfigurationSection(sectionPath);
+        if (sec == null) return;
+        for (String existing : new HashSet<>(sec.getKeys(false))) {
+            if (existing.equalsIgnoreCase(worldName)) {
+                sec.set(existing, null);
+            }
+        }
     }
 
     // ==========================================
@@ -462,17 +482,18 @@ public class CombatTagManager {
         String cleanKey = worldName.trim();
         String lowerKey = cleanKey.toLowerCase();
 
+        ConfigurationSection sec = plugin.getConfig().getConfigurationSection("combat-tag.anti-interrupt.worlds");
+        if (sec != null) {
+            for (String k : new HashSet<>(sec.getKeys(false))) {
+                if (k.equalsIgnoreCase(lowerKey)) {
+                    plugin.getConfig().set("combat-tag.anti-interrupt.worlds." + k, null);
+                }
+            }
+        }
+
         if (enabled == null) {
             worldAntiInterrupt.remove(lowerKey);
             plugin.getConfig().set("combat-tag.anti-interrupt.worlds." + cleanKey, null);
-            ConfigurationSection sec = plugin.getConfig().getConfigurationSection("combat-tag.anti-interrupt.worlds");
-            if (sec != null) {
-                for (String k : sec.getKeys(false)) {
-                    if (k.equalsIgnoreCase(lowerKey)) {
-                        plugin.getConfig().set("combat-tag.anti-interrupt.worlds." + k, null);
-                    }
-                }
-            }
         } else {
             worldAntiInterrupt.put(lowerKey, enabled);
             plugin.getConfig().set("combat-tag.anti-interrupt.worlds." + cleanKey, enabled);

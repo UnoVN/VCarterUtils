@@ -39,7 +39,7 @@
 * **GUI & Lore Formatting:** Use `<white><glyph:left_click></white>` and `<white><glyph:right_click></white>` for click prompts. Always use valid 2D vanilla item atlas names inside `<white><sprite:items:item/...></white>` (`ender_pearl`, `mace`, `netherite_sword`, `totem_of_undying`, `golden_apple`, `tnt_minecart`, `rail`, `crossbow_standby`, `diamond_chestplate`, `shulker_shell`, `compass_16`, `recovery_compass_16`).
 
 ## 3. TECH STACK & CRITICAL INTER-SYSTEM PIPELINES
-* **Plugin Info:** `VCarterUtils` v1.3.0 | Author: `Nh4n` | Main: `me.nh4n.vcarterutils.VCarterUtils` | Java 21 | Compile API: Paper `1.21.1-R0.1-SNAPSHOT` (`api-version: '1.21'`) | Runtime: Paper / Leaf `1.21.11`.
+* **Plugin Info:** `VCarterUtils` v1.3.1 | Author: `Nh4n` | Main: `me.nh4n.vcarterutils.VCarterUtils` | Java 21 | Compile API: Paper `1.21.1-R0.1-SNAPSHOT` (`api-version: '1.21'`) | Runtime: Paper / Leaf `1.21.11`.
 * **Soft-Depends:** `PlaceholderAPI` (2.11.6), `PerPlayerKit` (`/k1`..`/k99`, `/kit`, `/pk`, `/rekit`), `Nexo`, `FoCombatTag`, `Multiverse-Core`, `SlimeWorldManager`, `AdvancedSlimeWorldManager`, `SlimeWorldPlugin`.
 * **Respawn, AutoPot, Regear & Lobby Hotbar Pipeline (Tick-Sensitive):**
   * **Tick 0 (`PlayerDeathEvent`):** `LobbyHotbarManager.markRespawning(uuid)` clears stale `savedHotbars` and blocks `PlayerChangedWorldEvent` from saving an empty hotbar before `PerPlayerKit` loads items. `FoCombatTagHook.untag(player)` and `CombatTagManager.endCombat(uuid)` clear combat state so `/back` works immediately.
@@ -74,7 +74,7 @@
 * `@src/main/resources/gui/menu.yml` — `/setting` personal menu & `/setting admin` World Manager GUI config.
 * `@src/main/java/me/nh4n/vcarterutils/VCarterUtils.java` — Main plugin lifecycle, `reloadPluginConfig()`, `saveFeatureConfig(String)`, `getPlayerDataManager()`, `formatMessage(String)`, `parseMessage(String)`, and manager/hook getters.
 * `@src/main/java/me/nh4n/vcarterutils/config/ConfigManager.java` — Folder-organized modular configuration manager handling migration (monolithic + flat files -> folders), deleted-key isolation, dirty-only diff saving (preserving comments), and synchronization with main config.
-* `@src/main/java/me/nh4n/vcarterutils/config/PlayerDataManager.java` — Centralized thread-safe persistence for `data/playerdata.yml` (with legacy root `playerdata.yml` migration, coalesced async writes, and single dirty-checked shutdown flush).
+* `@src/main/java/me/nh4n/vcarterutils/config/PlayerDataManager.java` — Centralized thread-safe persistence for `data/playerdata.yml` (with legacy root `playerdata.yml` migration, `removeIfSetAsync`, atomic temp-file writes, coalesced async writes, and single dirty-checked shutdown flush).
 * `@src/main/java/me/nh4n/vcarterutils/util/MessageUtil.java` — Centralized message formatter and parser replacing `%prefix_...%` (`info`, `blue`, `error`, `red`, `warning`, `purple`, `success`, `admin`, `combat`) and `%c_...%` (`primary`, `success`, `error`, `warning`, `purple`, `text`, `muted`) placeholders dynamically from `config.yml`.
 
 ### Hooks & Packet Filters (`hook/`)

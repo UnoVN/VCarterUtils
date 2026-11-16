@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.3.1] - 2026-11-17 (Hotfix)
+
+### Config, Migration & Concurrency Fixes
+- **Monolithic Config Migration Precision:** Updated `ConfigManager` to replace legacy `config.yml` with the clean commented template when migrating from pre-theme monolithic configs (preserving customized `admin` values and template comments), honor deleted entries inside `AUTHORITATIVE_LEGACY_SECTIONS` (`force-worlds.worlds`, `blocked-commands.worlds`, `anti-interrupt.worlds`, `lobby-hotbar.items`, `setting-menu.items`), deep-clone YAML collections, and upgrade only individual legacy leaves in `migrateTypographyAndTheme()` without overwriting modern user customizations.
+- **Atomic & Safer `PlayerDataManager` Persistence:** Added `removeIfSetAsync(...)` to skip unnecessary writes for missing keys (used by `LobbyHotbarManager`), guarded async task scheduling against shutdown races with sync fallback, and switched `writeToDisk()` to atomic temp-file writes (`ATOMIC_MOVE` / `REPLACE_EXISTING`).
+- **Reload & Combat Tag Edge-Case Fixes:** Reset `plugin.getConfig()` defaults during `reloadPluginConfig()`, guarded `setupAutoResetTask()` against `interval-minutes <= 0`, moved `settingMenuManager.reload()` after `combatTagManager.reload()` and `trainingManager.reload()` so refreshed GUIs reflect new values, enabled `combat-tag.force-worlds.enabled` automatically on world overrides, passed defensive list copies on `blocked-commands` mutations, and cleared case-variant world keys consistently across `force-worlds`, `anti-interrupt`, and `blocked-commands`.
+
 ## [v1.3.0] - 2026-11-16
 
 ### Folder-Organized Configs & Persistence Optimization

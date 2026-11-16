@@ -7,7 +7,9 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -106,10 +108,34 @@ public class PlayerDataManager {
             mutator.accept(dataConfig);
             dirty = true;
         }
+        scheduleAsyncFlushOrSync();
+    }
 
+    public void removeIfSetAsync(String path) {
+        if (path == null || path.isEmpty()) return;
+        boolean changed;
+        synchronized (VCarterUtils.class) {
+            if (!dataConfig.isSet(path)) {
+                return;
+            }
+            dataConfig.set(path, null);
+            dirty = true;
+            changed = true;
+        }
+        if (changed) {
+            scheduleAsyncFlushOrSync();
+        }
+    }
+
+    private void scheduleAsyncFlushOrSync() {
         if (plugin != null && plugin.isEnabled()) {
             if (saveQueued.compareAndSet(false, true)) {
-                Bukkit.getScheduler().runTaskAsynchronously(plugin, this::flushQueuedAsync);
+                try {
+                    Bukkit.getScheduler().runTaskAsynchronously(plugin, this::flushQueuedAsync);
+                } catch (Throwable t) {
+                    saveQueued.set(false);
+                    saveSyncIfDirty();
+                }
             }
         } else {
             saveSyncIfDirty();
@@ -154,12 +180,27 @@ public class PlayerDataManager {
     }
 
     private void writeToDisk() {
+        File tempFile = new File(dataFile.getParentFile(), dataFile.getName() + ".tmp");
         try {
             ensureParentDir();
-            dataConfig.save(dataFile);
+            dataConfig.save(tempFile);
+            try {
+                Files.move(tempFile.toPath(), dataFile.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(tempFile.toPath(), dataFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
             dirty = false;
         } catch (IOException e) {
-            logger.warning("Could not save " + RELATIVE_PATH + ": " + e.getMessage());
+            if (tempFile.exists()) {
+                tempFile.delete();
+            }
+            try {
+                dataConfig.save(dataFile);
+                dirty = false;
+            } catch (IOException fallbackEx) {
+                logger.warning("Could not save " + RELATIVE_PATH + ": " + fallbackEx.getMessage());
+            }
         }
     }
 }

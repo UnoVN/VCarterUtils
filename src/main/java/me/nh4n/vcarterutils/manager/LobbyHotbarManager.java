@@ -100,15 +100,15 @@ public class LobbyHotbarManager {
     }
 
     private void savePlayerHotbarAsync(UUID uuid, ItemStack[] hotbar) {
-        final ItemStack[] copy = (hotbar != null) ? cloneHotbar(hotbar) : null;
+        if (hotbar == null) {
+            playerData.removeIfSetAsync("saved-hotbars." + uuid.toString());
+            return;
+        }
+        final ItemStack[] copy = cloneHotbar(hotbar);
         playerData.updateAndSaveAsync(cfg -> {
             String base = "saved-hotbars." + uuid.toString();
-            if (copy == null) {
-                cfg.set(base, null);
-            } else {
-                for (int i = 0; i < 9; i++) {
-                    cfg.set(base + ".slot_" + i, copy[i]);
-                }
+            for (int i = 0; i < 9; i++) {
+                cfg.set(base + ".slot_" + i, copy[i]);
             }
         });
     }

@@ -211,6 +211,7 @@ public class ConfigManager {
 
         logger.info("Detected legacy monolithic config.yml. Backing up and modularizing into feature folders...");
 
+        boolean replaceConfigTemplate = !mainYaml.contains("theme");
         File backupFile = new File(dataFolder, "data/backups/config.yml.legacy-backup");
         if (!backupFile.exists()) {
             File backupParent = backupFile.getParentFile();
@@ -235,7 +236,22 @@ public class ConfigManager {
         }
 
         try {
-            mainYaml.save(configFile);
+            if (replaceConfigTemplate) {
+                try (InputStream stream = resourceOpener.apply("config.yml")) {
+                    if (stream != null) {
+                        Files.copy(stream, configFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        YamlConfiguration freshConfig = YamlConfiguration.loadConfiguration(configFile);
+                        if (mainYaml.isConfigurationSection("admin")
+                                && mergeConfigPath(mainYaml, freshConfig, "admin", "admin")) {
+                            freshConfig.save(configFile);
+                        }
+                    } else {
+                        mainYaml.save(configFile);
+                    }
+                }
+            } else {
+                mainYaml.save(configFile);
+            }
             logger.info("Cleaned legacy sections from config.yml. Configurations are now organized in feature folders.");
         } catch (IOException e) {
             logger.warning("Could not save cleaned config.yml: " + e.getMessage());
@@ -274,6 +290,16 @@ public class ConfigManager {
         }
     }
 
+    private static final Set<String> AUTHORITATIVE_LEGACY_SECTIONS = Set.of(
+            "pearl-cooldown.force-worlds.worlds",
+            "mace-cooldown.force-worlds.worlds",
+            "combat-tag.force-worlds.worlds",
+            "combat-tag.blocked-commands.worlds",
+            "combat-tag.anti-interrupt.worlds",
+            "lobby-hotbar.items",
+            "setting-menu.items"
+    );
+
     private void migrateSectionToFeatureFile(YamlConfiguration legacyYaml, String relativePath, List<String> keys) {
         File file = new File(dataFolder, relativePath);
         boolean newlyExtracted = !file.exists();
@@ -287,7 +313,7 @@ public class ConfigManager {
             for (String key : keys) {
                 if (legacyYaml.isSet(key)) {
                     if (newlyExtracted) {
-                        if (mergeConfigPath(legacyYaml, featConfig, key)) {
+                        if (mergeConfigPath(legacyYaml, featConfig, key, key)) {
                             modified = true;
                         }
                     } else if (!featConfig.isSet(key)) {
@@ -305,8 +331,11 @@ public class ConfigManager {
         }
     }
 
-    private boolean mergeConfigPath(ConfigurationSection source, ConfigurationSection target, String path) {
+    private boolean mergeConfigPath(ConfigurationSection source, ConfigurationSection target, String path, String fullPath) {
         if (source.isConfigurationSection(path)) {
+            if (AUTHORITATIVE_LEGACY_SECTIONS.contains(fullPath)) {
+                return syncDiffToTarget(source, target, path);
+            }
             ConfigurationSection srcSec = source.getConfigurationSection(path);
             ConfigurationSection dstSec = target.getConfigurationSection(path);
             boolean modified = false;
@@ -316,7 +345,8 @@ public class ConfigManager {
             }
             if (srcSec != null) {
                 for (String child : srcSec.getKeys(false)) {
-                    if (mergeConfigPath(srcSec, dstSec, child)) {
+                    String childFull = fullPath.isEmpty() ? child : fullPath + "." + child;
+                    if (mergeConfigPath(srcSec, dstSec, child, childFull)) {
                         modified = true;
                     }
                 }
@@ -324,8 +354,8 @@ public class ConfigManager {
             return modified;
         }
         Object srcVal = source.get(path);
-        if (!Objects.equals(srcVal, target.get(path))) {
-            target.set(path, srcVal);
+        if (target.isConfigurationSection(path) || !Objects.equals(srcVal, target.get(path))) {
+            target.set(path, cloneYamlValue(srcVal));
             return true;
         }
         return false;
@@ -347,12 +377,13 @@ public class ConfigManager {
         }
 
         boolean hasTraining = cfg.isSet("setting-menu.items.training-mode");
+        boolean trainingEnabled = cfg.getBoolean("setting-menu.items.training-mode.enabled", true);
         int trainingSlot = cfg.getInt("setting-menu.items.training-mode.slot", 13);
         int xbowSlot = cfg.getInt("setting-menu.items.xbow-counter-toggle.slot", -1);
         int lobbySlot = cfg.getInt("setting-menu.items.lobby-hotbar-toggle.slot", -1);
 
         boolean changed = false;
-        if (!hasTraining || (trainingSlot == 13 && xbowSlot == 13)) {
+        if (!hasTraining || (trainingEnabled && trainingSlot == 13 && xbowSlot == 13)) {
             if (xbowSlot == 13) {
                 cfg.set("setting-menu.items.xbow-counter-toggle.slot", 14);
                 changed = true;
@@ -385,7 +416,8 @@ public class ConfigManager {
     }
 
     /**
-     * Fixes any outdated rtpq queue items in utility/lobby.yml (e.g. nexo:join) to use IRON_SWORD.
+     * Fixes any outdated rtpq/cosmetic/settings default items in utility/lobby.yml
+     * without overwriting modern user customizations.
      */
     private void migrateLobbyQueueItem() {
         FeatureConfig lobbyFc = featureConfigs.get("lobby");
@@ -414,7 +446,9 @@ public class ConfigManager {
 
         for (String key : List.of("decor", "cosmetics", "cosmetic")) {
             String cName = cfg.getString("lobby-hotbar.items." + key + ".name", "");
-            if (cName != null && (cName.contains("<glyph:social>") || cName.contains("Decorations") || cName.contains("Cosmetics"))) {
+            if (cName != null && (cName.contains("<glyph:social>")
+                    || cName.contains("<b>Decorations</b>")
+                    || cName.contains("<b>Cosmetics</b> <#6c7086>(/decor)"))) {
                 cfg.set("lobby-hotbar.items." + key + ".name", "<!italic><#f9e2af><b>Cosmetic</b> <#6c7086>▪ <#a6adc8>/decor");
                 cfg.set("lobby-hotbar.items." + key + ".lore", List.of(
                         "<!italic><#6c7086>ᴠɪsᴜᴀʟ ᴄᴜsᴛᴏᴍɪᴢᴀᴛɪᴏɴ",
@@ -444,11 +478,11 @@ public class ConfigManager {
     }
 
     /**
-     * Migrates genuinely obsolete legacy glyphs/markers to the clean warning_blue/red/purple
-     * typography without clobbering customized modern configs.
+     * Migrates only individual leaf entries containing genuinely obsolete legacy glyphs/markers
+     * to the clean warning_blue/red/purple typography without clobbering customized configs.
      */
     private void migrateTypographyAndTheme() {
-        List<String> legacyMarkers = List.of(
+        List<String> legacyGlyphMarkers = List.of(
                 "<glyph:info_blue>",
                 "<glyph:warning_orange>",
                 "<glyph:staff_warning>",
@@ -460,9 +494,16 @@ public class ConfigManager {
                 "<glyph:info_icon>",
                 "<glyph:admin_setting>",
                 "<glyph:join>",
-                "<glyph:cancel>",
-                "<b>ENABLED</b>",
-                "<b>DISABLED</b>"
+                "<glyph:cancel>"
+        );
+        List<String> legacyStatusMarkers = List.of("<b>ENABLED</b>", "<b>DISABLED</b>");
+        Set<String> statusLeafPaths = Set.of(
+                "lobby-hotbar.messages.status-enabled",
+                "lobby-hotbar.messages.status-disabled",
+                "xbow-counter.messages.status-enabled",
+                "xbow-counter.messages.status-disabled",
+                "training.messages.status-enabled",
+                "training.messages.status-disabled"
         );
 
         Map<String, List<String>> uiPathsByFeature = Map.ofEntries(
@@ -488,24 +529,22 @@ public class ConfigManager {
                 YamlConfiguration jarCfg = YamlConfiguration.loadConfiguration(new InputStreamReader(defStream, StandardCharsets.UTF_8));
                 FileConfiguration diskCfg = fc.configuration();
 
-                String dump = diskCfg.saveToString();
-                boolean hasLegacyMarker = false;
-                for (String marker : legacyMarkers) {
-                    if (dump.contains(marker)) {
-                        hasLegacyMarker = true;
-                        break;
-                    }
-                }
-
                 boolean changed = false;
-                if (hasLegacyMarker) {
-                    for (String path : entry.getValue()) {
-                        if (jarCfg.isSet(path)) {
-                            copyConfigPath(jarCfg, diskCfg, path);
+                for (String rootPath : entry.getValue()) {
+                    if (!jarCfg.isSet(rootPath)) continue;
+                    for (String leafPath : collectLeafPaths(jarCfg, rootPath)) {
+                        if (!diskCfg.isSet(leafPath)) continue;
+                        Object diskVal = diskCfg.get(leafPath);
+                        boolean upgradeLeaf = containsAnyMarker(diskVal, legacyGlyphMarkers)
+                                || (statusLeafPaths.contains(leafPath) && containsAnyMarker(diskVal, legacyStatusMarkers));
+                        if (upgradeLeaf) {
+                            diskCfg.set(leafPath, cloneYamlValue(jarCfg.get(leafPath)));
                             changed = true;
                         }
                     }
-                } else if ("config".equals(entry.getKey())) {
+                }
+
+                if ("config".equals(entry.getKey())) {
                     // Fill only missing theme keys individually so admin theme overrides stay intact
                     for (String themeSection : List.of("theme.prefixes", "theme.colors", "admin.messages")) {
                         ConfigurationSection sec = jarCfg.getConfigurationSection(themeSection);
@@ -513,7 +552,7 @@ public class ConfigManager {
                             for (String key : sec.getKeys(false)) {
                                 String fullPath = themeSection + "." + key;
                                 if (!diskCfg.isSet(fullPath)) {
-                                    diskCfg.set(fullPath, sec.get(key));
+                                    diskCfg.set(fullPath, cloneYamlValue(sec.get(key)));
                                     changed = true;
                                 }
                             }
@@ -531,32 +570,74 @@ public class ConfigManager {
             }
         }
 
-        // Ensure gameplay/regear.yml keeps its original <glyph:warning_blue> formatting
+        // Upgrade only genuinely obsolete regear entries while respecting custom %prefix_*% overrides
         FeatureConfig regearFc = featureConfigs.get("regear");
         if (regearFc != null) {
             FileConfiguration regearDisk = regearFc.configuration();
-            String regearDump = regearDisk.saveToString();
-            if (regearDump.contains("<sprite:items:item/shulker_shell>")
-                    || regearDump.contains("%prefix_")
-                    || regearDump.contains("ʀᴇsᴛᴏᴄᴋᴇᴅ ɪɴᴠᴇɴᴛᴏʀʏ")
-                    || regearDump.contains("<glyph:info_blue>")) {
-                try (InputStream regearStream = resourceOpener.apply(regearFc.fileName())) {
-                    if (regearStream != null) {
-                        YamlConfiguration regearJar = YamlConfiguration.loadConfiguration(new InputStreamReader(regearStream, StandardCharsets.UTF_8));
-                        for (String path : List.of("regear.announcement.message", "regear.item.name", "regear.item.lore", "regear.messages")) {
-                            if (regearJar.isSet(path)) {
-                                copyConfigPath(regearJar, regearDisk, path);
+            List<String> legacyRegearMarkers = List.of(
+                    "<sprite:items:item/shulker_shell>",
+                    "ʀᴇsᴛᴏᴄᴋᴇᴅ ɪɴᴠᴇɴᴛᴏʀʏ",
+                    "<glyph:info_blue>"
+            );
+            try (InputStream regearStream = resourceOpener.apply(regearFc.fileName())) {
+                if (regearStream != null) {
+                    YamlConfiguration regearJar = YamlConfiguration.loadConfiguration(new InputStreamReader(regearStream, StandardCharsets.UTF_8));
+                    boolean regearChanged = false;
+                    for (String rootPath : List.of("regear.announcement.message", "regear.item.name", "regear.item.lore", "regear.messages")) {
+                        if (!regearJar.isSet(rootPath)) continue;
+                        for (String leafPath : collectLeafPaths(regearJar, rootPath)) {
+                            if (regearDisk.isSet(leafPath) && containsAnyMarker(regearDisk.get(leafPath), legacyRegearMarkers)) {
+                                regearDisk.set(leafPath, cloneYamlValue(regearJar.get(leafPath)));
+                                regearChanged = true;
                             }
                         }
+                    }
+                    if (regearChanged) {
                         try {
                             regearDisk.save(regearFc.file());
                         } catch (IOException ignored) {
                         }
                     }
-                } catch (IOException ignored) {
+                }
+            } catch (IOException ignored) {
+            }
+        }
+    }
+
+    private List<String> collectLeafPaths(ConfigurationSection root, String rootPath) {
+        List<String> leaves = new ArrayList<>();
+        if (root.isConfigurationSection(rootPath)) {
+            ConfigurationSection sec = root.getConfigurationSection(rootPath);
+            if (sec != null) {
+                for (String key : sec.getKeys(true)) {
+                    if (!sec.isConfigurationSection(key)) {
+                        leaves.add(rootPath + "." + key);
+                    }
+                }
+            }
+        } else if (root.isSet(rootPath)) {
+            leaves.add(rootPath);
+        }
+        return leaves;
+    }
+
+    private boolean containsAnyMarker(Object value, List<String> markers) {
+        if (value instanceof String s) {
+            for (String marker : markers) {
+                if (s.contains(marker)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (value instanceof List<?> list) {
+            for (Object elem : list) {
+                if (containsAnyMarker(elem, markers)) {
+                    return true;
                 }
             }
         }
+        return false;
     }
 
     /**
@@ -652,7 +733,7 @@ public class ConfigManager {
                 }
             }
         } else {
-            target.set(path, source.get(path));
+            target.set(path, cloneYamlValue(source.get(path)));
         }
     }
 
@@ -697,10 +778,28 @@ public class ConfigManager {
 
         Object srcVal = source.get(path);
         if (target.isConfigurationSection(path) || !Objects.equals(srcVal, target.get(path))) {
-            target.set(path, srcVal);
+            target.set(path, cloneYamlValue(srcVal));
             return true;
         }
         return false;
+    }
+
+    private Object cloneYamlValue(Object val) {
+        if (val instanceof List<?> list) {
+            List<Object> copy = new ArrayList<>(list.size());
+            for (Object item : list) {
+                copy.add(cloneYamlValue(item));
+            }
+            return copy;
+        }
+        if (val instanceof Map<?, ?> map) {
+            Map<Object, Object> copy = new LinkedHashMap<>(map.size());
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                copy.put(entry.getKey(), cloneYamlValue(entry.getValue()));
+            }
+            return copy;
+        }
+        return val;
     }
 
     public FileConfiguration getFeatureConfig(String featureName) {

@@ -214,6 +214,7 @@ public final class VCarterUtils extends JavaPlugin {
     }
 
     public void reloadPluginConfig() {
+        getConfig().setDefaults(new YamlConfiguration());
         if (configManager != null) {
             configManager.reloadAll();
         } else {
@@ -241,14 +242,14 @@ public final class VCarterUtils extends JavaPlugin {
         if (xbowManager != null) {
             xbowManager.reload();
         }
-        if (settingMenuManager != null) {
-            settingMenuManager.reload();
-        }
         if (combatTagManager != null) {
             combatTagManager.reload();
         }
         if (trainingManager != null) {
             trainingManager.reload();
+        }
+        if (settingMenuManager != null) {
+            settingMenuManager.reload();
         }
         setupAutoResetTask();
         getLogger().info("VCarterUtils configuration reloaded.");
@@ -265,6 +266,9 @@ public final class VCarterUtils extends JavaPlugin {
         }
 
         long minutes = getConfig().getLong("score.auto-reset.interval-minutes", 60L);
+        if (minutes <= 0L) {
+            return;
+        }
         long ticks = minutes * 60L * 20L;
 
         this.autoResetTask = Bukkit.getScheduler().runTaskTimer(this, () -> {

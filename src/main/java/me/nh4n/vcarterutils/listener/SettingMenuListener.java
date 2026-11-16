@@ -25,6 +25,7 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.InventoryHolder;
 
 import me.nh4n.vcarterutils.hook.FoCombatTagHook;
+import me.nh4n.vcarterutils.manager.TrainingManager;
 import me.nh4n.vcarterutils.manager.TrainingManager.TrainingMenuHolder;
 import me.nh4n.vcarterutils.manager.TrainingOption;
 
@@ -635,14 +636,14 @@ public class SettingMenuListener implements Listener {
             return;
         }
 
-        // Slot 40: Back to main Settings menu
-        if (slot == 40) {
+        // Back to main Settings menu
+        if (slot == TrainingManager.BACK_SLOT) {
             plugin.getSettingMenuManager().openSettingMenu(player);
             player.playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 1.0f, 1.0f);
             return;
         }
 
-        // Slots 10..16: Training Options
+        // Training Option slots
         TrainingOption option = TrainingOption.fromSlot(slot);
         if (option != null) {
             boolean newState = plugin.getTrainingManager().toggleOption(player.getUniqueId(), option);

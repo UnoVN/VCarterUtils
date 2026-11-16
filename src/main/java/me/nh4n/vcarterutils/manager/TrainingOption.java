@@ -2,6 +2,8 @@ package me.nh4n.vcarterutils.manager;
 
 import org.bukkit.Material;
 
+import java.util.List;
+
 public enum TrainingOption {
     GOD_MODE(
             "god-mode",
@@ -9,7 +11,7 @@ public enum TrainingOption {
             "<white><sprite:items:item/golden_apple></white>",
             Material.GOLDEN_APPLE,
             10,
-            "Take zero damage from falls, pearls, explosions, void, and all attacks."
+            List.of("Take zero damage from falls, pearls,", "explosions, void, and all attacks.")
     ),
     AUTO_REFILL(
             "auto-refill",
@@ -17,7 +19,7 @@ public enum TrainingOption {
             "<white><sprite:items:item/tnt_minecart></white>",
             Material.DISPENSER,
             12,
-            "Auto-refills rails, TNT carts, projectiles, pearls, and items."
+            List.of("Auto-refills rails, TNT carts,", "projectiles, pearls, and hotbar items.")
     ),
     INFINITE_TOTEM(
             "infinite-totem",
@@ -25,7 +27,7 @@ public enum TrainingOption {
             "<white><sprite:items:item/totem_of_undying></white>",
             Material.TOTEM_OF_UNDYING,
             14,
-            "Auto-replenishes Totem of Undying on pop without losing it."
+            List.of("Auto-replenishes Totem of Undying", "on pop without losing it.")
     ),
     CROSSBOW_RELOAD(
             "crossbow-reload",
@@ -33,39 +35,39 @@ public enum TrainingOption {
             "<white><sprite:items:item/crossbow_standby></white>",
             Material.CROSSBOW,
             16,
-            "Crossbow never loses reload state and has infinite ammo."
+            List.of("Crossbow never loses reload state", "and has infinite ammo.")
     ),
     INFINITE_DURABILITY(
             "infinite-durability",
             "Infinite Durability",
             "<white><sprite:items:item/diamond_chestplate></white>",
             Material.DIAMOND_CHESTPLATE,
-            20,
-            "Weapons, armor, tools, and shields never lose durability."
+            19,
+            List.of("Weapons, armor, tools, and shields", "never lose durability.")
     ),
     INFINITE_BLOCKS(
             "infinite-blocks",
             "Infinite Blocks & Rails",
             "<white><sprite:items:item/rail></white>",
             Material.OBSIDIAN,
-            22,
-            "Placing blocks and rails never depletes items from your hand."
+            21,
+            List.of("Placing blocks and rails never", "depletes items from your hand.")
     ),
     INFINITE_CONSUMABLES(
             "infinite-consumables",
             "Infinite Consumables",
             "<white><sprite:items:item/golden_apple></white>",
             Material.ENCHANTED_GOLDEN_APPLE,
-            24,
-            "Food, golden apples, and potions never deplete or leave trash."
+            23,
+            List.of("Food, golden apples, and potions", "never deplete or leave trash.")
     ),
     KEEP_INVENTORY(
             "keep-inventory",
             "Keep Inventory",
             "<white><sprite:items:item/recovery_compass_16></white>",
             Material.CHEST,
-            31,
-            "Keep inventory and experience on death while in training."
+            25,
+            List.of("Keep inventory and experience", "on death while in training.")
     );
 
     private final String key;
@@ -73,15 +75,15 @@ public enum TrainingOption {
     private final String spriteTag;
     private final Material icon;
     private final int slot;
-    private final String description;
+    private final List<String> descriptionLines;
 
-    TrainingOption(String key, String displayName, String spriteTag, Material icon, int slot, String description) {
+    TrainingOption(String key, String displayName, String spriteTag, Material icon, int slot, List<String> descriptionLines) {
         this.key = key;
         this.displayName = displayName;
         this.spriteTag = spriteTag;
         this.icon = icon;
         this.slot = slot;
-        this.description = description;
+        this.descriptionLines = descriptionLines;
     }
 
     public String getKey() {
@@ -105,7 +107,11 @@ public enum TrainingOption {
     }
 
     public String getDescription() {
-        return description;
+        return String.join(" ", descriptionLines);
+    }
+
+    public List<String> getDescriptionLines() {
+        return descriptionLines;
     }
 
     public static TrainingOption fromKey(String key) {

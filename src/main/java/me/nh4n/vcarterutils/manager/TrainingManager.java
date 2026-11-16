@@ -286,13 +286,16 @@ public class TrainingManager {
     //           TRAINING MODE GUI
     // ==========================================
 
+    public static final int MENU_SIZE = 36;
+    public static final int BACK_SLOT = 31;
+
     public void openTrainingMenu(Player player) {
         String titleRaw = plugin.getConfig().getString(
                 "training-menu.title",
                 "<#6c7086>✦ <#89dceb><b>ᴛʀᴀɪɴɪɴɢ sᴇᴛᴛɪɴɢs</b> <#6c7086>✦"
         );
         Component title = plugin.parseMessage(titleRaw);
-        TrainingMenuHolder holder = new TrainingMenuHolder(45, title);
+        TrainingMenuHolder holder = new TrainingMenuHolder(MENU_SIZE, title);
         populateTrainingInventory(player, holder.getInventory());
         player.openInventory(holder.getInventory());
     }
@@ -306,10 +309,13 @@ public class TrainingManager {
     private void populateTrainingInventory(Player player, Inventory inv) {
         inv.clear();
 
-        // 1. Fill background with glass panes
-        ItemStack border = createSimpleItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
-        for (int i = 0; i < 45; i++) {
-            inv.setItem(i, border);
+        // 1. Unified 2-tone Catppuccin frame (black header/footer bars, gray inner background)
+        ItemStack border = createSimpleItem(Material.BLACK_STAINED_GLASS_PANE, " ", List.of());
+        ItemStack filler = createSimpleItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        int size = inv.getSize();
+        for (int i = 0; i < size; i++) {
+            boolean isEdgeRow = (i < 9 || i >= size - 9);
+            inv.setItem(i, isEdgeRow ? border : filler);
         }
 
         UUID uuid = player.getUniqueId();
@@ -318,7 +324,6 @@ public class TrainingManager {
         // 2. Slot 4: Master Training Switch
         String masterStatus = masterOn ? "<#a6e3a1><b>✔ ᴇɴᴀʙʟᴇᴅ</b>" : "<#f38ba8><b>✖ ᴅɪsᴀʙʟᴇᴅ</b>";
         ItemStack masterItem = createSimpleItem(
-                "nexo:settings",
                 Material.NETHER_STAR,
                 "<!italic><#89dceb><b>Master Training Mode</b>",
                 List.of(
@@ -327,47 +332,52 @@ public class TrainingManager {
                         "<!italic><#6c7086>▪ <#a6adc8>sᴛᴀᴛᴜs: " + masterStatus,
                         "",
                         "<!italic><#a6adc8>Master switch for all training features.",
-                        "<!italic><#a6adc8>When disabled, all options below are inactive.",
+                        "<!italic><#a6adc8>When disabled, options below are inactive.",
                         "",
                         "<!italic><white><glyph:left_click></white> <#89dceb>ᴛᴏɢɢʟᴇ ᴍᴀsᴛᴇʀ sᴡɪᴛᴄʜ"
                 )
         );
         inv.setItem(4, masterItem);
 
-        // 3. Slots: Training Options
+        // 3. Slots: Training Options (2x4 aligned grid: 10,12,14,16 and 19,21,23,25)
         for (TrainingOption option : TrainingOption.values()) {
             boolean optionOn = isOptionEnabled(uuid, option);
             String optStatus;
             if (!masterOn) {
-                optStatus = optionOn ? "<#f9e2af><b>● ᴏɴ <#6c7086>(ᴍᴀsᴛᴇʀ ᴏꜰꜰ)</b>" : "<#6c7086><b>○ ᴏꜰꜰ (ᴍᴀsᴛᴇʀ ᴏꜰꜰ)</b>";
+                optStatus = optionOn
+                        ? "<#f9e2af><b>● ᴇɴᴀʙʟᴇᴅ</b> <#6c7086>(ᴍᴀsᴛᴇʀ ᴏꜰꜰ)"
+                        : "<#6c7086><b>○ ᴅɪsᴀʙʟᴇᴅ</b> <#6c7086>(ᴍᴀsᴛᴇʀ ᴏꜰꜰ)";
             } else {
                 optStatus = optionOn ? "<#a6e3a1><b>✔ ᴇɴᴀʙʟᴇᴅ</b>" : "<#f38ba8><b>✖ ᴅɪsᴀʙʟᴇᴅ</b>";
             }
 
+            List<String> lore = new ArrayList<>();
+            lore.add("<!italic><#6c7086>ᴘʀᴀᴄᴛɪᴄᴇ ᴏᴘᴛɪᴏɴ");
+            lore.add("");
+            lore.add("<!italic><#6c7086>▪ <#a6adc8>sᴛᴀᴛᴜs: " + optStatus);
+            lore.add("");
+            for (String descLine : option.getDescriptionLines()) {
+                lore.add("<!italic><#a6adc8>" + descLine);
+            }
+            lore.add("");
+            lore.add("<!italic><white><glyph:left_click></white> <#89dceb>ᴛᴏɢɢʟᴇ ᴏɴ/ᴏꜰꜰ");
+
             ItemStack optItem = createSimpleItem(
                     option.getIcon(),
                     "<!italic>" + option.getSpriteTag() + " <#89dceb><b>" + option.getDisplayName() + "</b>",
-                    List.of(
-                        "<!italic><#6c7086>ᴘʀᴀᴄᴛɪᴄᴇ ᴏᴘᴛɪᴏɴ",
-                        "",
-                        "<!italic><#6c7086>▪ <#a6adc8>sᴛᴀᴛᴜs: " + optStatus,
-                        "",
-                        "<!italic><#a6adc8>" + option.getDescription(),
-                        "",
-                        "<!italic><white><glyph:left_click></white> <#89dceb>ᴛᴏɢɢʟᴇ ᴏɴ/ᴏꜰꜰ"
-                    )
+                    lore
             );
             inv.setItem(option.getSlot(), optItem);
         }
 
-        // 4. Slot 40: Back to main Settings menu
+        // 4. Slot 31: Back to main Settings menu
         ItemStack backBtn = createSimpleItem(
-                "nexo:cancel",
+                "nexo:previous",
                 Material.ARROW,
-                "<!italic><#f38ba8><b>« Back to Settings</b>",
+                "<!italic><#89dceb><b>« Back to Settings</b>",
                 List.of("<!italic><white><glyph:left_click></white> <#a6adc8>ʀᴇᴛᴜʀɴ ᴛᴏ /sᴇᴛᴛɪɴɢ")
         );
-        inv.setItem(40, backBtn);
+        inv.setItem(BACK_SLOT, backBtn);
     }
 
     private ItemStack createSimpleItem(Material mat, String name, List<String> lore) {

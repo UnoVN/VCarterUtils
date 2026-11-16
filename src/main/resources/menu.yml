@@ -8,6 +8,10 @@
 setting-menu:
   title: "<#6c7086>✦ <#89dceb><b>ᴘᴇʀsᴏɴᴀʟ sᴇᴛᴛɪɴɢs</b> <#6c7086>✦"
   rows: 3
+  border:
+    enabled: true
+    material: "BLACK_STAINED_GLASS_PANE"
+    name: " "
   filler:
     enabled: true
     material: "GRAY_STAINED_GLASS_PANE"
@@ -120,7 +124,7 @@ setting-menu:
       material: "nexo:cancel"
       name: "<!italic><#f38ba8><b>✖ Close</b>"
       lore:
-        - "<!italic><white><glyph:left_click></white> <#6c7086>ᴄʟᴏsᴇ ᴍᴇɴᴜ"
+        - "<!italic><white><glyph:left_click></white> <#a6adc8>ᴄʟᴏsᴇ ᴍᴇɴᴜ"
 
 admin-menu:
   title: "<#6c7086>✦ <#cba6f7><b>ᴡᴏʀʟᴅ ᴍᴀɴᴀɢᴇʀ</b> <#6c7086>✦"

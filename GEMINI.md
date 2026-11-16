@@ -88,7 +88,7 @@
 * `@src/main/java/me/nh4n/vcarterutils/manager/SettingMenuManager.java` — Builds personal `/setting` GUI (27 slots), Admin World Manager GUI (54 slots, auto-scanning Bukkit/Multiverse/SlimeWorlds), `WorldDetailMenu` (27 slots), and `GlobalDetailMenu` (27 slots).
 * `@src/main/java/me/nh4n/vcarterutils/manager/LobbyHotbarManager.java` — Saves/restores 9-slot player hotbars (`savedHotbars`), tracks `markRespawning(UUID)`, and applies Lobby Hotbar (`applyLobbyHotbar`, slots 0=`/rtpq`, 1=`/rtp`, 4=`/back`, 7=`/decor`, 8=`/settings`).
 * `@src/main/java/me/nh4n/vcarterutils/manager/XbowManager.java` — Calculates Rail + TNT Minecart + Flint & Steel + Crossbow ignition speed (`totalTicks = Math.max(1, nowTick - setup.startTick())`), saves/loads personal best ticks (`bestXbowTicks` in `playerdata.yml`), and coordinates Action Bar output.
-* `@src/main/java/me/nh4n/vcarterutils/manager/TrainingManager.java` — Manages Training Mode master switch, cached world blacklist (`isWorldBlacklisted`), 45-slot `/training` GUI states, 8 balanced training options, and auto-disable on entering real PvP.
+* `@src/main/java/me/nh4n/vcarterutils/manager/TrainingManager.java` — Manages Training Mode master switch, cached world blacklist (`isWorldBlacklisted`), 36-slot `/training` GUI states, 8 balanced training options, and auto-disable on entering real PvP.
 * `@src/main/java/me/nh4n/vcarterutils/manager/TrainingOption.java` — Enum of 8 training options (God Mode, Auto Refill, Infinite Totem, Crossbow Auto Reload, Infinite Durability, Infinite Blocks & Rails, Infinite Consumables, Keep Inventory) with GUI slots, item text component sprite tags (`getSpriteTag()`), and descriptions.
 
 ### Listeners (`listener/`)

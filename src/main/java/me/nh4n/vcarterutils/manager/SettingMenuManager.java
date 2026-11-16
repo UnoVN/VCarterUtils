@@ -75,18 +75,42 @@ public class SettingMenuManager {
         inv.clear();
         holder.clearSlotActions();
 
-        if (plugin.getConfig().getBoolean("setting-menu.filler.enabled", true)) {
+        int size = inv.getSize();
+        boolean fillerEnabled = plugin.getConfig().getBoolean("setting-menu.filler.enabled", true);
+        boolean borderEnabled = plugin.getConfig().getBoolean("setting-menu.border.enabled", true);
+
+        ItemStack fillerItem = null;
+        if (fillerEnabled) {
             ConfigurationSection fillerSec = plugin.getConfig().getConfigurationSection("setting-menu.filler");
-            ItemStack filler = NexoHook.createItemFromSection(fillerSec, Material.GRAY_STAINED_GLASS_PANE);
-            ItemMeta fillerMeta = filler.getItemMeta();
+            fillerItem = NexoHook.createItemFromSection(fillerSec, Material.GRAY_STAINED_GLASS_PANE);
+            ItemMeta fillerMeta = fillerItem.getItemMeta();
             if (fillerMeta != null) {
                 String fillerName = plugin.getConfig().getString("setting-menu.filler.name", " ");
                 fillerMeta.displayName(plugin.parseMessage(fillerName));
                 fillerMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
-                filler.setItemMeta(fillerMeta);
+                fillerItem.setItemMeta(fillerMeta);
             }
-            for (int i = 0; i < inv.getSize(); i++) {
-                inv.setItem(i, filler);
+        }
+
+        ItemStack borderItem = null;
+        if (borderEnabled && size >= 27) {
+            ConfigurationSection borderSec = plugin.getConfig().getConfigurationSection("setting-menu.border");
+            borderItem = NexoHook.createItemFromSection(borderSec, Material.BLACK_STAINED_GLASS_PANE);
+            ItemMeta borderMeta = borderItem.getItemMeta();
+            if (borderMeta != null) {
+                String borderName = plugin.getConfig().getString("setting-menu.border.name", " ");
+                borderMeta.displayName(plugin.parseMessage(borderName));
+                borderMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
+                borderItem.setItemMeta(borderMeta);
+            }
+        }
+
+        for (int i = 0; i < size; i++) {
+            boolean isEdgeRow = size >= 27 && (i < 9 || i >= size - 9);
+            if (isEdgeRow && borderItem != null) {
+                inv.setItem(i, borderItem);
+            } else if (fillerItem != null) {
+                inv.setItem(i, fillerItem);
             }
         }
 
@@ -182,9 +206,7 @@ public class SettingMenuManager {
                 ItemMeta meta = stack.getItemMeta();
                 if (meta != null) {
                     meta.displayName(plugin.parseMessage("<!italic><white><sprite:items:item/totem_of_undying></white> <#89dceb><b>Training Mode</b>"));
-                    String trainingStatus = plugin.getTrainingManager().isPlayerEnabled(player.getUniqueId())
-                            ? "<#a6e3a1><b>✔ ᴇɴᴀʙʟᴇᴅ</b>"
-                            : "<#f38ba8><b>✖ ᴅɪsᴀʙʟᴇᴅ</b>";
+                    String trainingStatus = formatBooleanStatus(plugin.getTrainingManager().isPlayerEnabled(player.getUniqueId()));
                     List<Component> lore = List.of(
                             plugin.parseMessage("<!italic><#6c7086>ᴘʀᴀᴄᴛɪᴄᴇ & sᴀɴᴅʙᴏx"),
                             plugin.parseMessage(""),
@@ -226,35 +248,19 @@ public class SettingMenuManager {
         inv.clear();
         holder.clearSlotActions();
 
-        ItemStack borderFiller = createSimpleItem(Material.BLACK_STAINED_GLASS_PANE, " ", List.of());
-
-        // Header border (slots 0-8)
-        for (int i = 0; i <= 8; i++) inv.setItem(i, borderFiller);
-        // Bottom border (slots 45-53)
-        for (int i = 45; i <= 53; i++) inv.setItem(i, borderFiller);
+        applyMenuFrame(inv, false);
 
         PearlManager pearlManager = plugin.getPearlManager();
         MaceManager maceManager = plugin.getMaceManager();
         CombatTagManager combatManager = plugin.getCombatTagManager();
 
         // 1. Slot 0: Global Overrides Quick Button
-        boolean pearlGlobalOn = pearlManager.isGlobalForceEnabled();
-        int pearlGlobalSec = pearlManager.getGlobalForceSeconds();
-        String pearlGlobalStr = pearlGlobalOn ? "<#a6e3a1><b>" + pearlGlobalSec + "s</b>" : "<#6c7086>ᴏꜰꜰ";
-
-        boolean maceGlobalOn = maceManager.isGlobalForceEnabled();
-        int maceGlobalSec = maceManager.getGlobalForceSeconds();
-        String maceGlobalStr = maceGlobalOn ? "<#a6e3a1><b>" + maceGlobalSec + "s</b>" : "<#6c7086>ᴏꜰꜰ";
-
-        boolean combatGlobalOn = combatManager.isGlobalForceEnabled();
-        int combatGlobalSec = combatManager.getGlobalForceSeconds();
-        String combatGlobalStr = combatGlobalOn ? "<#a6e3a1><b>" + combatGlobalSec + "s</b>" : "<#6c7086>ᴏꜰꜰ";
-
-        boolean antiGlobalOn = combatManager.isAntiInterruptGlobal();
-        String antiGlobalStr = antiGlobalOn ? "<#a6e3a1><b>✔ ᴏɴ</b>" : "<#f38ba8><b>✖ ᴏꜰꜰ</b>";
+        String pearlGlobalStr = formatGlobalTimerStatus(pearlManager.isGlobalForceEnabled(), pearlManager.getGlobalForceSeconds());
+        String maceGlobalStr = formatGlobalTimerStatus(maceManager.isGlobalForceEnabled(), maceManager.getGlobalForceSeconds());
+        String combatGlobalStr = formatGlobalTimerStatus(combatManager.isGlobalForceEnabled(), combatManager.getGlobalForceSeconds());
+        String antiGlobalStr = formatBooleanStatus(combatManager.isAntiInterruptGlobal());
 
         ItemStack globalItem = createSimpleItem(
-                "nexo:admin_setting",
                 Material.NETHER_STAR,
                 "<!italic><#cba6f7><b>Global Overrides</b>",
                 List.of(
@@ -281,7 +287,7 @@ public class SettingMenuManager {
         ItemStack scannerItem = createSimpleItem(
                 "nexo:admin_setting",
                 Material.RECOVERY_COMPASS,
-                "<!italic><#89dceb><b>World Manager</b>",
+                "<!italic><#cba6f7><b>World Manager</b>",
                 List.of(
                         "<!italic><#6c7086>ᴍᴜʟᴛɪ-ᴡᴏʀʟᴅ sᴄᴀɴɴᴇʀ",
                         "",
@@ -329,24 +335,15 @@ public class SettingMenuManager {
 
             Material iconMat = getWorldIconMaterial(dw, hasAnyForce);
 
-            String pearlDisplay = (forcedPearl >= 0) ? "<#a6e3a1><b>" + forcedPearl + "s</b>" : "<#6c7086>ᴏꜰꜰ";
-            String maceDisplay = (forcedMace >= 0) ? "<#a6e3a1><b>" + forcedMace + "s</b>" : "<#6c7086>ᴏꜰꜰ";
-            String combatDisplay;
-            if (forcedCombat == 0) {
-                combatDisplay = "<#f38ba8><b>✖ ᴅɪsᴀʙʟᴇᴅ (0s)</b>";
-            } else if (forcedCombat > 0) {
-                combatDisplay = "<#a6e3a1><b>" + forcedCombat + "s</b>";
-            } else {
-                combatDisplay = "<#6c7086>ᴏꜰꜰ (ᴅᴇꜰᴀᴜʟᴛ)";
-            }
+            String pearlDisplay = formatWorldGridTimer(forcedPearl, false);
+            String maceDisplay = formatWorldGridTimer(forcedMace, false);
+            String combatDisplay = formatWorldGridTimer(forcedCombat, true);
 
             String antiDisplay;
             if (worldAnti == null) {
-                antiDisplay = "<#6c7086>ᴅᴇꜰᴀᴜʟᴛ (" + (effectiveAnti ? "<#a6e3a1>ᴏɴ" : "<#f38ba8>ᴏꜰꜰ") + "<#6c7086>)";
-            } else if (worldAnti) {
-                antiDisplay = "<#a6e3a1><b>✔ ᴏɴ</b>";
+                antiDisplay = "<#6c7086>○ ᴅᴇꜰᴀᴜʟᴛ (" + (effectiveAnti ? "<#a6e3a1>ᴏɴ" : "<#f38ba8>ᴏꜰꜰ") + "<#6c7086>)";
             } else {
-                antiDisplay = "<#f38ba8><b>✖ ᴏꜰꜰ</b>";
+                antiDisplay = formatBooleanStatus(worldAnti);
             }
 
             List<String> wLore = List.of(
@@ -386,7 +383,7 @@ public class SettingMenuManager {
                 "nexo:cancel",
                 Material.BARRIER,
                 "<!italic><#f38ba8><b>✖ Close</b>",
-                List.of("<!italic><white><glyph:left_click></white> <#6c7086>ᴄʟᴏsᴇ ᴍᴇɴᴜ")
+                List.of("<!italic><white><glyph:left_click></white> <#a6adc8>ᴄʟᴏsᴇ ᴍᴇɴᴜ")
         );
         inv.setItem(49, closeBtn);
         holder.setSlotAction(49, new AdminSlotAction("CLOSE", null));
@@ -522,6 +519,54 @@ public class SettingMenuManager {
             }
         } catch (Throwable ignored) {
         }
+    }
+
+    private void applyMenuFrame(Inventory inv, boolean fillInner) {
+        ItemStack border = createSimpleItem(Material.BLACK_STAINED_GLASS_PANE, " ", List.of());
+        ItemStack inner = fillInner ? createSimpleItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of()) : null;
+        int size = inv.getSize();
+        for (int i = 0; i < size; i++) {
+            boolean isEdgeRow = (i < 9 || i >= size - 9);
+            if (isEdgeRow) {
+                inv.setItem(i, border);
+            } else if (inner != null) {
+                inv.setItem(i, inner);
+            }
+        }
+    }
+
+    private String formatBooleanStatus(boolean enabled) {
+        return enabled ? "<#a6e3a1><b>✔ ᴇɴᴀʙʟᴇᴅ</b>" : "<#f38ba8><b>✖ ᴅɪsᴀʙʟᴇᴅ</b>";
+    }
+
+    private String formatGlobalTimerStatus(boolean enabled, int seconds) {
+        return enabled ? "<#a6e3a1><b>✔ " + seconds + "s</b>" : "<#6c7086>○ ᴏꜰꜰ";
+    }
+
+    private String formatWorldGridTimer(int seconds, boolean allowZeroDisable) {
+        if (allowZeroDisable && seconds == 0) {
+            return "<#f38ba8><b>✖ ᴅɪsᴀʙʟᴇᴅ (0s)</b>";
+        }
+        return (seconds >= 0) ? "<#a6e3a1><b>✔ " + seconds + "s</b>" : "<#6c7086>○ ᴅᴇꜰᴀᴜʟᴛ";
+    }
+
+    private String formatDetailTimerStatus(int seconds, int defaultSeconds, boolean allowZeroDisable) {
+        if (allowZeroDisable && seconds == 0) {
+            return "<#f38ba8><b>✖ ᴅɪsᴀʙʟᴇᴅ (0s)</b>";
+        }
+        if (seconds >= 0) {
+            return "<#a6e3a1><b>✔ " + seconds + "s</b>";
+        }
+        return "<#6c7086>○ ᴅᴇꜰᴀᴜʟᴛ (" + defaultSeconds + "s)";
+    }
+
+    private ItemStack createBackButton(String title, String subtitle) {
+        return createSimpleItem(
+                "nexo:previous",
+                Material.ARROW,
+                "<!italic><#89dceb><b>« " + title + "</b>",
+                List.of("<!italic><white><glyph:left_click></white> <#a6adc8>" + subtitle)
+        );
     }
 
     private ItemStack createSimpleItem(Material material, String nameMiniMsg, List<String> loreMiniMsg) {
@@ -750,7 +795,7 @@ public class SettingMenuManager {
     }
 
     public void openWorldDetailMenu(Player admin, String worldName) {
-        String titleRaw = "<#6c7086>✦ <#cba6f7><b>ᴡᴏʀʟᴅ: <#89dceb>" + worldName + "</b> <#6c7086>✦";
+        String titleRaw = "<#6c7086>✦ <#cba6f7><b>ᴡᴏʀʟᴅ ʀᴜʟᴇs</b> <#6c7086>▪ <#89dceb><b>" + worldName + "</b> <#6c7086>✦";
         Component title = plugin.parseMessage(titleRaw);
         WorldDetailMenuHolder holder = new WorldDetailMenuHolder(27, title, worldName);
         populateWorldDetailInventory(holder.getInventory(), holder);
@@ -767,10 +812,7 @@ public class SettingMenuManager {
         inv.clear();
         holder.clearSlotActions();
 
-        ItemStack border = createSimpleItem(Material.BLACK_STAINED_GLASS_PANE, " ", List.of());
-        for (int i = 0; i < 27; i++) {
-            inv.setItem(i, border);
-        }
+        applyMenuFrame(inv, true);
 
         String worldName = holder.getWorldName();
         PearlManager pearlManager = plugin.getPearlManager();
@@ -802,85 +844,30 @@ public class SettingMenuManager {
         inv.setItem(4, worldHeader);
 
         // Slot 10: Pearl Cooldown
-        String pearlStatus = (pearlSec >= 0) ? "<#a6e3a1><b>" + pearlSec + "s</b>" : "<#6c7086>ᴏꜰꜰ (ᴅᴇꜰᴀᴜʟᴛ: " + pearlManager.getDefaultSeconds() + "s)";
-        ItemStack pearlItem = createSimpleItem(
-                Material.ENDER_PEARL,
-                "<!italic><white><sprite:items:item/ender_pearl></white> <#89dceb><b>Pearl Cooldown</b>",
-                List.of(
-                        "<!italic><#6c7086>ᴡᴏʀʟᴅ ᴏᴠᴇʀʀɪᴅᴇ",
-                        "",
-                        "<!italic><#6c7086>▪ <#a6adc8>sᴛᴀᴛᴜs: " + pearlStatus,
-                        "<!italic><#6c7086>▪ <#a6adc8>ᴍɪɴ ᴅᴇꜰᴀᴜʟᴛ: <#89dceb><b>" + pearlManager.getDefaultSeconds() + "s</b>",
-                        "",
-                        "<!italic><#6c7086>▪ <#a6adc8>ᴘʀᴇsᴇᴛs: " + buildOptionsBar(pearlSec, pearlManager.getAvailableOptions()),
-                        "",
-                        "<!italic><white><glyph:left_click></white> <#a6e3a1>ɴᴇxᴛ <#6c7086>│ <white><glyph:right_click></white> <#f9e2af>ᴘʀᴇᴠɪᴏᴜs",
-                        "<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:left_click></white> <#6c7086>ᴛᴜʀɴ ᴏꜰꜰ (ᴅᴇꜰᴀᴜʟᴛ)"
-                )
-        );
-        pearlItem.setAmount(Math.max(1, Math.min(64, pearlSec > 0 ? pearlSec : 1)));
-        inv.setItem(10, pearlItem);
+        inv.setItem(10, createWorldTimerItem(
+                Material.ENDER_PEARL, "ender_pearl", "Pearl Cooldown",
+                pearlSec, pearlManager.getDefaultSeconds(), pearlManager.getAvailableOptions(), false
+        ));
         holder.setSlotAction(10, new AdminSlotAction("DETAIL_PEARL", worldName));
 
         // Slot 12: Mace Cooldown
-        String maceStatus = (maceSec >= 0) ? "<#a6e3a1><b>" + maceSec + "s</b>" : "<#6c7086>ᴏꜰꜰ (ᴅᴇꜰᴀᴜʟᴛ: " + maceManager.getDefaultSeconds() + "s)";
-        ItemStack maceItem = createSimpleItem(
-                Material.MACE,
-                "<!italic><white><sprite:items:item/mace></white> <#89dceb><b>Mace Cooldown</b>",
-                List.of(
-                        "<!italic><#6c7086>ᴡᴏʀʟᴅ ᴏᴠᴇʀʀɪᴅᴇ",
-                        "",
-                        "<!italic><#6c7086>▪ <#a6adc8>sᴛᴀᴛᴜs: " + maceStatus,
-                        "<!italic><#6c7086>▪ <#a6adc8>ᴍɪɴ ᴅᴇꜰᴀᴜʟᴛ: <#89dceb><b>" + maceManager.getDefaultSeconds() + "s</b>",
-                        "",
-                        "<!italic><#6c7086>▪ <#a6adc8>ᴘʀᴇsᴇᴛs: " + buildOptionsBar(maceSec, maceManager.getAvailableOptions()),
-                        "",
-                        "<!italic><white><glyph:left_click></white> <#a6e3a1>ɴᴇxᴛ <#6c7086>│ <white><glyph:right_click></white> <#f9e2af>ᴘʀᴇᴠɪᴏᴜs",
-                        "<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:left_click></white> <#6c7086>ᴛᴜʀɴ ᴏꜰꜰ (ᴅᴇꜰᴀᴜʟᴛ)"
-                )
-        );
-        maceItem.setAmount(Math.max(1, Math.min(64, maceSec > 0 ? maceSec : 1)));
-        inv.setItem(12, maceItem);
+        inv.setItem(12, createWorldTimerItem(
+                Material.MACE, "mace", "Mace Cooldown",
+                maceSec, maceManager.getDefaultSeconds(), maceManager.getAvailableOptions(), false
+        ));
         holder.setSlotAction(12, new AdminSlotAction("DETAIL_MACE", worldName));
 
         // Slot 14: Combat Tag Timer
-        String combatStatus;
-        if (combatSec == 0) {
-            combatStatus = "<#f38ba8><b>✖ ᴅɪsᴀʙʟᴇᴅ (0s)</b>";
-        } else if (combatSec > 0) {
-            combatStatus = "<#a6e3a1><b>" + combatSec + "s</b>";
-        } else {
-            combatStatus = "<#6c7086>ᴏꜰꜰ (ᴅᴇꜰᴀᴜʟᴛ: " + combatManager.getDefaultSeconds() + "s)";
-        }
-        ItemStack combatItem = createSimpleItem(
-                Material.NETHERITE_SWORD,
-                "<!italic><white><sprite:items:item/netherite_sword></white> <#89dceb><b>Combat Tag Timer</b>",
-                List.of(
-                        "<!italic><#6c7086>ᴡᴏʀʟᴅ ᴏᴠᴇʀʀɪᴅᴇ",
-                        "",
-                        "<!italic><#6c7086>▪ <#a6adc8>sᴛᴀᴛᴜs: " + combatStatus,
-                        "<!italic><#6c7086>▪ <#a6adc8>ᴍɪɴ ᴅᴇꜰᴀᴜʟᴛ: <#89dceb><b>" + combatManager.getDefaultSeconds() + "s</b>",
-                        "",
-                        "<!italic><#6c7086>▪ <#a6adc8>ᴘʀᴇsᴇᴛs: " + buildOptionsBar(combatSec, combatManager.getAvailableOptions()),
-                        "",
-                        "<!italic><white><glyph:left_click></white> <#a6e3a1>ɴᴇxᴛ <#6c7086>│ <white><glyph:right_click></white> <#f9e2af>ᴘʀᴇᴠɪᴏᴜs",
-                        "<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:left_click></white> <#f38ba8>ᴅɪsᴀʙʟᴇ ᴄᴏᴍʙᴀᴛ (0s)",
-                        "<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:right_click></white> <#6c7086>ᴛᴜʀɴ ᴏꜰꜰ (ᴅᴇꜰᴀᴜʟᴛ)"
-                )
-        );
-        combatItem.setAmount(Math.max(1, Math.min(64, combatSec > 0 ? combatSec : 1)));
-        inv.setItem(14, combatItem);
+        inv.setItem(14, createWorldTimerItem(
+                Material.NETHERITE_SWORD, "netherite_sword", "Combat Tag Timer",
+                combatSec, combatManager.getDefaultSeconds(), combatManager.getAvailableOptions(), true
+        ));
         holder.setSlotAction(14, new AdminSlotAction("DETAIL_COMBAT", worldName));
 
         // Slot 16: Anti-Interrupt Protection
-        String antiStatus;
-        if (worldAnti == null) {
-            antiStatus = "<#6c7086>ᴅᴇꜰᴀᴜʟᴛ (" + (combatManager.isAntiInterruptGlobal() ? "<#a6e3a1>ᴏɴ" : "<#f38ba8>ᴏꜰꜰ") + "<#6c7086>)";
-        } else if (worldAnti) {
-            antiStatus = "<#a6e3a1><b>✔ ᴇɴᴀʙʟᴇᴅ</b>";
-        } else {
-            antiStatus = "<#f38ba8><b>✖ ᴅɪsᴀʙʟᴇᴅ</b>";
-        }
+        String antiStatus = (worldAnti == null)
+                ? "<#6c7086>○ ᴅᴇꜰᴀᴜʟᴛ (" + (combatManager.isAntiInterruptGlobal() ? "<#a6e3a1>ᴏɴ" : "<#f38ba8>ᴏꜰꜰ") + "<#6c7086>)"
+                : formatBooleanStatus(worldAnti);
 
         ItemStack antiItem = createSimpleItem(
                 Material.SHIELD,
@@ -893,22 +880,50 @@ public class SettingMenuManager {
                         "<!italic><#a6adc8>Protects active 1v1 fights from",
                         "<!italic><#a6adc8>third-party damage and interference.",
                         "",
-                        "<!italic><white><glyph:left_click></white> <#a6e3a1>ᴛᴏɢɢʟᴇ ᴏɴ/ᴏꜰꜰ",
-                        "<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:left_click></white> <#6c7086>ʀᴇsᴇᴛ ᴛᴏ ᴅᴇꜰᴀᴜʟᴛ"
+                        "<!italic><white><glyph:left_click></white> <#89dceb>ᴛᴏɢɢʟᴇ ᴏɴ/ᴏꜰꜰ",
+                        "<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:left_click></white> <#a6adc8>ʀᴇsᴇᴛ ᴅᴇꜰᴀᴜʟᴛ"
                 )
         );
         inv.setItem(16, antiItem);
         holder.setSlotAction(16, new AdminSlotAction("DETAIL_INTERRUPT", worldName));
 
         // Slot 22: Back Button
-        ItemStack backBtn = createSimpleItem(
-                "nexo:cancel",
-                Material.ARROW,
-                "<!italic><#f38ba8><b>« Back to World Manager</b>",
-                List.of("<!italic><white><glyph:left_click></white> <#a6adc8>ʀᴇᴛᴜʀɴ ᴛᴏ ᴡᴏʀʟᴅ ʟɪsᴛ")
-        );
-        inv.setItem(22, backBtn);
+        inv.setItem(22, createBackButton("Back to World Manager", "ʀᴇᴛᴜʀɴ ᴛᴏ ᴡᴏʀʟᴅ ʟɪsᴛ"));
         holder.setSlotAction(22, new AdminSlotAction("DETAIL_BACK", worldName));
+    }
+
+    private ItemStack createWorldTimerItem(
+            Material mat,
+            String spriteName,
+            String title,
+            int seconds,
+            int defaultSeconds,
+            List<Integer> options,
+            boolean allowZeroDisable
+    ) {
+        List<String> lore = new ArrayList<>();
+        lore.add("<!italic><#6c7086>ᴡᴏʀʟᴅ ᴏᴠᴇʀʀɪᴅᴇ");
+        lore.add("");
+        lore.add("<!italic><#6c7086>▪ <#a6adc8>sᴛᴀᴛᴜs: " + formatDetailTimerStatus(seconds, defaultSeconds, allowZeroDisable));
+        lore.add("<!italic><#6c7086>▪ <#a6adc8>ᴍɪɴ ᴅᴇꜰᴀᴜʟᴛ: <#89dceb><b>" + defaultSeconds + "s</b>");
+        lore.add("");
+        lore.add("<!italic><#6c7086>▪ <#a6adc8>ᴘʀᴇsᴇᴛs: " + buildOptionsBar(seconds, options));
+        lore.add("");
+        lore.add("<!italic><white><glyph:left_click></white> <#a6e3a1>ɴᴇxᴛ <#6c7086>│ <white><glyph:right_click></white> <#f9e2af>ᴘʀᴇᴠɪᴏᴜs");
+        if (allowZeroDisable) {
+            lore.add("<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:left_click></white> <#a6adc8>ᴅɪsᴀʙʟᴇ ᴄᴏᴍʙᴀᴛ (0s)");
+            lore.add("<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:right_click></white> <#a6adc8>ʀᴇsᴇᴛ ᴅᴇꜰᴀᴜʟᴛ");
+        } else {
+            lore.add("<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:left_click></white> <#a6adc8>ʀᴇsᴇᴛ ᴅᴇꜰᴀᴜʟᴛ");
+        }
+
+        ItemStack item = createSimpleItem(
+                mat,
+                "<!italic><white><sprite:items:item/" + spriteName + "></white> <#89dceb><b>" + title + "</b>",
+                lore
+        );
+        item.setAmount(Math.max(1, Math.min(64, seconds > 0 ? seconds : 1)));
+        return item;
     }
 
     private DiscoveredWorld findDiscoveredWorld(String worldName) {
@@ -943,10 +958,7 @@ public class SettingMenuManager {
         inv.clear();
         holder.clearSlotActions();
 
-        ItemStack border = createSimpleItem(Material.BLACK_STAINED_GLASS_PANE, " ", List.of());
-        for (int i = 0; i < 27; i++) {
-            inv.setItem(i, border);
-        }
+        applyMenuFrame(inv, true);
 
         PearlManager pearlManager = plugin.getPearlManager();
         MaceManager maceManager = plugin.getMaceManager();
@@ -966,109 +978,81 @@ public class SettingMenuManager {
         inv.setItem(4, header);
 
         // Slot 10: Global Pearl
-        boolean pearlGlobalOn = pearlManager.isGlobalForceEnabled();
-        int pearlGlobalSec = pearlManager.getGlobalForceSeconds();
-        int pearlDefSec = pearlManager.getDefaultSeconds();
-        ItemStack globalPearlItem = createSimpleItem(
-                Material.ENDER_PEARL,
-                "<!italic><white><sprite:items:item/ender_pearl></white> <#89dceb><b>Global Pearl</b>",
-                List.of(
-                        "<!italic><#6c7086>ɢʟᴏʙᴀʟ ᴏᴠᴇʀʀɪᴅᴇ",
-                        "",
-                        "<!italic><#6c7086>▪ <#a6adc8>ɢʟᴏʙᴀʟ ꜰᴏʀᴄᴇ: " + (pearlGlobalOn ? "<#a6e3a1><b>✔ ᴏɴ</b>" : "<#f38ba8><b>✖ ᴏꜰꜰ</b>"),
-                        "<!italic><#6c7086>▪ <#a6adc8>ꜰᴏʀᴄᴇ ᴅᴜʀᴀᴛɪᴏɴ: <#f9e2af><b>" + pearlGlobalSec + "s</b>",
-                        "<!italic><#6c7086>▪ <#a6adc8>ᴍɪɴ ᴅᴇꜰᴀᴜʟᴛ: <#89dceb><b>" + pearlDefSec + "s</b>",
-                        "",
-                        "<!italic><#6c7086>▪ <#a6adc8>ᴘʀᴇsᴇᴛs: " + buildOptionsBar(pearlGlobalSec, pearlManager.getAvailableOptions()),
-                        "",
-                        "<!italic><white><glyph:left_click></white> <#a6e3a1>ɴᴇxᴛ <#6c7086>│ <white><glyph:right_click></white> <#f9e2af>ᴘʀᴇᴠɪᴏᴜs",
-                        "<!italic><#89dceb>sʜɪꜰᴛ + <white><glyph:left_click></white> <#a6adc8>ᴛᴏɢɢʟᴇ ɢʟᴏʙᴀʟ ꜰᴏʀᴄᴇ",
-                        "<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:right_click></white> <#a6adc8>sᴇᴛ ᴅᴇꜰᴀᴜʟᴛ (" + pearlGlobalSec + "s)"
-                )
-        );
-        globalPearlItem.setAmount(Math.max(1, Math.min(64, pearlGlobalSec)));
-        inv.setItem(10, globalPearlItem);
+        inv.setItem(10, createGlobalTimerItem(
+                Material.ENDER_PEARL, "ender_pearl", "Global Pearl",
+                pearlManager.isGlobalForceEnabled(), pearlManager.getGlobalForceSeconds(),
+                pearlManager.getDefaultSeconds(), pearlManager.getAvailableOptions()
+        ));
         holder.setSlotAction(10, new AdminSlotAction("GLOBAL_PEARL", null));
 
         // Slot 12: Global Mace
-        boolean maceGlobalOn = maceManager.isGlobalForceEnabled();
-        int maceGlobalSec = maceManager.getGlobalForceSeconds();
-        int maceDefSec = maceManager.getDefaultSeconds();
-        ItemStack globalMaceItem = createSimpleItem(
-                Material.MACE,
-                "<!italic><white><sprite:items:item/mace></white> <#89dceb><b>Global Mace</b>",
-                List.of(
-                        "<!italic><#6c7086>ɢʟᴏʙᴀʟ ᴏᴠᴇʀʀɪᴅᴇ",
-                        "",
-                        "<!italic><#6c7086>▪ <#a6adc8>ɢʟᴏʙᴀʟ ꜰᴏʀᴄᴇ: " + (maceGlobalOn ? "<#a6e3a1><b>✔ ᴏɴ</b>" : "<#f38ba8><b>✖ ᴏꜰꜰ</b>"),
-                        "<!italic><#6c7086>▪ <#a6adc8>ꜰᴏʀᴄᴇ ᴅᴜʀᴀᴛɪᴏɴ: <#f9e2af><b>" + maceGlobalSec + "s</b>",
-                        "<!italic><#6c7086>▪ <#a6adc8>ᴍɪɴ ᴅᴇꜰᴀᴜʟᴛ: <#89dceb><b>" + maceDefSec + "s</b>",
-                        "",
-                        "<!italic><#6c7086>▪ <#a6adc8>ᴘʀᴇsᴇᴛs: " + buildOptionsBar(maceGlobalSec, maceManager.getAvailableOptions()),
-                        "",
-                        "<!italic><white><glyph:left_click></white> <#a6e3a1>ɴᴇxᴛ <#6c7086>│ <white><glyph:right_click></white> <#f9e2af>ᴘʀᴇᴠɪᴏᴜs",
-                        "<!italic><#89dceb>sʜɪꜰᴛ + <white><glyph:left_click></white> <#a6adc8>ᴛᴏɢɢʟᴇ ɢʟᴏʙᴀʟ ꜰᴏʀᴄᴇ",
-                        "<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:right_click></white> <#a6adc8>sᴇᴛ ᴅᴇꜰᴀᴜʟᴛ (" + maceGlobalSec + "s)"
-                )
-        );
-        globalMaceItem.setAmount(Math.max(1, Math.min(64, maceGlobalSec)));
-        inv.setItem(12, globalMaceItem);
+        inv.setItem(12, createGlobalTimerItem(
+                Material.MACE, "mace", "Global Mace",
+                maceManager.isGlobalForceEnabled(), maceManager.getGlobalForceSeconds(),
+                maceManager.getDefaultSeconds(), maceManager.getAvailableOptions()
+        ));
         holder.setSlotAction(12, new AdminSlotAction("GLOBAL_MACE", null));
 
         // Slot 14: Global Combat Tag
-        boolean combatGlobalOn = combatManager.isGlobalForceEnabled();
-        int combatGlobalSec = combatManager.getGlobalForceSeconds();
-        int combatDefSec = combatManager.getDefaultSeconds();
-        ItemStack globalCombatItem = createSimpleItem(
-                Material.NETHERITE_SWORD,
-                "<!italic><white><sprite:items:item/netherite_sword></white> <#89dceb><b>Global Combat Tag</b>",
-                List.of(
-                        "<!italic><#6c7086>ɢʟᴏʙᴀʟ ᴏᴠᴇʀʀɪᴅᴇ",
-                        "",
-                        "<!italic><#6c7086>▪ <#a6adc8>ɢʟᴏʙᴀʟ ꜰᴏʀᴄᴇ: " + (combatGlobalOn ? "<#a6e3a1><b>✔ ᴏɴ</b>" : "<#f38ba8><b>✖ ᴏꜰꜰ</b>"),
-                        "<!italic><#6c7086>▪ <#a6adc8>ꜰᴏʀᴄᴇ ᴅᴜʀᴀᴛɪᴏɴ: <#f9e2af><b>" + combatGlobalSec + "s</b>",
-                        "<!italic><#6c7086>▪ <#a6adc8>ᴍɪɴ ᴅᴇꜰᴀᴜʟᴛ: <#89dceb><b>" + combatDefSec + "s</b>",
-                        "",
-                        "<!italic><#6c7086>▪ <#a6adc8>ᴘʀᴇsᴇᴛs: " + buildOptionsBar(combatGlobalSec, combatManager.getAvailableOptions()),
-                        "",
-                        "<!italic><white><glyph:left_click></white> <#a6e3a1>ɴᴇxᴛ <#6c7086>│ <white><glyph:right_click></white> <#f9e2af>ᴘʀᴇᴠɪᴏᴜs",
-                        "<!italic><#89dceb>sʜɪꜰᴛ + <white><glyph:left_click></white> <#a6adc8>ᴛᴏɢɢʟᴇ ɢʟᴏʙᴀʟ ꜰᴏʀᴄᴇ",
-                        "<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:right_click></white> <#a6adc8>sᴇᴛ ᴅᴇꜰᴀᴜʟᴛ (" + combatGlobalSec + "s)"
-                )
-        );
-        globalCombatItem.setAmount(Math.max(1, Math.min(64, combatGlobalSec)));
-        inv.setItem(14, globalCombatItem);
+        inv.setItem(14, createGlobalTimerItem(
+                Material.NETHERITE_SWORD, "netherite_sword", "Global Combat Tag",
+                combatManager.isGlobalForceEnabled(), combatManager.getGlobalForceSeconds(),
+                combatManager.getDefaultSeconds(), combatManager.getAvailableOptions()
+        ));
         holder.setSlotAction(14, new AdminSlotAction("GLOBAL_COMBAT", null));
 
         // Slot 16: Global Anti-Interrupt
-        boolean globalAntiOn = combatManager.isAntiInterruptGlobal();
-        String globalAntiStatus = globalAntiOn ? "<#a6e3a1><b>✔ ᴇɴᴀʙʟᴇᴅ</b>" : "<#f38ba8><b>✖ ᴅɪsᴀʙʟᴇᴅ</b>";
+        String globalAntiStatus = formatBooleanStatus(combatManager.isAntiInterruptGlobal());
         ItemStack globalAntiItem = createSimpleItem(
                 Material.SHIELD,
                 "<!italic><white><sprite:items:item/totem_of_undying></white> <#89dceb><b>Global Anti-Interrupt</b>",
                 List.of(
                         "<!italic><#6c7086>ɢʟᴏʙᴀʟ ᴏᴠᴇʀʀɪᴅᴇ",
                         "",
-                        "<!italic><#6c7086>▪ <#a6adc8>ɢʟᴏʙᴀʟ sᴛᴀᴛᴜs: " + globalAntiStatus,
+                        "<!italic><#6c7086>▪ <#a6adc8>sᴛᴀᴛᴜs: " + globalAntiStatus,
                         "",
                         "<!italic><#a6adc8>Default anti-interrupt rule for all",
                         "<!italic><#a6adc8>worlds without custom overrides.",
                         "",
-                        "<!italic><white><glyph:left_click></white> <#a6e3a1>ᴛᴏɢɢʟᴇ ᴏɴ/ᴏꜰꜰ"
+                        "<!italic><white><glyph:left_click></white> <#89dceb>ᴛᴏɢɢʟᴇ ᴏɴ/ᴏꜰꜰ"
                 )
         );
         inv.setItem(16, globalAntiItem);
         holder.setSlotAction(16, new AdminSlotAction("GLOBAL_INTERRUPT", null));
 
         // Slot 22: Back Button
-        ItemStack backBtn = createSimpleItem(
-                "nexo:cancel",
-                Material.ARROW,
-                "<!italic><#f38ba8><b>« Back to World Manager</b>",
-                List.of("<!italic><white><glyph:left_click></white> <#a6adc8>ʀᴇᴛᴜʀɴ ᴛᴏ ᴡᴏʀʟᴅ ʟɪsᴛ")
-        );
-        inv.setItem(22, backBtn);
+        inv.setItem(22, createBackButton("Back to World Manager", "ʀᴇᴛᴜʀɴ ᴛᴏ ᴡᴏʀʟᴅ ʟɪsᴛ"));
         holder.setSlotAction(22, new AdminSlotAction("GLOBAL_BACK", null));
+    }
+
+    private ItemStack createGlobalTimerItem(
+            Material mat,
+            String spriteName,
+            String title,
+            boolean globalOn,
+            int globalSec,
+            int defaultSec,
+            List<Integer> options
+    ) {
+        ItemStack item = createSimpleItem(
+                mat,
+                "<!italic><white><sprite:items:item/" + spriteName + "></white> <#89dceb><b>" + title + "</b>",
+                List.of(
+                        "<!italic><#6c7086>ɢʟᴏʙᴀʟ ᴏᴠᴇʀʀɪᴅᴇ",
+                        "",
+                        "<!italic><#6c7086>▪ <#a6adc8>ɢʟᴏʙᴀʟ ꜰᴏʀᴄᴇ: " + formatBooleanStatus(globalOn),
+                        "<!italic><#6c7086>▪ <#a6adc8>ꜰᴏʀᴄᴇ ᴅᴜʀᴀᴛɪᴏɴ: <#f9e2af><b>" + globalSec + "s</b>",
+                        "<!italic><#6c7086>▪ <#a6adc8>ᴍɪɴ ᴅᴇꜰᴀᴜʟᴛ: <#89dceb><b>" + defaultSec + "s</b>",
+                        "",
+                        "<!italic><#6c7086>▪ <#a6adc8>ᴘʀᴇsᴇᴛs: " + buildOptionsBar(globalSec, options),
+                        "",
+                        "<!italic><white><glyph:left_click></white> <#a6e3a1>ɴᴇxᴛ <#6c7086>│ <white><glyph:right_click></white> <#f9e2af>ᴘʀᴇᴠɪᴏᴜs",
+                        "<!italic><#89dceb>sʜɪꜰᴛ + <white><glyph:left_click></white> <#a6adc8>ᴛᴏɢɢʟᴇ ɢʟᴏʙᴀʟ ꜰᴏʀᴄᴇ",
+                        "<!italic><#f38ba8>sʜɪꜰᴛ + <white><glyph:right_click></white> <#a6adc8>sᴇᴛ ᴅᴇꜰᴀᴜʟᴛ (" + globalSec + "s)"
+                )
+        );
+        item.setAmount(Math.max(1, Math.min(64, globalSec)));
+        return item;
     }
 
     public static class GlobalDetailMenuHolder implements InventoryHolder {

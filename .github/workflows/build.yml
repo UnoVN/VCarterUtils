@@ -3,6 +3,7 @@ name: Build VCarterUtils Jar
 on:
   push:
     branches: [ "main", "master" ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ "main", "master" ]
   workflow_dispatch:
@@ -10,6 +11,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Source Code
@@ -31,3 +34,51 @@ jobs:
           name: VCarterUtils-jar
           path: target/VCarterUtils-*.jar
           retention-days: 7
+
+      - name: Create or Update GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          export VERSION="${TAG#v}"
+          JAR_FILE=$(find target -maxdepth 1 -type f -name 'VCarterUtils-*.jar' ! -name 'original-*' | head -n 1)
+          if [ -z "$JAR_FILE" ]; then
+            echo "Error: Built plugin JAR not found in target/"
+            exit 1
+          fi
+
+          NOTES_FILE=$(mktemp)
+          HAS_NOTES=false
+          if [ -f CHANGELOG.md ]; then
+            python3 - <<'PY' > "$NOTES_FILE"
+          import os, re
+          ver = os.environ["VERSION"]
+          with open("CHANGELOG.md", encoding="utf-8") as f:
+              text = f.read()
+          pattern = rf"(?ms)^## \[?v?{re.escape(ver)}\]?(?: .*?)?\n(.*?)(?=^## |\Z)"
+          m = re.search(pattern, text)
+          if m and m.group(1).strip():
+              print(m.group(1).strip())
+          PY
+            if [ -s "$NOTES_FILE" ]; then
+              HAS_NOTES=true
+            fi
+          fi
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            if [ "$HAS_NOTES" = true ]; then
+              gh release edit "$TAG" --title "VCarterUtils $TAG" --notes-file "$NOTES_FILE"
+            fi
+            gh release upload "$TAG" "$JAR_FILE" --clobber
+          else
+            if [ "$HAS_NOTES" = true ]; then
+              gh release create "$TAG" "$JAR_FILE" \
+                --title "VCarterUtils $TAG" \
+                --notes-file "$NOTES_FILE"
+            else
+              gh release create "$TAG" "$JAR_FILE" \
+                --title "VCarterUtils $TAG" \
+                --generate-notes
+            fi
+          fi

@@ -37,7 +37,7 @@
 * **GUI & Lore Formatting:** Use `<white><glyph:left_click></white>` and `<white><glyph:right_click></white>` for click prompts. Always use valid 2D vanilla item atlas names inside `<white><sprite:items:item/...></white>` (`ender_pearl`, `mace`, `netherite_sword`, `totem_of_undying`, `golden_apple`, `tnt_minecart`, `rail`, `crossbow_standby`, `diamond_chestplate`, `shulker_shell`, `compass_16`, `recovery_compass_16`).
 
 ## 3. TECH STACK & CRITICAL INTER-SYSTEM PIPELINES
-* **Plugin Info:** `VCarterUtils` v1.2.7 | Author: `Nh4n` | Main: `me.nh4n.vcarterutils.VCarterUtils` | Java 21 | Compile API: Paper `1.21.1-R0.1-SNAPSHOT` (`api-version: '1.21'`) | Runtime: Paper / Leaf `1.21.11`.
+* **Plugin Info:** `VCarterUtils` v1.2.8 | Author: `Nh4n` | Main: `me.nh4n.vcarterutils.VCarterUtils` | Java 21 | Compile API: Paper `1.21.1-R0.1-SNAPSHOT` (`api-version: '1.21'`) | Runtime: Paper / Leaf `1.21.11`.
 * **Soft-Depends:** `PlaceholderAPI` (2.11.6), `PerPlayerKit` (`/k1`..`/k99`, `/kit`, `/pk`, `/rekit`), `Nexo`, `FoCombatTag`, `Multiverse-Core`, `SlimeWorldManager`, `AdvancedSlimeWorldManager`, `SlimeWorldPlugin`.
 * **Respawn, AutoPot, Regear & Lobby Hotbar Pipeline (Tick-Sensitive):**
   * **Tick 0 (`PlayerDeathEvent`):** `LobbyHotbarManager.markRespawning(uuid)` clears stale `savedHotbars` and blocks `PlayerChangedWorldEvent` from saving an empty hotbar before `PerPlayerKit` loads items. `FoCombatTagHook.untag(player)` and `CombatTagManager.endCombat(uuid)` clear combat state so `/back` works immediately.
@@ -61,7 +61,8 @@
 
 ### Core, Config & Utilities
 * `@.gitignore` — Excludes Maven `target/`, compiled `.jar`/`.class`, IDE metadata, and OS artifacts from Git.
-* `@.github/workflows/build.yml` — GitHub Actions CI building `target/VCarterUtils-*.jar` via `mvn clean package` on every push to `main`/`master`.
+* `@.github/workflows/build.yml` — GitHub Actions CI building `target/VCarterUtils-*.jar` via `mvn clean package` on push/PR and publishing/updating GitHub Releases on `v*` tag pushes.
+* `@CHANGELOG.md` — Release notes per version used by GitHub Actions release publishing.
 * `@pom.xml` — Maven build config (Java 21, Paper 1.21.1 API, PlaceholderAPI provided).
 * `@src/main/resources/plugin.yml` — Plugin metadata, commands, permissions, and soft-depends.
 * `@src/main/resources/config.yml` — Centralized global theme (`theme.prefixes`, `theme.colors`), admin messages, fallback defaults.
